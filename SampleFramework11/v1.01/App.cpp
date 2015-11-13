@@ -30,11 +30,11 @@ namespace SampleFramework11
 
 App* GlobalApp = nullptr;
 
-App::App(const wchar* appName, const wchar* iconResource) :   window(NULL, appName, WS_OVERLAPPEDWINDOW,
+App::App(const wchar* appName, const wchar* iconResource) :   _window(NULL, appName, WS_OVERLAPPEDWINDOW,
                                                                      WS_EX_APPWINDOW, 1280, 720, iconResource, iconResource),
-                                                              currentTimeDeltaSample(0),
-                                                              fps(0), tweakBar(nullptr), applicationName(appName),
-                                                              createConsole(true), showWindow(true), returnCode(0)
+                                                              _currentTimeDeltaSample(0),
+                                                              _fps(0), _tweakBar(nullptr), _applicationName(appName),
+                                                              _createConsole(true), _showWindow(true), _returnCode(0)
 {
     GlobalApp = this;
     for(uint32 i = 0; i < NumTimeDeltaSamples; ++i)
@@ -50,73 +50,73 @@ int32 App::Run()
 {
     try
     {
-        if(createConsole)
+        if(_createConsole)
         {
             Win32Call(AllocConsole());
-            Win32Call(SetConsoleTitle(applicationName.c_str()));
+            Win32Call(SetConsoleTitle(_applicationName.c_str()));
             FILE* consoleFile = nullptr;
             freopen_s(&consoleFile, "CONOUT$", "wb", stdout);
         }
 
-        if(showWindow)
-            window.ShowWindow();
+        if(_showWindow)
+            _window.ShowWindow();
 
-        deviceManager.Initialize(window);
+        _deviceManager.Initialize(_window);
 
-        blendStates.Initialize(deviceManager.Device());
-        rasterizerStates.Initialize(deviceManager.Device());
-        depthStencilStates.Initialize(deviceManager.Device());
-        samplerStates.Initialize(deviceManager.Device());
+        _blendStates.Initialize(_deviceManager.Device());
+        _rasterizerStates.Initialize(_deviceManager.Device());
+        _depthStencilStates.Initialize(_deviceManager.Device());
+        _samplerStates.Initialize(_deviceManager.Device());
 
         // Create a font + SpriteRenderer
-        font.Initialize(L"Arial", 18, SpriteFont::Regular, true, deviceManager.Device());
-        spriteRenderer.Initialize(deviceManager.Device());
+        _font.Initialize(L"Arial", 18, SpriteFont::Regular, true, _deviceManager.Device());
+        _spriteRenderer.Initialize(_deviceManager.Device());
 
-        Profiler::GlobalProfiler.Initialize(deviceManager.Device(), deviceManager.ImmediateContext());
+        Profiler::GlobalProfiler.Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext());
 
-        window.RegisterMessageCallback(WM_SIZE, OnWindowResized, this);
+        _window.RegisterMessageCallback(WM_SIZE, OnWindowResized, this);
 
         // Initialize AntTweakBar
-        TwCall(TwInit(TW_DIRECT3D11, deviceManager.Device()));
+        TwCall(TwInit(TW_DIRECT3D11, _deviceManager.Device()));
 
         // Create a tweak bar
-        tweakBar = TwNewBar("Settings");
+        _tweakBar = TwNewBar("Settings");
         TwCall(TwDefine(" GLOBAL help='MJPs sample framework for DX11' "));
         TwCall(TwDefine(" GLOBAL fontsize=3 "));
 
-        Settings.Initialize(tweakBar);
+        Settings.Initialize(_tweakBar);
 
         TwHelper::SetValuesWidth(Settings.TweakBar(), 120, false);
 
-        AppSettings::Initialize(deviceManager.Device());
+        AppSettings::Initialize(_deviceManager.Device());
 
         Initialize();
 
         AfterReset();
 
-        while(window.IsAlive())
+        while(_window.IsAlive())
         {
-            if(!window.IsMinimized())
+            if(!_window.IsMinimized())
             {
-                timer.Update();
+                _timer.Update();
                 Settings.Update();
 
                 CalculateFPS();
 
                 AppSettings::Update();
 
-                Update(timer);
+                Update(_timer);
 
-                UpdateShaders(deviceManager.Device());
+                UpdateShaders(_deviceManager.Device());
 
-                AppSettings::UpdateCBuffer(deviceManager.ImmediateContext());
+                AppSettings::UpdateCBuffer(_deviceManager.ImmediateContext());
 
-                Render(timer);
+                Render(_timer);
 
                 // Render the profiler text
-                spriteRenderer.Begin(deviceManager.ImmediateContext(), SpriteRenderer::Point);
-                Profiler::GlobalProfiler.EndFrame(spriteRenderer, font);
-                spriteRenderer.End();
+                _spriteRenderer.Begin(_deviceManager.ImmediateContext(), SpriteRenderer::Point);
+                Profiler::GlobalProfiler.EndFrame(_spriteRenderer, _font);
+                _spriteRenderer.End();
 
                 {
                     PIXEvent pixEvent(L"Ant Tweak Bar");
@@ -125,10 +125,10 @@ int32 App::Run()
                     TwCall(TwDraw());
                 }
 
-                deviceManager.Present();
+                _deviceManager.Present();
             }
 
-            window.MessageLoop();
+            _window.MessageLoop();
         }
     }
     catch(SampleFramework11::Exception exception)
@@ -141,44 +141,44 @@ int32 App::Run()
 
     TwCall(TwTerminate());
 
-    if(createConsole)
+    if(_createConsole)
     {
         fclose(stdout);
         FreeConsole();
     }
 
-    return returnCode;
+    return _returnCode;
 }
 
 void App::CalculateFPS()
 {
-    timeDeltaBuffer[currentTimeDeltaSample] = timer.DeltaSecondsF();
-    currentTimeDeltaSample = (currentTimeDeltaSample + 1) % NumTimeDeltaSamples;
+    timeDeltaBuffer[_currentTimeDeltaSample] = _timer.DeltaSecondsF();
+    _currentTimeDeltaSample = (_currentTimeDeltaSample + 1) % NumTimeDeltaSamples;
 
     float averageDelta = 0;
     for(UINT i = 0; i < NumTimeDeltaSamples; ++i)
         averageDelta += timeDeltaBuffer[i];
     averageDelta /= NumTimeDeltaSamples;
 
-    fps = static_cast<UINT>(std::floor((1.0f / averageDelta) + 0.5f));
+    _fps = static_cast<UINT>(std::floor((1.0f / averageDelta) + 0.5f));
 }
 
 LRESULT App::OnWindowResized(void* context, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     App* app = reinterpret_cast<App*>(context);
 
-    if(!app->deviceManager.FullScreen() && wParam != SIZE_MINIMIZED)
+    if(!app->_deviceManager.FullScreen() && wParam != SIZE_MINIMIZED)
     {
         int width, height;
-        app->window.GetClientArea(width, height);
+        app->_window.GetClientArea(width, height);
 
-        if(width != app->deviceManager.BackBufferWidth() || height != app->deviceManager.BackBufferHeight())
+        if(width != app->_deviceManager.BackBufferWidth() || height != app->_deviceManager.BackBufferHeight())
         {
             app->BeforeReset();
 
-            app->deviceManager.SetBackBufferWidth(width);
-            app->deviceManager.SetBackBufferHeight(height);
-            app->deviceManager.Reset();
+            app->_deviceManager.SetBackBufferWidth(width);
+            app->_deviceManager.SetBackBufferHeight(height);
+            app->_deviceManager.Reset();
 
             app->AfterReset();
         }
@@ -189,7 +189,7 @@ LRESULT App::OnWindowResized(void* context, HWND hWnd, UINT msg, WPARAM wParam, 
 
 void App::Exit()
 {
-    window.Destroy();
+    _window.Destroy();
 }
 
 void App::Initialize()
@@ -202,21 +202,21 @@ void App::BeforeReset()
 
 void App::AfterReset()
 {
-    const uint32 width = deviceManager.BackBufferWidth();
-    const uint32 height = deviceManager.BackBufferHeight();
+    const uint32 width = _deviceManager.BackBufferWidth();
+    const uint32 height = _deviceManager.BackBufferHeight();
 
-    TwHelper::SetSize(tweakBar, 375, deviceManager.BackBufferHeight());
-    TwHelper::SetPosition(tweakBar, deviceManager.BackBufferWidth() - 375, 0);
+    TwHelper::SetSize(_tweakBar, 375, _deviceManager.BackBufferHeight());
+    TwHelper::SetPosition(_tweakBar, _deviceManager.BackBufferWidth() - 375, 0);
 }
 
 void App::ToggleFullScreen(bool fullScreen)
 {
-    if(fullScreen != deviceManager.FullScreen())
+    if(fullScreen != _deviceManager.FullScreen())
     {
         BeforeReset();
 
-        deviceManager.SetFullScreen(fullScreen);
-        deviceManager.Reset();
+        _deviceManager.SetFullScreen(fullScreen);
+        _deviceManager.Reset();
 
         AfterReset();
     }
@@ -224,41 +224,41 @@ void App::ToggleFullScreen(bool fullScreen)
 
 void App::RenderText(const std::wstring& text, Float2 pos)
 {
-    ID3D11DeviceContext* context = deviceManager.ImmediateContext();
+    ID3D11DeviceContext* context = _deviceManager.ImmediateContext();
 
     // Set the backbuffer and viewport
-    ID3D11RenderTargetView* rtvs[1] = { deviceManager.BackBuffer() };
+    ID3D11RenderTargetView* rtvs[1] = { _deviceManager.BackBuffer() };
     context->OMSetRenderTargets(1, rtvs, NULL);
 
     float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
     context->ClearRenderTargetView(rtvs[0], clearColor);
 
-    SetViewport(context, deviceManager.BackBufferWidth(), deviceManager.BackBufferHeight());
+    SetViewport(context, _deviceManager.BackBufferWidth(), _deviceManager.BackBufferHeight());
 
     // Draw the text
     Float4x4 transform;
     transform.SetTranslation(Float3(pos.x, pos.y,0.0f));
-    spriteRenderer.Begin(context, SpriteRenderer::Point);
-    spriteRenderer.RenderText(font, text.c_str(), transform.ToSIMD());
-    spriteRenderer.End();
+    _spriteRenderer.Begin(context, SpriteRenderer::Point);
+    _spriteRenderer.RenderText(_font, text.c_str(), transform.ToSIMD());
+    _spriteRenderer.End();
 
     // Present
-    deviceManager.SwapChain()->Present(0, 0);
+    _deviceManager.SwapChain()->Present(0, 0);
 
     // Pump the message loop
-    window.MessageLoop();
+    _window.MessageLoop();
 }
 
 void App::RenderCenteredText(const std::wstring& text)
 {
 
     // Measure the text
-    Float2 textSize = font.MeasureText(text.c_str());
+    Float2 textSize = _font.MeasureText(text.c_str());
 
     // Position it in the middle
     Float2 textPos;
-    textPos.x = Round((deviceManager.BackBufferWidth() / 2.0f) - (textSize.x / 2.0f));
-    textPos.y = Round((deviceManager.BackBufferHeight() / 2.0f) - (textSize.y / 2.0f));
+    textPos.x = Round((_deviceManager.BackBufferWidth() / 2.0f) - (textSize.x / 2.0f));
+    textPos.y = Round((_deviceManager.BackBufferHeight() / 2.0f) - (textSize.y / 2.0f));
 
     RenderText(text, textPos);
 }

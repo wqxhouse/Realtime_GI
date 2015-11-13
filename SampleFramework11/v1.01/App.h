@@ -49,39 +49,39 @@ protected:
 
     static LRESULT OnWindowResized(void* context, HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-    Window window;
-    DeviceManager deviceManager;
-    Timer timer;
+    Window _window;
+    DeviceManager _deviceManager;
+    Timer _timer;
 
-    BlendStates blendStates;
-    RasterizerStates rasterizerStates;
-    DepthStencilStates depthStencilStates;
-    SamplerStates samplerStates;
+    BlendStates _blendStates;
+    RasterizerStates _rasterizerStates;
+    DepthStencilStates _depthStencilStates;
+    SamplerStates _samplerStates;
 
-    SpriteFont font;
-    SpriteRenderer spriteRenderer;
+    SpriteFont _font;
+    SpriteRenderer _spriteRenderer;
 
     static const uint32 NumTimeDeltaSamples = 64;
     float timeDeltaBuffer[NumTimeDeltaSamples];
-    uint32 currentTimeDeltaSample;
-    uint32 fps;
+    uint32 _currentTimeDeltaSample;
+    uint32 _fps;
 
-    TwBar* tweakBar;
+    TwBar* _tweakBar;
 
-    std::wstring applicationName;
+    std::wstring _applicationName;
 
-    bool createConsole;
-    bool showWindow;
-    int32 returnCode;
+    bool _createConsole;
+    bool _showWindow;
+    int32 _returnCode;
 
 public:
 
     // Accessors
-    Window& Window() { return window; }
-    DeviceManager& DeviceManager() { return deviceManager; }
-    SpriteFont& Font() { return font; }
-    SpriteRenderer& SpriteRenderer() { return spriteRenderer; }
-    TwBar* TweakBar() { return tweakBar; }
+    Window& Window() { return _window; }
+    DeviceManager& DeviceManager() { return _deviceManager; }
+    SpriteFont& Font() { return _font; }
+    SpriteRenderer& SpriteRenderer() { return _spriteRenderer; }
+    TwBar* TweakBar() { return _tweakBar; }
 };
 
 extern App* GlobalApp;

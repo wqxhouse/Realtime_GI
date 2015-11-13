@@ -63,45 +63,45 @@ protected:
     void CreateShadowMaps();
     void ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx, Float3 cascadeScale);
 
-    ID3D11DevicePtr device;
+    ID3D11DevicePtr _device;
 
-    BlendStates blendStates;
-    RasterizerStates rasterizerStates;
-    DepthStencilStates depthStencilStates;
-    SamplerStates samplerStates;
+    BlendStates _blendStates;
+    RasterizerStates _rasterizerStates;
+    DepthStencilStates _depthStencilStates;
+    SamplerStates _samplerStates;
 
-    const Model* model = nullptr;
+    const Model* _model = nullptr;
 
-    DepthStencilBuffer shadowMap;
-    RenderTarget2D  varianceShadowMap;
-    RenderTarget2D tempVSM;
+    DepthStencilBuffer _shadowMap;
+    RenderTarget2D  _varianceShadowMap;
+    RenderTarget2D _tempVSM;
 
-    ID3D11RasterizerStatePtr shadowRSState;
-    ID3D11SamplerStatePtr evsmSampler;
+    ID3D11RasterizerStatePtr _shadowRSState;
+    ID3D11SamplerStatePtr _evsmSampler;
 
-    std::vector<ID3D11InputLayoutPtr> meshInputLayouts;
-    VertexShaderPtr meshVS[2];
-    PixelShaderPtr meshPS[2][2];
+    std::vector<ID3D11InputLayoutPtr> _meshInputLayouts;
+    VertexShaderPtr _meshVS[2];
+    PixelShaderPtr _meshPS[2][2];
 
-    std::vector<ID3D11InputLayoutPtr> meshDepthInputLayouts;
-    VertexShaderPtr meshDepthVS;
+    std::vector<ID3D11InputLayoutPtr> _meshDepthInputLayouts;
+    VertexShaderPtr _meshDepthVS;
 
-    VertexShaderPtr fullScreenVS;
-    PixelShaderPtr evsmConvertPS;
-    PixelShaderPtr evsmBlurH;
-    PixelShaderPtr evsmBlurV;
+    VertexShaderPtr _fullScreenVS;
+    PixelShaderPtr _evsmConvertPS;
+    PixelShaderPtr _evsmBlurH;
+    PixelShaderPtr _evsmBlurV;
 
-    ComputeShaderPtr depthReductionInitialCS[2];
-    ComputeShaderPtr depthReductionCS;
-    std::vector<RenderTarget2D> depthReductionTargets;
-    StagingTexture2D reductionStagingTextures[ReadbackLatency];
-    uint32 currFrame = 0;
+    ComputeShaderPtr _depthReductionInitialCS[2];
+    ComputeShaderPtr _depthReductionCS;
+    std::vector<RenderTarget2D> _depthReductionTargets;
+    StagingTexture2D _reductionStagingTextures[ReadbackLatency];
+    uint32 _currFrame = 0;
 
-    Float2 shadowDepthBounds = Float2(0.0f, 1.0f);
+    Float2 _shadowDepthBounds = Float2(0.0f, 1.0f);
 
-    ID3D11ShaderResourceViewPtr specularLookupTexture;
+    ID3D11ShaderResourceViewPtr _specularLookupTexture;
 
-    Float4x4 prevWVP;
+    Float4x4 _prevWVP;
 
     // Constant buffers
     struct MeshVSConstants
@@ -135,6 +135,8 @@ protected:
         Float2 JitterOffset;
     };
 
+	// struct 
+
     struct EVSMConstants
     {
         Float3 CascadeScale;
@@ -153,8 +155,9 @@ protected:
         uint32 NumSamples;
     };
 
-    ConstantBuffer<MeshVSConstants> meshVSConstants;
-    ConstantBuffer<MeshPSConstants> meshPSConstants;
-    ConstantBuffer<EVSMConstants> evsmConstants;
-    ConstantBuffer<ReductionConstants> reductionConstants;
+    ConstantBuffer<MeshVSConstants> _meshVSConstants;
+    ConstantBuffer<MeshPSConstants> _meshPSConstants;
+	//ConstantBuffer<MeshPSConstants> 
+    ConstantBuffer<EVSMConstants> _evsmConstants;
+    ConstantBuffer<ReductionConstants> _reductionConstants;
 };
