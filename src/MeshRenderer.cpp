@@ -51,16 +51,16 @@ static const bool EnableShadowMips = true;
 void MeshRenderer::LoadShaders()
 {
     // Load the mesh shaders
-    meshDepthVS = CompileVSFromFile(device, L"DepthOnly.hlsl", "VS", "vs_5_0");
+    _meshDepthVS = CompileVSFromFile(_device, L"DepthOnly.hlsl", "VS", "vs_5_0");
 
     CompileOptions opts;
     opts.Add("UseNormalMapping_", 0);
 
-    meshVS[0] = CompileVSFromFile(device, L"Mesh.hlsl", "VS", "vs_5_0", opts);
+    _meshVS[0] = CompileVSFromFile(_device, L"Mesh.hlsl", "VS", "vs_5_0", opts);
 
     opts.Reset();
     opts.Add("UseNormalMapping_", 1);
-    meshVS[1] = CompileVSFromFile(device, L"Mesh.hlsl", "VS", "vs_5_0", opts);
+    _meshVS[1] = CompileVSFromFile(_device, L"Mesh.hlsl", "VS", "vs_5_0", opts);
 
     for(uint32 useNormalMapping = 0; useNormalMapping < 2; ++useNormalMapping)
     {
@@ -69,106 +69,106 @@ void MeshRenderer::LoadShaders()
             opts.Reset();
             opts.Add("UseNormalMapping_", useNormalMapping);
             opts.Add("CentroidSampling_", centroidSampling);
-            meshPS[useNormalMapping][centroidSampling] = CompilePSFromFile(device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
+            _meshPS[useNormalMapping][centroidSampling] = CompilePSFromFile(_device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
         }
     }
 
-    fullScreenVS = CompileVSFromFile(device, L"EVSMConvert.hlsl", "FullScreenVS");
+    _fullScreenVS = CompileVSFromFile(_device, L"EVSMConvert.hlsl", "FullScreenVS");
 
     opts.Reset();
     opts.Add("MSAASamples_", ShadowMSAASamples);
-    evsmConvertPS = CompilePSFromFile(device, L"EVSMConvert.hlsl", "ConvertToEVSM", "ps_5_0", opts);
+    _evsmConvertPS = CompilePSFromFile(_device, L"EVSMConvert.hlsl", "ConvertToEVSM", "ps_5_0", opts);
 
     opts.Reset();
     opts.Add("Horizontal_", 1);
     opts.Add("Vertical_", 0);
     opts.Add("SampleRadius_", SampleRadius);
-    evsmBlurH = CompilePSFromFile(device, L"EVSMConvert.hlsl", "BlurEVSM", "ps_5_0", opts);
+    _evsmBlurH = CompilePSFromFile(_device, L"EVSMConvert.hlsl", "BlurEVSM", "ps_5_0", opts);
 
     opts.Reset();
     opts.Add("Horizontal_", 0);
     opts.Add("Vertical_", 1);
     opts.Add("SampleRadius_", SampleRadius);
-    evsmBlurV = CompilePSFromFile(device, L"EVSMConvert.hlsl", "BlurEVSM", "ps_5_0", opts);
+    _evsmBlurV = CompilePSFromFile(_device, L"EVSMConvert.hlsl", "BlurEVSM", "ps_5_0", opts);
 
     opts.Reset();
     opts.Add("MSAA_", 0);
-    depthReductionInitialCS[0] = CompileCSFromFile(device, L"DepthReduction.hlsl", "DepthReductionInitialCS", "cs_5_0", opts);
+    _depthReductionInitialCS[0] = CompileCSFromFile(_device, L"DepthReduction.hlsl", "DepthReductionInitialCS", "cs_5_0", opts);
 
     opts.Reset();
     opts.Add("MSAA_", 1);
-    depthReductionInitialCS[1] = CompileCSFromFile(device, L"DepthReduction.hlsl", "DepthReductionInitialCS", "cs_5_0", opts);
+    _depthReductionInitialCS[1] = CompileCSFromFile(_device, L"DepthReduction.hlsl", "DepthReductionInitialCS", "cs_5_0", opts);
 
-    depthReductionCS = CompileCSFromFile(device, L"DepthReduction.hlsl", "DepthReductionCS");
+    _depthReductionCS = CompileCSFromFile(_device, L"DepthReduction.hlsl", "DepthReductionCS");
 }
 
 void MeshRenderer::CreateShadowMaps()
 {
     // Create the shadow map as a texture array
-    shadowMap.Initialize(device, ShadowMapSize, ShadowMapSize, DXGI_FORMAT_D24_UNORM_S8_UINT, true,
+    _shadowMap.Initialize(_device, ShadowMapSize, ShadowMapSize, DXGI_FORMAT_D24_UNORM_S8_UINT, true,
                          ShadowMSAASamples, 0, 1);
 
     DXGI_FORMAT smFmt = DXGI_FORMAT_R32G32B32A32_FLOAT;
     uint32 numMips = EnableShadowMips ? 0 : 1;
-    varianceShadowMap.Initialize(device, ShadowMapSize, ShadowMapSize, smFmt, numMips, 1, 0,
+    _varianceShadowMap.Initialize(_device, ShadowMapSize, ShadowMapSize, smFmt, numMips, 1, 0,
                                  EnableShadowMips, false, NumCascades, false);
 
-    tempVSM.Initialize(device, ShadowMapSize, ShadowMapSize, smFmt, 1, 1, 0, false, false, 1, false);
+    _tempVSM.Initialize(_device, ShadowMapSize, ShadowMapSize, smFmt, 1, 1, 0, false, false, 1, false);
 }
 
 void MeshRenderer::SetModel(const Model* model)
 {
-    this->model = model;
+    this->_model = model;
 
-    meshInputLayouts.clear();
-    meshDepthInputLayouts.clear();
+    _meshInputLayouts.clear();
+    _meshDepthInputLayouts.clear();
 
-    VertexShaderPtr vs = AppSettings::UseNormalMapping() ? meshVS[1] : meshVS[0];
+    VertexShaderPtr vs = AppSettings::UseNormalMapping() ? _meshVS[1] : _meshVS[0];
 
     for(uint64 i = 0; i < model->Meshes().size(); ++i)
     {
         const Mesh& mesh = model->Meshes()[i];
         ID3D11InputLayoutPtr inputLayout;
-        DXCall(device->CreateInputLayout(mesh.InputElements(), mesh.NumInputElements(),
+        DXCall(_device->CreateInputLayout(mesh.InputElements(), mesh.NumInputElements(),
                vs->ByteCode->GetBufferPointer(), vs->ByteCode->GetBufferSize(), &inputLayout));
-        meshInputLayouts.push_back(inputLayout);
+        _meshInputLayouts.push_back(inputLayout);
 
-        DXCall(device->CreateInputLayout(mesh.InputElements(), mesh.NumInputElements(),
-               meshDepthVS->ByteCode->GetBufferPointer(), meshDepthVS->ByteCode->GetBufferSize(), &inputLayout));
-        meshDepthInputLayouts.push_back(inputLayout);
+        DXCall(_device->CreateInputLayout(mesh.InputElements(), mesh.NumInputElements(),
+               _meshDepthVS->ByteCode->GetBufferPointer(), _meshDepthVS->ByteCode->GetBufferSize(), &inputLayout));
+        _meshDepthInputLayouts.push_back(inputLayout);
     }
 }
 
 // Loads resources
 void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
-    this->device = device;
+    this->_device = device;
 
-    blendStates.Initialize(device);
-    rasterizerStates.Initialize(device);
-    depthStencilStates.Initialize(device);
-    samplerStates.Initialize(device);
+    _blendStates.Initialize(device);
+    _rasterizerStates.Initialize(device);
+    _depthStencilStates.Initialize(device);
+    _samplerStates.Initialize(device);
 
-    meshVSConstants.Initialize(device);
-    meshPSConstants.Initialize(device);
-    evsmConstants.Initialize(device);
-    reductionConstants.Initialize(device);
+    _meshVSConstants.Initialize(device);
+    _meshPSConstants.Initialize(device);
+    _evsmConstants.Initialize(device);
+    _reductionConstants.Initialize(device);
 
     LoadShaders();
 
     D3D11_RASTERIZER_DESC rsDesc = RasterizerStates::NoCullDesc();
     rsDesc.DepthClipEnable = false;
-    DXCall(device->CreateRasterizerState(&rsDesc, &shadowRSState));
+    DXCall(device->CreateRasterizerState(&rsDesc, &_shadowRSState));
 
     D3D11_SAMPLER_DESC sampDesc = SamplerStates::AnisotropicDesc();
     sampDesc.MaxAnisotropy = ShadowAnisotropy;
-    DXCall(device->CreateSamplerState(&sampDesc, &evsmSampler));
+    DXCall(device->CreateSamplerState(&sampDesc, &_evsmSampler));
 
     // Create the staging textures for reading back the reduced depth buffer
     for(uint32 i = 0; i < ReadbackLatency; ++i)
-        reductionStagingTextures[i].Initialize(device, 1, 1, DXGI_FORMAT_R16G16_UNORM);
+        _reductionStagingTextures[i].Initialize(device, 1, 1, DXGI_FORMAT_R16G16_UNORM);
 
-    specularLookupTexture = LoadTexture(device, L"..\\Content\\Textures\\SpecularLookup.dds");
+    _specularLookupTexture = LoadTexture(device, L"..\\Content\\Textures\\SpecularLookup.dds");
 
     CreateShadowMaps();
 }
@@ -179,7 +179,7 @@ void MeshRenderer::Update()
 
 void MeshRenderer::CreateReductionTargets(uint32 width, uint32 height)
 {
-    depthReductionTargets.clear();
+    _depthReductionTargets.clear();
 
     uint32 w = width;
     uint32 h = height;
@@ -190,8 +190,8 @@ void MeshRenderer::CreateReductionTargets(uint32 width, uint32 height)
         h = DispatchSize(ReductionTGSize, h);
 
         RenderTarget2D rt;
-        rt.Initialize(device, w, h, DXGI_FORMAT_R16G16_UNORM, 1, 1, 0, false, true);
-        depthReductionTargets.push_back(rt);
+        rt.Initialize(_device, w, h, DXGI_FORMAT_R16G16_UNORM, 1, 1, 0, false, true);
+        _depthReductionTargets.push_back(rt);
     }
 }
 
@@ -200,19 +200,19 @@ void MeshRenderer::ReduceDepth(ID3D11DeviceContext* context, DepthStencilBuffer&
 {
     PIXEvent event(L"Depth Reduction");
 
-    reductionConstants.Data.Projection = Float4x4::Transpose(camera.ProjectionMatrix());
-    reductionConstants.Data.NearClip = camera.NearClip();
-    reductionConstants.Data.FarClip = camera.FarClip();
-    reductionConstants.Data.TextureSize.x = depthBuffer.Width;
-    reductionConstants.Data.TextureSize.y = depthBuffer.Height;
-    reductionConstants.Data.NumSamples = depthBuffer.MultiSamples;
-    reductionConstants.ApplyChanges(context);
-    reductionConstants.SetCS(context, 0);
+    _reductionConstants.Data.Projection = Float4x4::Transpose(camera.ProjectionMatrix());
+    _reductionConstants.Data.NearClip = camera.NearClip();
+    _reductionConstants.Data.FarClip = camera.FarClip();
+    _reductionConstants.Data.TextureSize.x = depthBuffer.Width;
+    _reductionConstants.Data.TextureSize.y = depthBuffer.Height;
+    _reductionConstants.Data.NumSamples = depthBuffer.MultiSamples;
+    _reductionConstants.ApplyChanges(context);
+    _reductionConstants.SetCS(context, 0);
 
     ID3D11RenderTargetView* rtvs[1] = { NULL };
     context->OMSetRenderTargets(1, rtvs, NULL);
 
-    ID3D11UnorderedAccessView* uavs[1] = { depthReductionTargets[0].UAView };
+    ID3D11UnorderedAccessView* uavs[1] = { _depthReductionTargets[0].UAView };
     context->CSSetUnorderedAccessViews(0, 1, uavs, NULL);
 
     ID3D11ShaderResourceView* srvs[1] = { depthBuffer.SRView };
@@ -220,11 +220,11 @@ void MeshRenderer::ReduceDepth(ID3D11DeviceContext* context, DepthStencilBuffer&
 
     const bool msaa = depthBuffer.MultiSamples > 1;
 
-    ID3D11ComputeShader* shader = depthReductionInitialCS[msaa ? 1 : 0];
+    ID3D11ComputeShader* shader = _depthReductionInitialCS[msaa ? 1 : 0];
     context->CSSetShader(shader, NULL, 0);
 
-    uint32 dispatchX = depthReductionTargets[0].Width;
-    uint32 dispatchY = depthReductionTargets[0].Height;
+    uint32 dispatchX = _depthReductionTargets[0].Width;
+    uint32 dispatchY = _depthReductionTargets[0].Height;
     context->Dispatch(dispatchX, dispatchY, 1);
 
     uavs[0] = NULL;
@@ -233,24 +233,24 @@ void MeshRenderer::ReduceDepth(ID3D11DeviceContext* context, DepthStencilBuffer&
     srvs[0] = NULL;
     context->CSSetShaderResources(0, 1, srvs);
 
-    context->CSSetShader(depthReductionCS, NULL, 0);
+    context->CSSetShader(_depthReductionCS, NULL, 0);
 
-    for(uint32 i = 1; i < depthReductionTargets.size(); ++i)
+    for(uint32 i = 1; i < _depthReductionTargets.size(); ++i)
     {
-        RenderTarget2D& srcTexture = depthReductionTargets[i - 1];
-        reductionConstants.Data.TextureSize.x = srcTexture.Width;
-        reductionConstants.Data.TextureSize.y = srcTexture.Height;
-        reductionConstants.Data.NumSamples = srcTexture.MultiSamples;
-        reductionConstants.ApplyChanges(context);
+        RenderTarget2D& srcTexture = _depthReductionTargets[i - 1];
+        _reductionConstants.Data.TextureSize.x = srcTexture.Width;
+        _reductionConstants.Data.TextureSize.y = srcTexture.Height;
+        _reductionConstants.Data.NumSamples = srcTexture.MultiSamples;
+        _reductionConstants.ApplyChanges(context);
 
-        uavs[0] = depthReductionTargets[i].UAView;
+        uavs[0] = _depthReductionTargets[i].UAView;
         context->CSSetUnorderedAccessViews(0, 1, uavs, NULL);
 
         srvs[0] = srcTexture.SRView;
         context->CSSetShaderResources(0, 1, srvs);
 
-        dispatchX = depthReductionTargets[i].Width;
-        dispatchY = depthReductionTargets[i].Height;
+        dispatchX = _depthReductionTargets[i].Width;
+        dispatchY = _depthReductionTargets[i].Height;
         context->Dispatch(dispatchX, dispatchY, 1);
 
         uavs[0] = NULL;
@@ -261,25 +261,25 @@ void MeshRenderer::ReduceDepth(ID3D11DeviceContext* context, DepthStencilBuffer&
     }
 
     // Copy to a staging texture
-    ID3D11Texture2D* lastTarget = depthReductionTargets[depthReductionTargets.size() - 1].Texture;
-    context->CopyResource(reductionStagingTextures[currFrame % ReadbackLatency].Texture, lastTarget);
+    ID3D11Texture2D* lastTarget = _depthReductionTargets[_depthReductionTargets.size() - 1].Texture;
+    context->CopyResource(_reductionStagingTextures[_currFrame % ReadbackLatency].Texture, lastTarget);
 
-    ++currFrame;
+    ++_currFrame;
 
-    if(currFrame >= ReadbackLatency)
+    if(_currFrame >= ReadbackLatency)
     {
-        StagingTexture2D& stagingTexture = reductionStagingTextures[currFrame % ReadbackLatency];
+        StagingTexture2D& stagingTexture = _reductionStagingTextures[_currFrame % ReadbackLatency];
 
         uint32 pitch;
         const uint16* texData = reinterpret_cast<uint16*>(stagingTexture.Map(context, 0, pitch));
-        shadowDepthBounds.x = texData[0] / static_cast<float>(0xffff);
-        shadowDepthBounds.y = texData[1] / static_cast<float>(0xffff);
+        _shadowDepthBounds.x = texData[0] / static_cast<float>(0xffff);
+        _shadowDepthBounds.y = texData[1] / static_cast<float>(0xffff);
 
         stagingTexture.Unmap(context, 0);
     }
     else
     {
-        shadowDepthBounds = Float2(0.0f, 1.0f);
+        _shadowDepthBounds = Float2(0.0f, 1.0f);
     }
 }
 
@@ -293,10 +293,10 @@ void MeshRenderer::ComputeShadowDepthBounds(const Camera& camera)
 
     float minDepth = 1.0f;
     float maxDepth = 0.0f;
-    const uint64 numMeshes = model->Meshes().size();
+    const uint64 numMeshes = _model->Meshes().size();
     for(uint64 meshIdx = 0; meshIdx < numMeshes; ++meshIdx)
     {
-        const Mesh& mesh = model->Meshes()[meshIdx];
+        const Mesh& mesh = _model->Meshes()[meshIdx];
         const uint64 numVerts = mesh.NumVertices();
         const uint64 stride = mesh.VertexStride();
         const uint8* vertices = mesh.Vertices();
@@ -311,7 +311,7 @@ void MeshRenderer::ComputeShadowDepthBounds(const Camera& camera)
         }
     }
 
-    shadowDepthBounds = Float2(minDepth, maxDepth);
+    _shadowDepthBounds = Float2(minDepth, maxDepth);
 }
 
 // Convert to an EVSM map
@@ -320,9 +320,9 @@ void MeshRenderer::ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx
     PIXEvent event(L"EVSM Conversion");
 
     float blendFactor[4] = {1, 1, 1, 1};
-    context->OMSetBlendState(blendStates.BlendDisabled(), blendFactor, 0xFFFFFFFF);
-    context->RSSetState(rasterizerStates.NoCull());
-    context->OMSetDepthStencilState(depthStencilStates.DepthDisabled(), 0);
+    context->OMSetBlendState(_blendStates.BlendDisabled(), blendFactor, 0xFFFFFFFF);
+    context->RSSetState(_rasterizerStates.NoCull());
+    context->OMSetDepthStencilState(_depthStencilStates.DepthDisabled(), 0);
     ID3D11Buffer* vbs[1] = { NULL };
     uint32 strides[1] = { 0 };
     uint32 offsets[1] = { 0 };
@@ -335,26 +335,26 @@ void MeshRenderer::ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx
     vp.TopLeftY = 0.0f;
     vp.MinDepth = 0.0f;
     vp.MaxDepth = 1.0f;
-    vp.Width = static_cast<float>(varianceShadowMap.Width);
-    vp.Height = static_cast<float>(varianceShadowMap.Height);
+    vp.Width = static_cast<float>(_varianceShadowMap.Width);
+    vp.Height = static_cast<float>(_varianceShadowMap.Height);
     context->RSSetViewports(1, &vp);
 
-    evsmConstants.Data.PositiveExponent = PositiveExponent;
-    evsmConstants.Data.NegativeExponent = NegativeExponent;
-    evsmConstants.Data.CascadeScale = meshPSConstants.Data.CascadeScales[cascadeIdx].To3D();
-    evsmConstants.Data.FilterSize = 1.0f;
-    evsmConstants.Data.ShadowMapSize.x = float(varianceShadowMap.Width);
-    evsmConstants.Data.ShadowMapSize.y = float(varianceShadowMap.Height);
-    evsmConstants.ApplyChanges(context);
-    evsmConstants.SetPS(context, 0);
+    _evsmConstants.Data.PositiveExponent = PositiveExponent;
+    _evsmConstants.Data.NegativeExponent = NegativeExponent;
+    _evsmConstants.Data.CascadeScale = _meshPSConstants.Data.CascadeScales[cascadeIdx].To3D();
+    _evsmConstants.Data.FilterSize = 1.0f;
+    _evsmConstants.Data.ShadowMapSize.x = float(_varianceShadowMap.Width);
+    _evsmConstants.Data.ShadowMapSize.y = float(_varianceShadowMap.Height);
+    _evsmConstants.ApplyChanges(context);
+    _evsmConstants.SetPS(context, 0);
 
-    context->VSSetShader(fullScreenVS, NULL, 0);
-    context->PSSetShader(evsmConvertPS, NULL, 0);
+    context->VSSetShader(_fullScreenVS, NULL, 0);
+    context->PSSetShader(_evsmConvertPS, NULL, 0);
 
-    ID3D11RenderTargetView* rtvs[1] = { varianceShadowMap.RTVArraySlices[cascadeIdx] };
+    ID3D11RenderTargetView* rtvs[1] = { _varianceShadowMap.RTVArraySlices[cascadeIdx] };
     context->OMSetRenderTargets(1, rtvs, NULL);
 
-    ID3D11ShaderResourceView* srvs[1] = { shadowMap.SRView };
+    ID3D11ShaderResourceView* srvs[1] = { _shadowMap.SRView };
     context->PSSetShaderResources(0, 1, srvs);
 
     context->Draw(3, 0);
@@ -368,18 +368,18 @@ void MeshRenderer::ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx
     if(FilterSizeU > 1.0f || FilterSizeV > 1.0f)
     {
         // Horizontal pass
-        evsmConstants.Data.FilterSize = FilterSizeU;
-        evsmConstants.ApplyChanges(context);
+        _evsmConstants.Data.FilterSize = FilterSizeU;
+        _evsmConstants.ApplyChanges(context);
 
         uint32 sampleRadiusU = static_cast<uint32>((FilterSizeU / 2) + 0.499f);
 
-        rtvs[0] = tempVSM.RTView;
+        rtvs[0] = _tempVSM.RTView;
         context->OMSetRenderTargets(1, rtvs, NULL);
 
-        srvs[0] = varianceShadowMap.SRVArraySlices[cascadeIdx];
+        srvs[0] = _varianceShadowMap.SRVArraySlices[cascadeIdx];
         context->PSSetShaderResources(0, 1, srvs);
 
-        context->PSSetShader(evsmBlurH, NULL, 0);
+        context->PSSetShader(_evsmBlurH, NULL, 0);
 
         context->Draw(3, 0);
 
@@ -387,18 +387,18 @@ void MeshRenderer::ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx
         context->PSSetShaderResources(0, 1, srvs);
 
         // Vertical pass
-        evsmConstants.Data.FilterSize = FilterSizeV;
-        evsmConstants.ApplyChanges(context);
+        _evsmConstants.Data.FilterSize = FilterSizeV;
+        _evsmConstants.ApplyChanges(context);
 
         uint32 sampleRadiusV = static_cast<uint32>((FilterSizeV / 2) + 0.499f);
 
-        rtvs[0] = varianceShadowMap.RTVArraySlices[cascadeIdx];
+        rtvs[0] = _varianceShadowMap.RTVArraySlices[cascadeIdx];
         context->OMSetRenderTargets(1, rtvs, NULL);
 
-        srvs[0] = tempVSM.SRView;
+        srvs[0] = _tempVSM.SRView;
         context->PSSetShaderResources(0, 1, srvs);
 
-        context->PSSetShader(evsmBlurV, NULL, 0);
+        context->PSSetShader(_evsmBlurV, NULL, 0);
 
         context->Draw(3, 0);
 
@@ -407,7 +407,7 @@ void MeshRenderer::ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx
     }
 
     if(EnableShadowMips && cascadeIdx == NumCascades - 1)
-        context->GenerateMips(varianceShadowMap.SRView);
+        context->GenerateMips(_varianceShadowMap.SRView);
 }
 
 // Renders all meshes in the model, with shadows
@@ -419,40 +419,40 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 
     // Set states
     float blendFactor[4] = {1, 1, 1, 1};
-    context->OMSetBlendState(blendStates.BlendDisabled(), blendFactor, 0xFFFFFFFF);
-    context->OMSetDepthStencilState(depthStencilStates.DepthEnabled(), 0);
-    context->RSSetState(rasterizerStates.BackFaceCull());
+    context->OMSetBlendState(_blendStates.BlendDisabled(), blendFactor, 0xFFFFFFFF);
+    context->OMSetDepthStencilState(_depthStencilStates.DepthEnabled(), 0);
+    context->RSSetState(_rasterizerStates.BackFaceCull());
 
     ID3D11SamplerState* sampStates[3] = {
-        samplerStates.Anisotropic(),
-        evsmSampler,
-        samplerStates.LinearClamp(),
+        _samplerStates.Anisotropic(),
+        _evsmSampler,
+        _samplerStates.LinearClamp(),
     };
 
     context->PSSetSamplers(0, 3, sampStates);
 
     // Set constant buffers
-    meshVSConstants.Data.World = Float4x4::Transpose(world);
-    meshVSConstants.Data.View = Float4x4::Transpose(camera.ViewMatrix());
-    meshVSConstants.Data.WorldViewProjection = Float4x4::Transpose(world * camera.ViewProjectionMatrix());
-    meshVSConstants.Data.PrevWorldViewProjection = prevWVP;
-    meshVSConstants.ApplyChanges(context);
-    meshVSConstants.SetVS(context, 0);
+    _meshVSConstants.Data.World = Float4x4::Transpose(world);
+    _meshVSConstants.Data.View = Float4x4::Transpose(camera.ViewMatrix());
+    _meshVSConstants.Data.WorldViewProjection = Float4x4::Transpose(world * camera.ViewProjectionMatrix());
+    _meshVSConstants.Data.PrevWorldViewProjection = _prevWVP;
+    _meshVSConstants.ApplyChanges(context);
+    _meshVSConstants.SetVS(context, 0);
 
-    prevWVP = meshVSConstants.Data.WorldViewProjection;
+    _prevWVP = _meshVSConstants.Data.WorldViewProjection;
 
-    meshPSConstants.Data.CameraPosWS = camera.Position();
-    meshPSConstants.Data.OffsetScale = OffsetScale;
-    meshPSConstants.Data.PositiveExponent = PositiveExponent;
-    meshPSConstants.Data.NegativeExponent = NegativeExponent;
-    meshPSConstants.Data.LightBleedingReduction = LightBleedingReduction;
-    meshPSConstants.Data.Projection = Float4x4::Transpose(camera.ProjectionMatrix());
-    meshPSConstants.Data.EnvironmentSH = envMapSH;
-    meshPSConstants.Data.RTSize.x = float(GlobalApp->DeviceManager().BackBufferWidth());
-    meshPSConstants.Data.RTSize.y = float(GlobalApp->DeviceManager().BackBufferHeight());
-    meshPSConstants.Data.JitterOffset = jitterOffset;
-    meshPSConstants.ApplyChanges(context);
-    meshPSConstants.SetPS(context, 0);
+    _meshPSConstants.Data.CameraPosWS = camera.Position();
+    _meshPSConstants.Data.OffsetScale = OffsetScale;
+    _meshPSConstants.Data.PositiveExponent = PositiveExponent;
+    _meshPSConstants.Data.NegativeExponent = NegativeExponent;
+    _meshPSConstants.Data.LightBleedingReduction = LightBleedingReduction;
+    _meshPSConstants.Data.Projection = Float4x4::Transpose(camera.ProjectionMatrix());
+    _meshPSConstants.Data.EnvironmentSH = envMapSH;
+    _meshPSConstants.Data.RTSize.x = float(GlobalApp->DeviceManager().BackBufferWidth());
+    _meshPSConstants.Data.RTSize.y = float(GlobalApp->DeviceManager().BackBufferHeight());
+    _meshPSConstants.Data.JitterOffset = jitterOffset;
+    _meshPSConstants.ApplyChanges(context);
+    _meshPSConstants.SetPS(context, 0);
 
     const uint64 nmlMapIdx = AppSettings::UseNormalMapping() ? 1 : 0;
     const uint64 centroidIdx = AppSettings::CentroidSampling ? 1 : 0;
@@ -461,14 +461,14 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     context->DSSetShader(nullptr, nullptr, 0);
     context->HSSetShader(nullptr, nullptr, 0);
     context->GSSetShader(nullptr, nullptr, 0);
-    context->VSSetShader(meshVS[nmlMapIdx], nullptr, 0);
-    context->PSSetShader(meshPS[nmlMapIdx][centroidIdx], nullptr, 0);
+    context->VSSetShader(_meshVS[nmlMapIdx], nullptr, 0);
+    context->PSSetShader(_meshPS[nmlMapIdx][centroidIdx], nullptr, 0);
 
     // Draw all meshes
     uint32 partCount = 0;
-    for(uint64 meshIdx = 0; meshIdx < model->Meshes().size(); ++meshIdx)
+    for(uint64 meshIdx = 0; meshIdx < _model->Meshes().size(); ++meshIdx)
     {
-        const Mesh& mesh = model->Meshes()[meshIdx];
+        const Mesh& mesh = _model->Meshes()[meshIdx];
 
         // Set the vertices and indices
         ID3D11Buffer* vertexBuffers[1] = { mesh.VertexBuffer() };
@@ -479,22 +479,22 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
         context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         // Set the input layout
-        context->IASetInputLayout(meshInputLayouts[meshIdx]);
+        context->IASetInputLayout(_meshInputLayouts[meshIdx]);
 
         // Draw all parts
         for(uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
         {
             const MeshPart& part = mesh.MeshParts()[partIdx];
-            const MeshMaterial& material = model->Materials()[part.MaterialIdx];
+            const MeshMaterial& material = _model->Materials()[part.MaterialIdx];
 
             // Set the textures
             ID3D11ShaderResourceView* psTextures[5] =
             {
                 material.DiffuseMap,
                 material.NormalMap,
-                varianceShadowMap.SRView,
+                _varianceShadowMap.SRView,
                 envMap,
-                specularLookupTexture
+                _specularLookupTexture
             };
 
             context->PSSetShaderResources(0, 5, psTextures);
@@ -514,23 +514,23 @@ void MeshRenderer::RenderDepth(ID3D11DeviceContext* context, const Camera& camer
 
     // Set states
     float blendFactor[4] = {1, 1, 1, 1};
-    context->OMSetBlendState(blendStates.ColorWriteDisabled(), blendFactor, 0xFFFFFFFF);
-    context->OMSetDepthStencilState(depthStencilStates.DepthWriteEnabled(), 0);
+    context->OMSetBlendState(_blendStates.ColorWriteDisabled(), blendFactor, 0xFFFFFFFF);
+    context->OMSetDepthStencilState(_depthStencilStates.DepthWriteEnabled(), 0);
 
     if(shadowRendering)
-        context->RSSetState(shadowRSState);
+        context->RSSetState(_shadowRSState);
     else
-        context->RSSetState(rasterizerStates.BackFaceCull());
+        context->RSSetState(_rasterizerStates.BackFaceCull());
 
     // Set constant buffers
-    meshVSConstants.Data.World = Float4x4::Transpose(world);
-    meshVSConstants.Data.View = Float4x4::Transpose(camera.ViewMatrix());
-    meshVSConstants.Data.WorldViewProjection = Float4x4::Transpose(world * camera.ViewProjectionMatrix());
-    meshVSConstants.ApplyChanges(context);
-    meshVSConstants.SetVS(context, 0);
+    _meshVSConstants.Data.World = Float4x4::Transpose(world);
+    _meshVSConstants.Data.View = Float4x4::Transpose(camera.ViewMatrix());
+    _meshVSConstants.Data.WorldViewProjection = Float4x4::Transpose(world * camera.ViewProjectionMatrix());
+    _meshVSConstants.ApplyChanges(context);
+    _meshVSConstants.SetVS(context, 0);
 
     // Set shaders
-    context->VSSetShader(meshDepthVS, nullptr, 0);
+    context->VSSetShader(_meshDepthVS, nullptr, 0);
     context->PSSetShader(nullptr, nullptr, 0);
     context->GSSetShader(nullptr, nullptr, 0);
     context->DSSetShader(nullptr, nullptr, 0);
@@ -538,9 +538,9 @@ void MeshRenderer::RenderDepth(ID3D11DeviceContext* context, const Camera& camer
 
 
     uint32 partCount = 0;
-    for(uint32 meshIdx = 0; meshIdx < model->Meshes().size(); ++meshIdx)
+    for(uint32 meshIdx = 0; meshIdx < _model->Meshes().size(); ++meshIdx)
     {
-        const Mesh& mesh = model->Meshes()[meshIdx];
+        const Mesh& mesh = _model->Meshes()[meshIdx];
 
         // Set the vertices and indices
         ID3D11Buffer* vertexBuffers[1] = { mesh.VertexBuffer() };
@@ -551,7 +551,7 @@ void MeshRenderer::RenderDepth(ID3D11DeviceContext* context, const Camera& camer
         context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         // Set the input layout
-        context->IASetInputLayout(meshDepthInputLayouts[meshIdx]);
+        context->IASetInputLayout(_meshDepthInputLayouts[meshIdx]);
 
         // Draw all parts
         for(uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
@@ -579,8 +579,8 @@ void MeshRenderer::RenderShadowMap(ID3D11DeviceContext* context, const Camera& c
 
     const float sMapSize = static_cast<float>(ShadowMapSize);
 
-    const float MinDistance = shadowDepthBounds.x;
-    const float MaxDistance = shadowDepthBounds.y;
+    const float MinDistance = _shadowDepthBounds.x;
+    const float MaxDistance = _shadowDepthBounds.y;
 
     // Compute the split distances based on the partitioning mode
     float CascadeSplits[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -627,7 +627,7 @@ void MeshRenderer::RenderShadowMap(ID3D11DeviceContext* context, const Camera& c
         context->RSSetViewports(1, &viewport);
 
         // Set the shadow map as the depth target
-        ID3D11DepthStencilView* dsv = shadowMap.DSView;
+        ID3D11DepthStencilView* dsv = _shadowMap.DSView;
         ID3D11RenderTargetView* nullRenderTargets[D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT] = { NULL };
         context->OMSetRenderTargets(D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT, nullRenderTargets, dsv);
         context->ClearDepthStencilView(dsv, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0);
@@ -728,15 +728,15 @@ void MeshRenderer::RenderShadowMap(ID3D11DeviceContext* context, const Camera& c
 
         // Store the split distance in terms of view space depth
         const float clipDist = camera.FarClip() - camera.NearClip();
-        meshPSConstants.Data.CascadeSplits[cascadeIdx] = camera.NearClip() + splitDist * clipDist;
+        _meshPSConstants.Data.CascadeSplits[cascadeIdx] = camera.NearClip() + splitDist * clipDist;
 
         if(cascadeIdx == 0)
         {
             c0Extents = cascadeExtents;
             c0Matrix = shadowMatrix;
-            meshPSConstants.Data.ShadowMatrix = XMMatrixTranspose(shadowMatrix);
-            meshPSConstants.Data.CascadeOffsets[0] = Float4(0.0f, 0.0f, 0.0f, 0.0f);
-            meshPSConstants.Data.CascadeScales[0] = Float4(1.0f, 1.0f, 1.0f, 1.0f);
+            _meshPSConstants.Data.ShadowMatrix = XMMatrixTranspose(shadowMatrix);
+            _meshPSConstants.Data.CascadeOffsets[0] = Float4(0.0f, 0.0f, 0.0f, 0.0f);
+            _meshPSConstants.Data.CascadeScales[0] = Float4(1.0f, 1.0f, 1.0f, 1.0f);
         }
         else
         {
@@ -752,11 +752,11 @@ void MeshRenderer::RenderShadowMap(ID3D11DeviceContext* context, const Camera& c
 
             // Calculate the scale and offset
             Float3 cascadeScale = Float3(1.0f, 1.0f, 1.f) / (otherCorner - cascadeCorner);
-            meshPSConstants.Data.CascadeOffsets[cascadeIdx] = Float4(-cascadeCorner, 0.0f);
-            meshPSConstants.Data.CascadeScales[cascadeIdx] = Float4(cascadeScale, 1.0f);
+            _meshPSConstants.Data.CascadeOffsets[cascadeIdx] = Float4(-cascadeCorner, 0.0f);
+            _meshPSConstants.Data.CascadeScales[cascadeIdx] = Float4(cascadeScale, 1.0f);
         }
 
-        ConvertToEVSM(context, cascadeIdx, meshPSConstants.Data.CascadeScales[cascadeIdx].To3D());
+        ConvertToEVSM(context, cascadeIdx, _meshPSConstants.Data.CascadeScales[cascadeIdx].To3D());
     }
 
     // Restore the previous render targets and viewports

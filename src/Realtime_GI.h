@@ -32,40 +32,40 @@ class Realtime_GI : public App
 
 protected:
 
-    FirstPersonCamera camera;
+    FirstPersonCamera _camera;
 
-    SpriteFont font;
-    SampleFramework11::SpriteRenderer spriteRenderer;
-    Skybox skybox;
+    SpriteFont _font;
+    SampleFramework11::SpriteRenderer _spriteRenderer;
+    Skybox _skybox;
 
-    PostProcessor postProcessor;
-    DepthStencilBuffer depthBuffer;
-    RenderTarget2D colorTarget;
-    RenderTarget2D resolveTarget;
-    RenderTarget2D prevFrameTarget;
-    RenderTarget2D velocityTarget;
-    RenderTarget2D velocityResolveTarget;
-    uint64 frameCount = 0;
+    PostProcessor _postProcessor;
+    DepthStencilBuffer _depthBuffer;
+    RenderTarget2D _colorTarget;
+    RenderTarget2D _resolveTarget;
+    RenderTarget2D _prevFrameTarget;
+    RenderTarget2D _velocityTarget;
+    RenderTarget2D _velocityResolveTarget;
+    uint64 _frameCount = 0;
 
     // Model
-    Model models[uint64(Scenes::NumValues)];
-    MeshRenderer meshRenderer;
+    Model _models[uint64(Scenes::NumValues)];
+    MeshRenderer _meshRenderer;
 
-    Float4x4 modelTransform;
-    Quaternion modelOrientations[uint64(Scenes::NumValues)];
+    Float4x4 _modelTransform;
+    Quaternion _modelOrientations[uint64(Scenes::NumValues)];
 
-    ID3D11ShaderResourceViewPtr envMap;
-    SH9Color envMapSH;
+    ID3D11ShaderResourceViewPtr _envMap;
+    SH9Color _envMapSH;
 
-    VertexShaderPtr resolveVS;
-    PixelShaderPtr resolvePS[uint64(MSAAModes::NumValues)];
+    VertexShaderPtr _resolveVS;
+    PixelShaderPtr _resolvePS[uint64(MSAAModes::NumValues)];
 
-    VertexShaderPtr backgroundVelocityVS;
-    PixelShaderPtr backgroundVelocityPS;
-    Float4x4 prevViewProjection;
+    VertexShaderPtr _backgroundVelocityVS;
+    PixelShaderPtr _backgroundVelocityPS;
+    Float4x4 _prevViewProjection;
 
-    Float2 jitterOffset;
-    Float2 prevJitter;
+    Float2 _jitterOffset;
+    Float2 _prevJitter;
 
     struct ResolveConstants
     {
@@ -81,8 +81,8 @@ protected:
         Float2 JitterOffset;
     };
 
-    ConstantBuffer<ResolveConstants> resolveConstants;
-    ConstantBuffer<BackgroundVelocityConstants> backgroundVelocityConstants;
+    ConstantBuffer<ResolveConstants> _resolveConstants;
+    ConstantBuffer<BackgroundVelocityConstants> _backgroundVelocityConstants;
 
     virtual void Initialize() override;
     virtual void Render(const Timer& timer) override;
