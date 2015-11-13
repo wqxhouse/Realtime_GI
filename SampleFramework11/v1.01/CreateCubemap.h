@@ -13,7 +13,7 @@ using namespace SampleFramework11;
 class CreateCubemap
 {
 private:
-	FirstPersonCamera cubemapCamera;//Camera used to catch scenes in 6 directions
+	PerspectiveCamera cubemapCamera;//Camera used to catch scenes in 6 directions
 	D3D11_TEXTURE2D_DESC cubemapTex;
 	D3D11_SUBRESOURCE_DATA cubemapData;
 	std::vector<XMFLOAT4> cubemapColor[6];//RGBA color buffer of cubemap faces
@@ -21,7 +21,7 @@ private:
 public:
 	VOID Initialize();
 	VOID SetPosition(Float3 position);
-	CONST FirstPersonCamera &GetFirstPersonCamera();
+	CONST PerspectiveCamera &GetFirstPersonCamera();
 	VOID Create();
 	~CreateCubemap();
 };

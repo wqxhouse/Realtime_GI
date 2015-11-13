@@ -16,7 +16,7 @@ VOID CreateCubemap::Create(){
 }
 
 
-CONST FirstPersonCamera &CreateCubemap::GetFirstPersonCamera(){
+CONST PerspectiveCamera &CreateCubemap::GetFirstPersonCamera(){
 	return cubemapCamera;
 }
 
