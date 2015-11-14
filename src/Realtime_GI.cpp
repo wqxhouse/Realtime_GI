@@ -44,7 +44,7 @@ static const Float3 ModelPositions[uint64(Scenes::NumValues)] = { Float3(-1.0f, 
 // Model filenames
 static const wstring ModelPaths[uint64(Scenes::NumValues)] =
 {
-    L"..\\Content\\Models\\Tower\\Tower.sdkmesh",
+    // L"..\\Content\\Models\\Tower\\Tower.sdkmesh",
     L"..\\Content\\Models\\RoboHand\\RoboHand.meshdata",
     // L"",
 };
@@ -104,8 +104,8 @@ void Realtime_GI::Initialize()
 	}
 	*/
 	Model *m = _scene.addModel(ModelPaths[0]);
-	SceneObject *sobj = _scene.addStaticOpaqueObject(m, 0.01f, Float3(0, 0, 0), Quaternion());
-	// SceneObject *sobj = _scene.addStaticOpaqueObject(m, 0.1f, Float3(-1.0f, 2.0f, 0.0f), Quaternion(0.41f, -0.55f, -0.29f, 0.67f));
+	// SceneObject *sobj = _scene.addStaticOpaqueObject(m, 0.01f, Float3(0, 0, 0), Quaternion());
+	SceneObject *sobj = _scene.addStaticOpaqueObject(m, 0.1f, Float3(-1.0f, 2.0f, 0.0f), Quaternion(0.41f, -0.55f, -0.29f, 0.67f));
 	// SceneObject *sobj2 = _scene.addStaticOpaqueObject(m, 0.1f, Float3(3.0f, 3.0f, 0.0f), Quaternion(0.33f, -0.55f, -0.29f, 0.67f));
 
     // _modelOrientations[uint64(Scenes::RoboHand)] = Quaternion(0.41f, -0.55f, -0.29f, 0.67f);
