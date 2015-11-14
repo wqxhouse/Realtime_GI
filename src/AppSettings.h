@@ -95,7 +95,7 @@ namespace AppSettings
     extern FloatSetting DiffuseIntensity;
     extern FloatSetting Roughness;
     extern FloatSetting SpecularIntensity;
-    extern OrientationSetting ModelOrientation;
+    extern OrientationSetting SceneOrientation;
     extern FloatSetting ModelRotationSpeed;
     extern BoolSetting DoubleSyncInterval;
     extern FloatSetting ExposureScale;
@@ -136,7 +136,7 @@ namespace AppSettings
         float DiffuseIntensity;
         float Roughness;
         float SpecularIntensity;
-        Float4Align Quaternion ModelOrientation;
+        Float4Align Quaternion SceneOrientation;
         float ModelRotationSpeed;
         bool32 DoubleSyncInterval;
         float ExposureScale;

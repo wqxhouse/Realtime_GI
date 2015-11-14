@@ -24,6 +24,7 @@
 
 #include "PostProcessor.h"
 #include "MeshRenderer.h"
+#include "Scene.h"
 
 using namespace SampleFramework11;
 
@@ -48,11 +49,12 @@ protected:
     uint64 _frameCount = 0;
 
     // Model
-    Model _models[uint64(Scenes::NumValues)];
+    // Model _models[uint64(Scenes::NumValues)];
+	Scene _scene;
     MeshRenderer _meshRenderer;
 
-    Float4x4 _modelTransform;
-    Quaternion _modelOrientations[uint64(Scenes::NumValues)];
+    Float4x4 _globalTransform;
+    // Quaternion _modelOrientations[uint64(Scenes::NumValues)];
 
     ID3D11ShaderResourceViewPtr _envMap;
     SH9Color _envMapSH;

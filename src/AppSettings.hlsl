@@ -30,7 +30,7 @@ cbuffer AppSettings : register(b7)
     float DiffuseIntensity;
     float Roughness;
     float SpecularIntensity;
-    float4 ModelOrientation;
+    float4 SceneOrientation;
     float ModelRotationSpeed;
     bool DoubleSyncInterval;
     float ExposureScale;

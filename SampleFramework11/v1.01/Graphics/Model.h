@@ -218,6 +218,8 @@ protected:
     static void LoadMaterialResources(MeshMaterial& material, const std::wstring& directory, ID3D11Device* device, bool forceSRGB);
 
     std::vector<Mesh> meshes;
+
+	// TODO: separate material manager to cache loaded material
     std::vector<MeshMaterial> meshMaterials;
     std::wstring fileDirectory;
 };

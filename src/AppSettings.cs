@@ -172,7 +172,7 @@ public class Settings
         [HelpText("Specular intensity parameter for the material")]
         float SpecularIntensity = 0.05f;
 
-        Orientation ModelOrientation = new Orientation(0.41f, -0.55f, -0.29f, 0.67f);
+        Orientation SceneOrientation = new Orientation(0.41f, -0.55f, -0.29f, 0.67f);
 
         [MinValue(0.0f)]
         [MaxValue(10.0f)]

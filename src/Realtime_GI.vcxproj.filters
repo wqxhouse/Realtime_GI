@@ -103,6 +103,7 @@
     <ClCompile Include="AppSettings.cpp">
       <Filter>AppSettings</Filter>
     </ClCompile>
+    <ClCompile Include="Scene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PostProcessor.h" />
@@ -232,6 +233,7 @@
     <ClInclude Include="SharedConstants.h">
       <Filter>Shader</Filter>
     </ClInclude>
+    <ClInclude Include="Scene.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="PostProcessing.hlsl" />

@@ -138,6 +138,7 @@
     <ClCompile Include="..\SampleFramework11\v1.01\Window.cpp" />
     <ClCompile Include="MeshRenderer.cpp" />
     <ClCompile Include="AppSettings.cpp" />
+    <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Realtime_GI.cpp" />
     <ClCompile Include="PostProcessor.cpp" />
   </ItemGroup>
@@ -182,6 +183,7 @@
     <ClInclude Include="AppPCH.h" />
     <ClInclude Include="MeshRenderer.h" />
     <ClInclude Include="AppSettings.h" />
+    <ClInclude Include="Scene.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="PostProcessor.h" />
     <ClInclude Include="Realtime_GI.h" />

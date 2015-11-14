@@ -20,11 +20,11 @@
 #include <Graphics\\ShaderCompilation.h>
 
 #include "AppSettings.h"
+#include "Scene.h"
 
 using namespace SampleFramework11;
 
 struct BakeData;
-
 class MeshRenderer
 {
 
@@ -37,7 +37,7 @@ protected:
 public:
 
     void Initialize(ID3D11Device* device, ID3D11DeviceContext* context);
-    void SetModel(const Model* model);
+	void SetScene(Scene *scene);
 
     void RenderDepth(ID3D11DeviceContext* context, const Camera& camera, const Float4x4& world,
                      bool shadowRendering);
@@ -52,7 +52,7 @@ public:
     void ReduceDepth(ID3D11DeviceContext* context, DepthStencilBuffer& depthBuffer,
                      const Camera& camera);
 
-    void ComputeShadowDepthBounds(const Camera& camera);
+    // void ComputeShadowDepthBounds(const Camera& camera);
 
     void RenderShadowMap(ID3D11DeviceContext* context, const Camera& camera,
                          const Float4x4& world);
@@ -63,6 +63,13 @@ protected:
     void CreateShadowMaps();
     void ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx, Float3 cascadeScale);
 
+	void RenderDepthSceneObjects(ID3D11DeviceContext* context, const Float4x4 &world, const Camera& camera, std::vector<SceneObject> &sceneObjects);
+	void RenderSceneObjects(ID3D11DeviceContext* context, const Float4x4 &world, const Camera& camera,
+		ID3D11ShaderResourceView* envMap, const SH9Color& envMapSH,
+		Float2 jitterOffset, std::vector<SceneObject> &sceneObjects);
+
+    void genAndCacheMeshInputLayout(const Model* model);
+
     ID3D11DevicePtr _device;
 
     BlendStates _blendStates;
@@ -70,7 +77,8 @@ protected:
     DepthStencilStates _depthStencilStates;
     SamplerStates _samplerStates;
 
-    const Model* _model = nullptr;
+    // const Model* _model = nullptr;
+	Scene *_scene = nullptr;
 
     DepthStencilBuffer _shadowMap;
     RenderTarget2D  _varianceShadowMap;
@@ -79,11 +87,13 @@ protected:
     ID3D11RasterizerStatePtr _shadowRSState;
     ID3D11SamplerStatePtr _evsmSampler;
 
-    std::vector<ID3D11InputLayoutPtr> _meshInputLayouts;
+    // std::vector<ID3D11InputLayoutPtr> _meshInputLayouts;
+	std::unordered_map<const Mesh *, ID3D11InputLayoutPtr> _meshInputLayouts;
     VertexShaderPtr _meshVS[2];
     PixelShaderPtr _meshPS[2][2];
 
-    std::vector<ID3D11InputLayoutPtr> _meshDepthInputLayouts;
+    // std::vector<ID3D11InputLayoutPtr> _meshDepthInputLayouts;
+	std::unordered_map<const Mesh *, ID3D11InputLayoutPtr> _meshDepthInputLayouts;
     VertexShaderPtr _meshDepthVS;
 
     VertexShaderPtr _fullScreenVS;
@@ -101,7 +111,8 @@ protected:
 
     ID3D11ShaderResourceViewPtr _specularLookupTexture;
 
-    Float4x4 _prevWVP;
+    // Float4x4 _prevWVP;
+	
 
     // Constant buffers
     struct MeshVSConstants
@@ -159,5 +170,5 @@ protected:
     ConstantBuffer<MeshPSConstants> _meshPSConstants;
 	//ConstantBuffer<MeshPSConstants> 
     ConstantBuffer<EVSMConstants> _evsmConstants;
-    ConstantBuffer<ReductionConstants> _reductionConstants;
+	ConstantBuffer<ReductionConstants> _reductionConstants;
 };

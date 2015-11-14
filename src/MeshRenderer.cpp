@@ -116,26 +116,52 @@ void MeshRenderer::CreateShadowMaps()
     _tempVSM.Initialize(_device, ShadowMapSize, ShadowMapSize, smFmt, 1, 1, 0, false, false, 1, false);
 }
 
-void MeshRenderer::SetModel(const Model* model)
+void MeshRenderer::SetScene(Scene *scene)
 {
-    this->_model = model;
+	// unless the scene json or scene gui option or model has changed, 
+	// this function will only be called once
+	_scene = scene;
+	_meshInputLayouts.clear();
+	_meshDepthInputLayouts.clear();
 
-    _meshInputLayouts.clear();
-    _meshDepthInputLayouts.clear();
+	// generate input layout for every model's mesh
+	for (uint64 i = 0; i < _scene->_models.size(); i++)
+	{
+		genAndCacheMeshInputLayout(&_scene->_models[i]);
+	}
+}
+
+void MeshRenderer::genAndCacheMeshInputLayout(const Model* model)
+{
+    // this->_model = model;
+
+	/* _meshInputLayouts.clear();
+	 _meshDepthInputLayouts.clear();*/
 
     VertexShaderPtr vs = AppSettings::UseNormalMapping() ? _meshVS[1] : _meshVS[0];
 
+	// TODO: optimize this; group meshes with the same input layout to reduce api calls
     for(uint64 i = 0; i < model->Meshes().size(); ++i)
     {
         const Mesh& mesh = model->Meshes()[i];
-        ID3D11InputLayoutPtr inputLayout;
-        DXCall(_device->CreateInputLayout(mesh.InputElements(), mesh.NumInputElements(),
-               vs->ByteCode->GetBufferPointer(), vs->ByteCode->GetBufferSize(), &inputLayout));
-        _meshInputLayouts.push_back(inputLayout);
+		ID3D11InputLayoutPtr inputLayout;
 
-        DXCall(_device->CreateInputLayout(mesh.InputElements(), mesh.NumInputElements(),
-               _meshDepthVS->ByteCode->GetBufferPointer(), _meshDepthVS->ByteCode->GetBufferSize(), &inputLayout));
-        _meshDepthInputLayouts.push_back(inputLayout);
+		if (_meshInputLayouts.find(&mesh) == _meshInputLayouts.end())
+		{
+			DXCall(_device->CreateInputLayout(mesh.InputElements(), mesh.NumInputElements(),
+				vs->ByteCode->GetBufferPointer(), vs->ByteCode->GetBufferSize(), &inputLayout));
+			_meshInputLayouts.insert(std::make_pair(&mesh, inputLayout));
+		}
+        // _meshInputLayouts.push_back(inputLayout);
+
+
+		if (_meshDepthInputLayouts.find(&mesh) == _meshDepthInputLayouts.end())
+		{
+			DXCall(_device->CreateInputLayout(mesh.InputElements(), mesh.NumInputElements(),
+				_meshDepthVS->ByteCode->GetBufferPointer(), _meshDepthVS->ByteCode->GetBufferSize(), &inputLayout));
+			_meshDepthInputLayouts.insert(std::make_pair(&mesh, inputLayout));
+		}
+        // _meshDepthInputLayouts.push_back(inputLayout);
     }
 }
 
@@ -284,35 +310,35 @@ void MeshRenderer::ReduceDepth(ID3D11DeviceContext* context, DepthStencilBuffer&
 }
 
 // Computes shadow depth bounds on the CPU using the mesh vertex positions
-void MeshRenderer::ComputeShadowDepthBounds(const Camera& camera)
-{
-    Float4x4 viewMatrix = camera.ViewMatrix();
-    const float nearClip = camera.NearClip();
-    const float farClip = camera.FarClip();
-    const float clipDist = farClip - nearClip;
-
-    float minDepth = 1.0f;
-    float maxDepth = 0.0f;
-    const uint64 numMeshes = _model->Meshes().size();
-    for(uint64 meshIdx = 0; meshIdx < numMeshes; ++meshIdx)
-    {
-        const Mesh& mesh = _model->Meshes()[meshIdx];
-        const uint64 numVerts = mesh.NumVertices();
-        const uint64 stride = mesh.VertexStride();
-        const uint8* vertices = mesh.Vertices();
-        for(uint64 i = 0; i < numVerts; ++i)
-        {
-            const Float3& position = *reinterpret_cast<const Float3*>(vertices);
-            float viewSpaceZ = Float3::Transform(position, viewMatrix).z;
-            float depth = Saturate((viewSpaceZ - nearClip) / clipDist);
-            minDepth = std::min(minDepth, depth);
-            maxDepth = std::max(maxDepth, depth);
-            vertices += stride;
-        }
-    }
-
-    _shadowDepthBounds = Float2(minDepth, maxDepth);
-}
+//void MeshRenderer::ComputeShadowDepthBounds(const Camera& camera)
+//{
+//    Float4x4 viewMatrix = camera.ViewMatrix();
+//    const float nearClip = camera.NearClip();
+//    const float farClip = camera.FarClip();
+//    const float clipDist = farClip - nearClip;
+//
+//    float minDepth = 1.0f;
+//    float maxDepth = 0.0f;
+//    const uint64 numMeshes = _model->Meshes().size();
+//    for(uint64 meshIdx = 0; meshIdx < numMeshes; ++meshIdx)
+//    {
+//        const Mesh& mesh = _model->Meshes()[meshIdx];
+//        const uint64 numVerts = mesh.NumVertices();
+//        const uint64 stride = mesh.VertexStride();
+//        const uint8* vertices = mesh.Vertices();
+//        for(uint64 i = 0; i < numVerts; ++i)
+//        {
+//            const Float3& position = *reinterpret_cast<const Float3*>(vertices);
+//            float viewSpaceZ = Float3::Transform(position, viewMatrix).z;
+//            float depth = Saturate((viewSpaceZ - nearClip) / clipDist);
+//            minDepth = std::min(minDepth, depth);
+//            maxDepth = std::max(maxDepth, depth);
+//            vertices += stride;
+//        }
+//    }
+//
+//    _shadowDepthBounds = Float2(minDepth, maxDepth);
+//}
 
 // Convert to an EVSM map
 void MeshRenderer::ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx, Float3 cascadeScale)
@@ -431,16 +457,7 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 
     context->PSSetSamplers(0, 3, sampStates);
 
-    // Set constant buffers
-    _meshVSConstants.Data.World = Float4x4::Transpose(world);
-    _meshVSConstants.Data.View = Float4x4::Transpose(camera.ViewMatrix());
-    _meshVSConstants.Data.WorldViewProjection = Float4x4::Transpose(world * camera.ViewProjectionMatrix());
-    _meshVSConstants.Data.PrevWorldViewProjection = _prevWVP;
-    _meshVSConstants.ApplyChanges(context);
-    _meshVSConstants.SetVS(context, 0);
-
-    _prevWVP = _meshVSConstants.Data.WorldViewProjection;
-
+	// set PS constants
     _meshPSConstants.Data.CameraPosWS = camera.Position();
     _meshPSConstants.Data.OffsetScale = OffsetScale;
     _meshPSConstants.Data.PositiveExponent = PositiveExponent;
@@ -464,46 +481,71 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     context->VSSetShader(_meshVS[nmlMapIdx], nullptr, 0);
     context->PSSetShader(_meshPS[nmlMapIdx][centroidIdx], nullptr, 0);
 
-    // Draw all meshes
-    uint32 partCount = 0;
-    for(uint64 meshIdx = 0; meshIdx < _model->Meshes().size(); ++meshIdx)
-    {
-        const Mesh& mesh = _model->Meshes()[meshIdx];
-
-        // Set the vertices and indices
-        ID3D11Buffer* vertexBuffers[1] = { mesh.VertexBuffer() };
-        UINT vertexStrides[1] = { mesh.VertexStride() };
-        UINT offsets[1] = { 0 };
-        context->IASetVertexBuffers(0, 1, vertexBuffers, vertexStrides, offsets);
-        context->IASetIndexBuffer(mesh.IndexBuffer(), mesh.IndexBufferFormat(), 0);
-        context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-        // Set the input layout
-        context->IASetInputLayout(_meshInputLayouts[meshIdx]);
-
-        // Draw all parts
-        for(uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
-        {
-            const MeshPart& part = mesh.MeshParts()[partIdx];
-            const MeshMaterial& material = _model->Materials()[part.MaterialIdx];
-
-            // Set the textures
-            ID3D11ShaderResourceView* psTextures[5] =
-            {
-                material.DiffuseMap,
-                material.NormalMap,
-                _varianceShadowMap.SRView,
-                envMap,
-                _specularLookupTexture
-            };
-
-            context->PSSetShaderResources(0, 5, psTextures);
-            context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
-        }
-    }
+	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->_staticOpaqueObjects);
+	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->_dynamicOpaqueObjects);
 
     ID3D11ShaderResourceView* nullSRVs[5] = { nullptr };
     context->PSSetShaderResources(0, 5, nullSRVs);
+}
+
+void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4x4 &world, const Camera& camera,
+	ID3D11ShaderResourceView* envMap, const SH9Color& envMapSH,
+	Float2 jitterOffset, std::vector<SceneObject> &sceneObjects)
+{
+	for (uint64 objIndex = 0; objIndex < sceneObjects.size(); objIndex++)
+	{
+		Float4x4 worldMat = *sceneObjects[objIndex].base * world;
+		Model *model = sceneObjects[objIndex].model;
+
+		// Draw all meshes
+		uint32 partCount = 0;
+		for (uint64 meshIdx = 0; meshIdx < model->Meshes().size(); ++meshIdx)
+		{
+			const Mesh& mesh = model->Meshes()[meshIdx];
+
+			// Set VS constant buffer
+			_meshVSConstants.Data.World = Float4x4::Transpose(worldMat);
+			_meshVSConstants.Data.View = Float4x4::Transpose(camera.ViewMatrix());
+			_meshVSConstants.Data.WorldViewProjection = Float4x4::Transpose(worldMat * camera.ViewProjectionMatrix());
+			_meshVSConstants.Data.PrevWorldViewProjection = *sceneObjects[objIndex].prevWVP;
+			_meshVSConstants.ApplyChanges(context);
+			_meshVSConstants.SetVS(context, 0);
+
+			*sceneObjects[objIndex].prevWVP = _meshVSConstants.Data.WorldViewProjection;
+
+			// Set the vertices and indices
+			ID3D11Buffer* vertexBuffers[1] = { mesh.VertexBuffer() };
+			UINT vertexStrides[1] = { mesh.VertexStride() };
+			UINT offsets[1] = { 0 };
+			context->IASetVertexBuffers(0, 1, vertexBuffers, vertexStrides, offsets);
+			context->IASetIndexBuffer(mesh.IndexBuffer(), mesh.IndexBufferFormat(), 0);
+			context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+			// Set the input layout
+			// context->IASetInputLayout(_meshInputLayouts[meshIdx]);
+			context->IASetInputLayout(_meshInputLayouts[&mesh]);
+
+			// Draw all parts
+			for (uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
+			{
+				const MeshPart& part = mesh.MeshParts()[partIdx];
+				const MeshMaterial& material = model->Materials()[part.MaterialIdx];
+
+				// Set the textures
+				ID3D11ShaderResourceView* psTextures[5] =
+				{
+					material.DiffuseMap,
+					material.NormalMap,
+					_varianceShadowMap.SRView,
+					envMap,
+					_specularLookupTexture
+				};
+
+				context->PSSetShaderResources(0, 5, psTextures);
+				context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
+			}
+		}
+	}
 }
 
 // Renders all meshes using depth-only rendering
@@ -522,13 +564,6 @@ void MeshRenderer::RenderDepth(ID3D11DeviceContext* context, const Camera& camer
     else
         context->RSSetState(_rasterizerStates.BackFaceCull());
 
-    // Set constant buffers
-    _meshVSConstants.Data.World = Float4x4::Transpose(world);
-    _meshVSConstants.Data.View = Float4x4::Transpose(camera.ViewMatrix());
-    _meshVSConstants.Data.WorldViewProjection = Float4x4::Transpose(world * camera.ViewProjectionMatrix());
-    _meshVSConstants.ApplyChanges(context);
-    _meshVSConstants.SetVS(context, 0);
-
     // Set shaders
     context->VSSetShader(_meshDepthVS, nullptr, 0);
     context->PSSetShader(nullptr, nullptr, 0);
@@ -536,30 +571,50 @@ void MeshRenderer::RenderDepth(ID3D11DeviceContext* context, const Camera& camer
     context->DSSetShader(nullptr, nullptr, 0);
     context->HSSetShader(nullptr, nullptr, 0);
 
+	RenderDepthSceneObjects(context, world, camera, _scene->_staticOpaqueObjects);
+	RenderDepthSceneObjects(context, world, camera, _scene->_dynamicOpaqueObjects);
+}
 
-    uint32 partCount = 0;
-    for(uint32 meshIdx = 0; meshIdx < _model->Meshes().size(); ++meshIdx)
-    {
-        const Mesh& mesh = _model->Meshes()[meshIdx];
+void MeshRenderer::RenderDepthSceneObjects(ID3D11DeviceContext* context, const Float4x4 &world, 
+	const Camera& camera, std::vector<SceneObject> &sceneObjects)
+{
+	for (uint64 objIndex = 0; objIndex < sceneObjects.size(); objIndex++)
+	{
+		Float4x4 worldMat = *sceneObjects[objIndex].base * world;
+		Model *model = sceneObjects[objIndex].model;
 
-        // Set the vertices and indices
-        ID3D11Buffer* vertexBuffers[1] = { mesh.VertexBuffer() };
-        UINT vertexStrides[1] = { mesh.VertexStride() };
-        UINT offsets[1] = { 0 };
-        context->IASetVertexBuffers(0, 1, vertexBuffers, vertexStrides, offsets);
-        context->IASetIndexBuffer(mesh.IndexBuffer(), mesh.IndexBufferFormat(), 0);
-        context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		// Set constant buffers
+		_meshVSConstants.Data.World = Float4x4::Transpose(worldMat);
+		_meshVSConstants.Data.View = Float4x4::Transpose(camera.ViewMatrix());
+		_meshVSConstants.Data.WorldViewProjection = Float4x4::Transpose(worldMat * camera.ViewProjectionMatrix());
+		_meshVSConstants.ApplyChanges(context);
+		_meshVSConstants.SetVS(context, 0);
 
-        // Set the input layout
-        context->IASetInputLayout(_meshDepthInputLayouts[meshIdx]);
+		uint32 partCount = 0;
+		for (uint32 meshIdx = 0; meshIdx < model->Meshes().size(); ++meshIdx)
+		{
+			const Mesh& mesh = model->Meshes()[meshIdx];
 
-        // Draw all parts
-        for(uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
-        {
-            const MeshPart& part = mesh.MeshParts()[partIdx];
-            context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
-        }
-    }
+			// Set the vertices and indices
+			ID3D11Buffer* vertexBuffers[1] = { mesh.VertexBuffer() };
+			UINT vertexStrides[1] = { mesh.VertexStride() };
+			UINT offsets[1] = { 0 };
+			context->IASetVertexBuffers(0, 1, vertexBuffers, vertexStrides, offsets);
+			context->IASetIndexBuffer(mesh.IndexBuffer(), mesh.IndexBufferFormat(), 0);
+			context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+			// Set the input layout
+			// context->IASetInputLayout(_meshDepthInputLayouts[meshIdx]);
+			context->IASetInputLayout(_meshDepthInputLayouts[&mesh]);
+
+			// Draw all parts
+			for (uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
+			{
+				const MeshPart& part = mesh.MeshParts()[partIdx];
+				context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
+			}
+		}
+	}
 }
 
 // Renders meshes using cascaded shadow mapping

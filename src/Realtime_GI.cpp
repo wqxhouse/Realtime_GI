@@ -92,20 +92,26 @@ void Realtime_GI::Initialize()
     _camera.SetPosition(Float3(0.0f, 2.5f, -10.0f));
 
     // Load the scenes
-    for(uint64 i = 0; i < uint64(Scenes::NumValues); ++i)
-    {
-        if(i == uint64(Scenes::Plane))
-            _models[i].GeneratePlaneScene(device, Float2(10.0f, 10.0f), Float3(), Quaternion(),
-                                         L"", L"Bricks_NML.dds");
-        else
-            _models[i].CreateFromMeshData(device, ModelPaths[i].c_str());
-    }
+	_scene.Initialize(device);
+	/*for(uint64 i = 0; i < uint64(Scenes::NumValues); ++i)
+	{
+	if(i == uint64(Scenes::Plane))
+	_models[i].GeneratePlaneScene(device, Float2(10.0f, 10.0f), Float3(), Quaternion(),
+	L"", L"Bricks_NML.dds");
+	else
+	_models[i].CreateFromMeshData(device, ModelPaths[i].c_str());
+	}
+	*/
+	Model *m = _scene.addModel(ModelPaths[0]);
+	SceneObject *sobj = _scene.addStaticOpaqueObject(m, 0.1f, Float3(-1.0f, 2.0f, 0.0f), Quaternion(0.41f, -0.55f, -0.29f, 0.67f));
 
-    _modelOrientations[uint64(Scenes::RoboHand)] = Quaternion(0.41f, -0.55f, -0.29f, 0.67f);
-    AppSettings::ModelOrientation.SetValue(_modelOrientations[AppSettings::CurrentScene]);
+    // _modelOrientations[uint64(Scenes::RoboHand)] = Quaternion(0.41f, -0.55f, -0.29f, 0.67f);
+    // AppSettings::ModelOrientation.SetValue(_modelOrientations[AppSettings::CurrentScene]);
 
     _meshRenderer.Initialize(device, _deviceManager.ImmediateContext());
-    _meshRenderer.SetModel(&_models[AppSettings::CurrentScene]);
+    // _meshRenderer.SetModel(&_models[AppSettings::CurrentScene]);
+    _meshRenderer.SetScene(&_scene);
+
     _skybox.Initialize(device);
 
     _envMap = LoadTexture(device, L"..\\Content\\EnvMaps\\Ennis.dds");
@@ -201,7 +207,9 @@ void Realtime_GI::Update(const Timer& timer)
     // Reset the camera projection
     _camera.SetAspectRatio(_camera.AspectRatio());
     Float2 jitter = 0.0f;
-    if(AppSettings::EnableTemporalAA && AppSettings::EnableJitter() && AppSettings::UseStandardResolve == false)
+    if (AppSettings::EnableTemporalAA 
+	 && AppSettings::EnableJitter() 
+	 && AppSettings::UseStandardResolve == false)
     {
         const float jitterScale = 0.5f;
 
@@ -234,16 +242,14 @@ void Realtime_GI::Update(const Timer& timer)
 
     if(AppSettings::CurrentScene.Changed())
     {
-        _meshRenderer.SetModel(&_models[AppSettings::CurrentScene]);
-        AppSettings::ModelOrientation.SetValue(_modelOrientations[AppSettings::CurrentScene]);
+        //_meshRenderer.SetModel(&_models[AppSettings::CurrentScene]);
+        //AppSettings::ModelOrientation.SetValue(_modelOrientations[AppSettings::CurrentScene]);
     }
 
-    Quaternion orientation = AppSettings::ModelOrientation;
-    orientation = orientation * Quaternion::FromAxisAngle(Float3(0.0f, 1.0f, 0.0f), AppSettings::ModelRotationSpeed * timer.DeltaSecondsF());
-    AppSettings::ModelOrientation.SetValue(orientation);
-
-    _modelTransform = orientation.ToFloat4x4() * Float4x4::ScaleMatrix(ModelScales[AppSettings::CurrentScene]);
-    _modelTransform.SetTranslation(ModelPositions[AppSettings::CurrentScene]);
+	Quaternion orientation = AppSettings::SceneOrientation;
+	orientation = orientation * Quaternion::FromAxisAngle(Float3(0.0f, 1.0f, 0.0f), AppSettings::ModelRotationSpeed * timer.DeltaSecondsF());
+	AppSettings::SceneOrientation.SetValue(orientation);
+	_globalTransform = orientation.ToFloat4x4();
 }
 
 void Realtime_GI::RenderAA()
@@ -315,6 +321,8 @@ void Realtime_GI::Render(const Timer& timer)
 
     AppSettings::UpdateCBuffer(context);
 
+	_scene.sortSceneObjects(_camera.ViewMatrix());
+
     RenderScene();
 
     RenderBackgroundVelocity();
@@ -352,16 +360,18 @@ void Realtime_GI::RenderScene()
 
     ID3D11RenderTargetView* renderTargets[2] = { nullptr, nullptr };
     context->OMSetRenderTargets(1, renderTargets, _depthBuffer.DSView);
-    _meshRenderer.RenderDepth(context, _camera, _modelTransform, false);
+	
+	// TODO: reduce api calls
+    _meshRenderer.RenderDepth(context, _camera, _globalTransform, false);
 
     _meshRenderer.ReduceDepth(context, _depthBuffer, _camera);
-    _meshRenderer.RenderShadowMap(context, _camera, _modelTransform);
+    _meshRenderer.RenderShadowMap(context, _camera, _globalTransform);
 
     renderTargets[0] = _colorTarget.RTView;
     renderTargets[1] = _velocityTarget.RTView;
     context->OMSetRenderTargets(2, renderTargets, _depthBuffer.DSView);
 
-    _meshRenderer.Render(context, _camera, _modelTransform, _envMap, _envMapSH, _jitterOffset);
+    _meshRenderer.Render(context, _camera, _globalTransform, _envMap, _envMapSH, _jitterOffset);
 
     renderTargets[0] = _colorTarget.RTView;
     renderTargets[1] = nullptr;

@@ -132,6 +132,7 @@ using namespace DirectX::PackedVector;
 #include <cstdio>
 #include <cstdarg>
 #include <random>
+#include <unordered_map>
 
 // AntTweakBar
 #include "..\\..\\Externals\\AntTweakBar\\include\\AntTweakBar.h"
