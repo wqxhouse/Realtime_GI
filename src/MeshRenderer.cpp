@@ -497,21 +497,21 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 		Float4x4 worldMat = *sceneObjects[objIndex].base * world;
 		Model *model = sceneObjects[objIndex].model;
 
+		// Set VS constant buffer
+		_meshVSConstants.Data.World = Float4x4::Transpose(worldMat);
+		_meshVSConstants.Data.View = Float4x4::Transpose(camera.ViewMatrix());
+		_meshVSConstants.Data.WorldViewProjection = Float4x4::Transpose(worldMat * camera.ViewProjectionMatrix());
+		_meshVSConstants.Data.PrevWorldViewProjection = *sceneObjects[objIndex].prevWVP;
+		_meshVSConstants.ApplyChanges(context);
+		_meshVSConstants.SetVS(context, 0);
+
+		*sceneObjects[objIndex].prevWVP = _meshVSConstants.Data.WorldViewProjection;
+
 		// Draw all meshes
 		uint32 partCount = 0;
 		for (uint64 meshIdx = 0; meshIdx < model->Meshes().size(); ++meshIdx)
 		{
 			const Mesh& mesh = model->Meshes()[meshIdx];
-
-			// Set VS constant buffer
-			_meshVSConstants.Data.World = Float4x4::Transpose(worldMat);
-			_meshVSConstants.Data.View = Float4x4::Transpose(camera.ViewMatrix());
-			_meshVSConstants.Data.WorldViewProjection = Float4x4::Transpose(worldMat * camera.ViewProjectionMatrix());
-			_meshVSConstants.Data.PrevWorldViewProjection = *sceneObjects[objIndex].prevWVP;
-			_meshVSConstants.ApplyChanges(context);
-			_meshVSConstants.SetVS(context, 0);
-
-			*sceneObjects[objIndex].prevWVP = _meshVSConstants.Data.WorldViewProjection;
 
 			// Set the vertices and indices
 			ID3D11Buffer* vertexBuffers[1] = { mesh.VertexBuffer() };

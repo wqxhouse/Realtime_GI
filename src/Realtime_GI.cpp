@@ -246,7 +246,8 @@ void Realtime_GI::Update(const Timer& timer)
         //AppSettings::ModelOrientation.SetValue(_modelOrientations[AppSettings::CurrentScene]);
     }
 
-	Quaternion orientation = AppSettings::SceneOrientation;
+	// Quaternion orientation = AppSettings::SceneOrientation;
+	Quaternion orientation = Quaternion();
 	orientation = orientation * Quaternion::FromAxisAngle(Float3(0.0f, 1.0f, 0.0f), AppSettings::ModelRotationSpeed * timer.DeltaSecondsF());
 	AppSettings::SceneOrientation.SetValue(orientation);
 	_globalTransform = orientation.ToFloat4x4();
