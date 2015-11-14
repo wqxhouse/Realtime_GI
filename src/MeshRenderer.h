@@ -63,10 +63,10 @@ protected:
     void CreateShadowMaps();
     void ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx, Float3 cascadeScale);
 
-	void RenderDepthSceneObjects(ID3D11DeviceContext* context, const Float4x4 &world, const Camera& camera, std::vector<SceneObject> &sceneObjects);
+	void RenderDepthSceneObjects(ID3D11DeviceContext* context, const Float4x4 &world, const Camera& camera, SceneObject *sceneObjectsArr, int numSceneObjs);
 	void RenderSceneObjects(ID3D11DeviceContext* context, const Float4x4 &world, const Camera& camera,
 		ID3D11ShaderResourceView* envMap, const SH9Color& envMapSH,
-		Float2 jitterOffset, std::vector<SceneObject> &sceneObjects);
+		Float2 jitterOffset, SceneObject *sceneObjectsArr, int numSceneObjs);
 
     void genAndCacheMeshInputLayout(const Model* model);
 

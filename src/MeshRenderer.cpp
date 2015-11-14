@@ -125,9 +125,9 @@ void MeshRenderer::SetScene(Scene *scene)
 	_meshDepthInputLayouts.clear();
 
 	// generate input layout for every model's mesh
-	for (uint64 i = 0; i < _scene->_models.size(); i++)
+	for (uint64 i = 0; i < _scene->getNumModels(); i++)
 	{
-		genAndCacheMeshInputLayout(&_scene->_models[i]);
+		genAndCacheMeshInputLayout(&_scene->getModelsPtr()[i]);
 	}
 }
 
@@ -481,8 +481,8 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     context->VSSetShader(_meshVS[nmlMapIdx], nullptr, 0);
     context->PSSetShader(_meshPS[nmlMapIdx][centroidIdx], nullptr, 0);
 
-	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->_staticOpaqueObjects);
-	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->_dynamicOpaqueObjects);
+	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getStaticOpaqueObjectsPtr(), _scene->getNumStaticOpaqueObjects());
+	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getDynamicOpaqueObjectsPtr(), _scene->getNumDynmamicOpaueObjects());
 
     ID3D11ShaderResourceView* nullSRVs[5] = { nullptr };
     context->PSSetShaderResources(0, 5, nullSRVs);
@@ -490,22 +490,22 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 
 void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4x4 &world, const Camera& camera,
 	ID3D11ShaderResourceView* envMap, const SH9Color& envMapSH,
-	Float2 jitterOffset, std::vector<SceneObject> &sceneObjects)
+	Float2 jitterOffset, SceneObject *sceneObjectsArr, int numSceneObjs)
 {
-	for (uint64 objIndex = 0; objIndex < sceneObjects.size(); objIndex++)
+	for (uint64 objIndex = 0; objIndex < numSceneObjs; objIndex++)
 	{
-		Float4x4 worldMat = *sceneObjects[objIndex].base * world;
-		Model *model = sceneObjects[objIndex].model;
+		Float4x4 worldMat = *sceneObjectsArr[objIndex].base * world;
+		Model *model = sceneObjectsArr[objIndex].model;
 
 		// Set VS constant buffer
 		_meshVSConstants.Data.World = Float4x4::Transpose(worldMat);
 		_meshVSConstants.Data.View = Float4x4::Transpose(camera.ViewMatrix());
 		_meshVSConstants.Data.WorldViewProjection = Float4x4::Transpose(worldMat * camera.ViewProjectionMatrix());
-		_meshVSConstants.Data.PrevWorldViewProjection = *sceneObjects[objIndex].prevWVP;
+		_meshVSConstants.Data.PrevWorldViewProjection = *sceneObjectsArr[objIndex].prevWVP;
 		_meshVSConstants.ApplyChanges(context);
 		_meshVSConstants.SetVS(context, 0);
 
-		*sceneObjects[objIndex].prevWVP = _meshVSConstants.Data.WorldViewProjection;
+		*sceneObjectsArr[objIndex].prevWVP = _meshVSConstants.Data.WorldViewProjection;
 
 		// Draw all meshes
 		uint32 partCount = 0;
@@ -571,17 +571,17 @@ void MeshRenderer::RenderDepth(ID3D11DeviceContext* context, const Camera& camer
     context->DSSetShader(nullptr, nullptr, 0);
     context->HSSetShader(nullptr, nullptr, 0);
 
-	RenderDepthSceneObjects(context, world, camera, _scene->_staticOpaqueObjects);
-	RenderDepthSceneObjects(context, world, camera, _scene->_dynamicOpaqueObjects);
+	RenderDepthSceneObjects(context, world, camera, _scene->getStaticOpaqueObjectsPtr(), _scene->getNumStaticOpaqueObjects());
+	RenderDepthSceneObjects(context, world, camera, _scene->getDynamicOpaqueObjectsPtr(), _scene->getNumDynmamicOpaueObjects());
 }
 
 void MeshRenderer::RenderDepthSceneObjects(ID3D11DeviceContext* context, const Float4x4 &world, 
-	const Camera& camera, std::vector<SceneObject> &sceneObjects)
+	const Camera& camera, SceneObject *sceneObjectsArr, int numSceneObjs)
 {
-	for (uint64 objIndex = 0; objIndex < sceneObjects.size(); objIndex++)
+	for (uint64 objIndex = 0; objIndex < numSceneObjs; objIndex++)
 	{
-		Float4x4 worldMat = *sceneObjects[objIndex].base * world;
-		Model *model = sceneObjects[objIndex].model;
+		Float4x4 worldMat = *sceneObjectsArr[objIndex].base * world;
+		Model *model = sceneObjectsArr[objIndex].model;
 
 		// Set constant buffers
 		_meshVSConstants.Data.World = Float4x4::Transpose(worldMat);

@@ -3,6 +3,20 @@
 
 int Scene::_highest_id = 0;
 
+Scene::Scene()
+{
+	_device = NULL;
+	_numModels = 0;
+	_numStaticObjects = 0;
+	_numDynamicObjects = 0;
+	_numObjectBases = 0;
+	_numPrevWVPs = 0;
+}
+
+Scene::~Scene()
+{
+}
+
 void Scene::Initialize(ID3D11Device *device)
 {
 	_device = device;
@@ -11,37 +25,47 @@ void Scene::Initialize(ID3D11Device *device)
 Model *Scene::addModel(const std::wstring &modelPath)
 {
 	std::wstring ext = GetFileExtension(modelPath.c_str());
-	_models.resize(_models.size() + 1);
 
+	// TODO: error handling
 	if (ext == L"meshdata")
 	{
-		_models.back().CreateFromMeshData(_device, modelPath.c_str());
+		_models[_numModels].CreateFromMeshData(_device, modelPath.c_str());
+		_numModels++;
 	}
 	else if (ext == L"sdkmesh")
 	{
-		_models.back().CreateFromSDKMeshFile(_device, modelPath.c_str());
+		_models[_numModels].CreateFromSDKMeshFile(_device, modelPath.c_str());
+		_numModels++;
 	}
-	else if (ext == L"")
+	else
 	{
-		_models.back().CreateWithAssimp(_device, modelPath.c_str());
+		_models[_numModels].CreateWithAssimp(_device, modelPath.c_str());
+		_numModels++;
 	}
 
-	return &_models.back();
+	return &_models[_numModels - 1];
 }
 
 SceneObject *Scene::addStaticOpaqueObject(Model *model, float scale, const Float3 &pos, const Quaternion &rot)
 {
 	Assert_(model != nullptr);
-	_staticOpaqueObjects.resize(_staticOpaqueObjects.size() + 1);
-	_objectBases.resize(_objectBases.size() + 1);
-	_objectBases.back() = createBase(scale, pos, rot);
-	_prevWVPs.resize(_prevWVPs.size() + 1);
+	Assert_(_numObjectBases < MAX_STATIC_OBJECTS);
+	Assert_(_numModels < MAX_MODELS);
+	Assert_(_numObjectBases < MAX_OBJECT_MATRICES);
+	Assert_(_numPrevWVPs < MAX_OBJECT_MATRICES);
 
-	SceneObject &obj = _staticOpaqueObjects.back();
-	obj.base = &_objectBases.back();
+	_objectBases[_numObjectBases] = createBase(scale, pos, rot);
+	_prevWVPs[_numPrevWVPs] = _objectBases[_numObjectBases];
+
+	SceneObject &obj = _staticOpaqueObjects[_numStaticObjects];
+	obj.base = &_objectBases[_numObjectBases];
 	obj.model = model;
-	obj.prevWVP = &_prevWVPs.back();
+	obj.prevWVP = &_prevWVPs[_numPrevWVPs];
 	obj.id = _highest_id++;
+
+	_numObjectBases++;
+	_numPrevWVPs++;
+	_numStaticObjects++;
 
 	return &obj;
 }
@@ -49,16 +73,23 @@ SceneObject *Scene::addStaticOpaqueObject(Model *model, float scale, const Float
 SceneObject *Scene::addDynamicOpaqueObject(Model *model, float scale, const Float3 &pos, const Quaternion &rot)
 {
 	Assert_(model != nullptr);
-	_dynamicOpaqueObjects.resize(_dynamicOpaqueObjects.size() + 1);
-	_objectBases.resize(_objectBases.size() + 1);
-	_objectBases.back() = createBase(scale, pos, rot);
-	_prevWVPs.resize(_prevWVPs.size() + 1);
-	
-	SceneObject &obj = _dynamicOpaqueObjects.back();
-	obj.base = &_objectBases.back();
+	Assert_(_numObjectBases < MAX_STATIC_OBJECTS);
+	Assert_(_numModels < MAX_MODELS);
+	Assert_(_numObjectBases < MAX_OBJECT_MATRICES);
+	Assert_(_numPrevWVPs < MAX_OBJECT_MATRICES);
+
+	_objectBases[_numObjectBases] = createBase(scale, pos, rot);
+	_prevWVPs[_numPrevWVPs] = _objectBases[_numObjectBases];
+
+	SceneObject &obj = _dynamicOpaqueObjects[_numDynamicObjects];
+	obj.base = &_objectBases[_numObjectBases];
 	obj.model = model;
-	obj.prevWVP = &_prevWVPs.back();
-	obj.id = _highest_id++;;
+	obj.prevWVP = &_prevWVPs[_numPrevWVPs];
+	obj.id = _highest_id++;
+
+	_numObjectBases++;
+	_numPrevWVPs++;
+	_numDynamicObjects++;
 
 	return &obj;
 }
@@ -77,8 +108,8 @@ void Scene::sortSceneObjects(const Float4x4 &viewMatrix)
 {
 	// opaque
 	OpaqueObjectDepthCompare opqCmp(viewMatrix);
-	std::sort(_staticOpaqueObjects.begin(), _staticOpaqueObjects.end(), opqCmp);
-	std::sort(_dynamicOpaqueObjects.begin(), _dynamicOpaqueObjects.end(), opqCmp);
+	std::sort(_staticOpaqueObjects, _staticOpaqueObjects + _numStaticObjects, opqCmp);
+	std::sort(_dynamicOpaqueObjects, _dynamicOpaqueObjects + _numDynamicObjects, opqCmp);
 	
 	// TODO: transparent
 }
