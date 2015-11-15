@@ -7,7 +7,10 @@
 
 #include <PCH.h>
 #include <Graphics\\Camera.h>
+#include <Graphics\\Skybox.h>
 #include <Graphics\\GraphicsTypes.h>
+
+#include "MeshRenderer.h"
 
 using namespace SampleFramework11;
 
@@ -17,10 +20,9 @@ private:
 	const uint32 CubemapWidth = 128;
 	const uint32 CubemapHeight = 128;
 
+	//MeshRenderer *meshRenderer = nullptr;
+
 	PerspectiveCamera cubemapCamera;//Camera used to catch scenes in 6 directions
-	//D3D11_TEXTURE2D_DESC cubemapTex;
-	//D3D11_SUBRESOURCE_DATA cubemapData;
-	//std::vector<XMFLOAT4> cubemapColor[6];//RGBA color buffer of cubemap faces
 	RenderTarget2D cubemapTarget;
 	DepthStencilBuffer cubemapDepthTarget;
 	Float3 position;
@@ -29,14 +31,17 @@ private:
 		Float3 LookAt;
 		Float3 Up;
 	}CubemapCameraStruct[6];
-	static const CameraStruct DefaultCubemapCameraStruct[6];
-	static const Float3 DefaultPosition;
+	static CONST CameraStruct DefaultCubemapCameraStruct[6];
+	static CONST Float3 DefaultPosition;
 public:
-	CreateCubemap(const float NearClip, const float FarClip);
+	CreateCubemap(CONST FLOAT NearClip, CONST FLOAT FarClip);
 	VOID Initialize(ID3D11Device *device, uint32 numMipLevels, uint32 multiSamples, uint32 msQuality);
 	VOID SetPosition(Float3 position);
 	CONST PerspectiveCamera &GetCubemapCamera();
-	VOID Create();
+	VOID GetTargetViews(RenderTarget2D &resCubemapTarget, DepthStencilBuffer &resCubemapDepthTarget);
+	VOID Create(ID3D11DeviceContext *context, MeshRenderer *meshRender, RenderTarget2D velocityTarget,
+		Float4x4 modelTransform, ID3D11ShaderResourceView* environmentMap,
+		SH9Color environmentMapSH, Float2 jitterOffset, Skybox skybox);
 	~CreateCubemap();
 };
 
