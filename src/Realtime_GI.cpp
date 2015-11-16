@@ -102,8 +102,10 @@ void Realtime_GI::Initialize()
     for(uint64 i = 0; i < uint64(Scenes::NumValues); ++i)
     {
         if(i == uint64(Scenes::Plane))
-            _models[i].GeneratePlaneScene(device, Float2(10.0f, 10.0f), Float3(), Quaternion(),
-                                         L"", L"Bricks_NML.dds");
+            //_models[i].GeneratePlaneScene(device, Float2(10.0f, 10.0f), Float3(), Quaternion(),
+            //                             L"", L"Bricks_NML.dds");//!
+			_models[i].GenerateBoxScene(device, Float3(10.0f, 10.0f, 10.0f), Float3(), Quaternion(),
+			L"", L"");//!
         else
             _models[i].CreateFromMeshData(device, ModelPaths[i].c_str());
     }
@@ -360,13 +362,17 @@ void Realtime_GI::RenderScene()
     PIXEvent event(L"Render Scene");
 
     ID3D11DeviceContextPtr context = _deviceManager.ImmediateContext();
+	RenderTarget2D cubemapRenderTarget;
 
     SetViewport(context, _colorTarget.Width, _colorTarget.Height);
 
-	//if (_frameCount == 0){
+	if (_frameCount == 0){
 		createCubeMap.Create(_deviceManager, &_meshRenderer, _velocityTarget, 
 			_modelTransform, _envMap, _envMapSH, _jitterOffset, &_skybox);
-	//}
+	}
+	if (_frameCount > 0){
+		createCubeMap.GetTargetViews(cubemapRenderTarget);
+	}
 
     float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
     context->ClearRenderTargetView(_colorTarget.RTView, clearColor);
@@ -387,7 +393,8 @@ void Realtime_GI::RenderScene()
     renderTargets[1] = _velocityTarget.RTView;
     context->OMSetRenderTargets(2, renderTargets, _depthBuffer.DSView);
 
-    _meshRenderer.Render(context, _camera, _modelTransform, _envMap, _envMapSH, _jitterOffset);
+	_meshRenderer.Render(context, _camera, _modelTransform, cubemapRenderTarget.SRView, _envMapSH, _jitterOffset);
+    //_meshRenderer.Render(context, _camera, _modelTransform, _envMap, _envMapSH, _jitterOffset);
 	//_meshRenderer.Render(context, m_Camera, _modelTransform, _envMap, _envMapSH, _jitterOffset);
 
     renderTargets[0] = _colorTarget.RTView;

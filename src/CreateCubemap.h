@@ -40,7 +40,7 @@ public:
 	VOID Initialize(ID3D11Device *device, uint32 numMipLevels, uint32 multiSamples, uint32 msQuality);
 	VOID SetPosition(Float3 position);
 	CONST PerspectiveCamera &GetCubemapCamera();
-	VOID GetTargetViews(RenderTarget2D &resCubemapTarget, DepthStencilBuffer &resCubemapDepthTarget);
+	VOID GetTargetViews(RenderTarget2D &resCubemapTarget);
 	VOID Create(CONST DeviceManager &deviceManager, MeshRenderer *meshRenderer,
 		CONST RenderTarget2D &velocityTarget, CONST Float4x4 &modelTransform, ID3D11ShaderResourceView *environmentMap,
 		CONST SH9Color &environmentMapSH, CONST Float2 &jitterOffset, Skybox *skybox);

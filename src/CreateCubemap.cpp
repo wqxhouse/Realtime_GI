@@ -66,19 +66,18 @@ VOID CreateCubemap::Create(CONST DeviceManager &deviceManager, MeshRenderer *mes
 		deviceManager.ImmediateContext()->ClearRenderTargetView(RTView, clearColor);
 		deviceManager.ImmediateContext()->ClearDepthStencilView(DSView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-		ID3D11RenderTargetView *renderTarget[1] = { RTView };
+		ID3D11RenderTargetView *renderTarget[2] = { RTView };
 		deviceManager.ImmediateContext()->OMSetRenderTargets(1, renderTarget, DSView);
 		meshRenderer->RenderDepth(deviceManager.ImmediateContext(), cubemapCamera, modelTransform, false);
 
-		renderTarget[0] = RTView;
 		deviceManager.ImmediateContext()->OMSetRenderTargets(1, renderTarget, DSView);
 		meshRenderer->Render(deviceManager.ImmediateContext(), cubemapCamera, modelTransform, 
 			environmentMap, environmentMapSH, jitterOffset, TRUE);
 
-		if (AppSettings::RenderBackground){
+		//if (AppSettings::RenderBackground){
 			skybox->RenderEnvironmentMap(deviceManager.ImmediateContext(), environmentMap, cubemapCamera.ViewMatrix(),
 				cubemapCamera.ProjectionMatrix(), Float3(std::exp2(AppSettings::ExposureScale)));
-		}
+		//}
 		renderTarget[0] = nullptr;
 		deviceManager.ImmediateContext()->OMSetRenderTargets(1, renderTarget, nullptr);
 	}
@@ -97,9 +96,9 @@ CONST PerspectiveCamera &CreateCubemap::GetCubemapCamera(){
 	return cubemapCamera;
 }
 
-VOID CreateCubemap::GetTargetViews(RenderTarget2D &resCubemapTarget, DepthStencilBuffer &resCubemapDepthTarget){
+VOID CreateCubemap::GetTargetViews(RenderTarget2D &resCubemapTarget){
 	resCubemapTarget = cubemapTarget;
-	resCubemapDepthTarget = cubemapDepthTarget;
+	//resCubemapDepthTarget = cubemapDepthTarget;
 }
 
 
