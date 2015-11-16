@@ -172,6 +172,13 @@ public class Settings
         [HelpText("Specular intensity parameter for the material")]
         float SpecularIntensity = 0.05f;
 
+        [DisplayName("Emissive Intensity")]
+        [MinValue(0.0f)]
+        [MaxValue(1.0f)]
+        [StepSize(0.001f)]
+        [HelpText("Emissive parameter for the material")]
+        float EmissiveIntensity = 0.00f;
+
         Orientation SceneOrientation = new Orientation(0.41f, -0.55f, -0.29f, 0.67f);
 
         [MinValue(0.0f)]

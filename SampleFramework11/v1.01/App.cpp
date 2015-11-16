@@ -109,6 +109,7 @@ int32 App::Run()
 
                 UpdateShaders(_deviceManager.Device());
 
+				// TODO: only update this giant cbuffer if gui value has changed
                 AppSettings::UpdateCBuffer(_deviceManager.ImmediateContext());
 
                 Render(_timer);

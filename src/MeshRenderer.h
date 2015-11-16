@@ -60,6 +60,14 @@ public:
 protected:
 
     void LoadShaders();
+
+	void GenVSShaderPermutations(ID3D11Device *device, const wchar *path, const char *entryName, const char **shaderDescs, int numDescs, std::unordered_map<uint32, VertexShaderPtr> &out);
+	void GenPSShaderPermutations(ID3D11Device *device, const wchar *path, const char *entryName, const char **shaderDescs, int numDescs, std::unordered_map<uint32, PixelShaderPtr> &out);
+	void GenVSRecursive(ID3D11Device *device, int depth, bool32 *descStates, CompileOptions *opts, const wchar *path, const char *entryName, const char **shaderDescs, int numDescs, std::unordered_map<uint32, VertexShaderPtr> &out);
+	void GenPSRecursive(ID3D11Device *device, int depth, bool32 *descStates, CompileOptions *opts, const wchar *path, const char *entryName, const char **shaderDescs, int numDescs, std::unordered_map<uint32, PixelShaderPtr> &out);
+	uint32 boolArrToUint32(bool32 *arr, int num);
+	void uint32ToBoolArr(uint32 bits, bool32 *arr);
+
     void CreateShadowMaps();
     void ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx, Float3 cascadeScale);
 
@@ -68,7 +76,8 @@ protected:
 		ID3D11ShaderResourceView* envMap, const SH9Color& envMapSH,
 		Float2 jitterOffset, SceneObject *sceneObjectsArr, int numSceneObjs);
 
-    void genAndCacheMeshInputLayout(const Model* model);
+    void GenAndCacheMeshInputLayout(const Model* model);
+	void GenMeshShaderMap(const Model *model);
 
     ID3D11DevicePtr _device;
 
@@ -89,8 +98,21 @@ protected:
 
     // std::vector<ID3D11InputLayoutPtr> _meshInputLayouts;
 	std::unordered_map<const Mesh *, ID3D11InputLayoutPtr> _meshInputLayouts;
-    VertexShaderPtr _meshVS[2];
-    PixelShaderPtr _meshPS[2][2];
+
+	std::unordered_map<const Mesh *, VertexShaderPtr> _meshVertexShadersMap;
+	std::unordered_map<const Mesh *, PixelShaderPtr>  _meshPixelShadersMap;
+
+	//std::unordered_map<const char *, std::vector<VertexShaderPtr> > _meshVertexShaders;
+	//std::unordered_map<const char *, std::vector<PixelShaderPtr> >  _meshPixelShaders;
+
+	std::unordered_map<uint32, VertexShaderPtr> _meshVertexShaders;
+	std::unordered_map<uint32, PixelShaderPtr> _meshPixelShaders;
+
+	uint32 _curShaderNum;
+	uint32 _totalShaderNum;
+
+    // VertexShaderPtr _meshVS[2];
+    // PixelShaderPtr _meshPS[2][2];
 
     // std::vector<ID3D11InputLayoutPtr> _meshDepthInputLayouts;
 	std::unordered_map<const Mesh *, ID3D11InputLayoutPtr> _meshDepthInputLayouts;

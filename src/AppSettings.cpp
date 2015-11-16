@@ -73,6 +73,7 @@ namespace AppSettings
     FloatSetting DiffuseIntensity;
     FloatSetting Roughness;
     FloatSetting SpecularIntensity;
+    FloatSetting EmissiveIntensity;
     OrientationSetting SceneOrientation;
     FloatSetting ModelRotationSpeed;
     BoolSetting DoubleSyncInterval;
@@ -184,6 +185,9 @@ namespace AppSettings
         SpecularIntensity.Initialize(tweakBar, "SpecularIntensity", "Scene Controls", "Specular Intensity", "Specular intensity parameter for the material", 0.0500f, 0.0000f, 1.0000f, 0.0010f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&SpecularIntensity);
 
+        EmissiveIntensity.Initialize(tweakBar, "EmissiveIntensity", "Scene Controls", "Emissive Intensity", "Emissive parameter for the material", 0.0000f, 0.0000f, 1.0000f, 0.0010f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&EmissiveIntensity);
+
         SceneOrientation.Initialize(tweakBar, "SceneOrientation", "Scene Controls", "Scene Orientation", "", Quaternion(0.4100f, -0.5500f, -0.2900f, 0.6700f));
         Settings.AddSetting(&SceneOrientation);
 
@@ -253,6 +257,7 @@ namespace AppSettings
         CBuffer.Data.DiffuseIntensity = DiffuseIntensity;
         CBuffer.Data.Roughness = Roughness;
         CBuffer.Data.SpecularIntensity = SpecularIntensity;
+        CBuffer.Data.EmissiveIntensity = EmissiveIntensity;
         CBuffer.Data.SceneOrientation = SceneOrientation;
         CBuffer.Data.ModelRotationSpeed = ModelRotationSpeed;
         CBuffer.Data.DoubleSyncInterval = DoubleSyncInterval;

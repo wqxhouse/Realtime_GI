@@ -48,58 +48,190 @@ static const uint32 ShadowAnisotropy = 16;
 static const bool EnableShadowMips = true;
 #endif
 
+// Renders a text string indicating the current progress for compiling shaders
+static bool32 RenderShaderProgress(uint32 currShader, uint32 numShaders)
+{
+	float percent = Round((currShader / static_cast<float>(numShaders)) * 100.0f);
+	std::wstring progressText = L"Compiling shaders (" + ToString(percent) + L"%)";
+	GlobalApp->RenderCenteredText(progressText);
+	return GlobalApp->Window().IsAlive();
+}
+
+uint32 MeshRenderer::boolArrToUint32(bool32 *arr, int num)
+{
+	uint32 bits = 0;
+	for (int i = 0; i < num; i++)
+	{
+		bits |= (arr[i] & 0x1) << i;
+	}
+	return bits;
+}
+
+void MeshRenderer::uint32ToBoolArr(uint32 bits, bool32 *arr)
+{
+	for (int i = 0; i < 32; i++)
+	{
+		arr[i] = (bits & (1 << i)) >> i;
+	}
+}
+
+void MeshRenderer::GenVSShaderPermutations(ID3D11Device *device, const wchar *path, const char *entryName, 
+	const char **shaderDescs, int numDescs, std::unordered_map<uint32, VertexShaderPtr> &out)
+{
+	CompileOptions opts;
+	/*for (uint64 i = 0; i < numDescs; i++)
+	{
+	const char *macro = shaderDescs[i];
+
+	std::vector<VertexShaderPtr> pair;
+	pair.resize(2);
+	for (int k = 0; k < 2; k++)
+	{
+	opts.Reset();
+	opts.Add(macro, k);
+
+	pair[k] = CompileVSFromFile(device, paths, entryName, "vs_5_0", opts);
+	}
+
+	out.insert(std::make_pair(macro, pair));
+	}*/
+
+	bool32 *states = (bool32 *)malloc(numDescs * sizeof(bool32));
+	GenVSRecursive(device, 0, states, &opts, path, entryName, shaderDescs, numDescs, out);
+	free(states);
+}
+
+void MeshRenderer::GenVSRecursive(ID3D11Device *device, int depth, bool32 *descStates, CompileOptions *opts, 
+	const wchar *path, const char *entryName, const char **shaderDescs, int numDescs, std::unordered_map<uint32, VertexShaderPtr> &out)
+{
+	if (depth == numDescs)
+	{
+		if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+			return;
+
+		opts->Reset();
+		for (int i = 0; i < numDescs; i++)
+		{
+			opts->Add(shaderDescs[i], descStates[i]);
+		}
+
+		uint32 bits = boolArrToUint32(descStates, numDescs);
+		VertexShaderPtr ptr = CompileVSFromFile(device, path, entryName, "vs_5_0", *opts);
+		out.insert(std::make_pair(bits, ptr));
+	}
+	else
+	{
+		for (int i = 0; i < 2; i++)
+		{
+			descStates[numDescs - 1 - depth] = i;
+			GenVSRecursive(device, depth + 1, descStates, opts, path, entryName, shaderDescs, numDescs, out);
+		}
+	}
+}
+
+void MeshRenderer::GenPSShaderPermutations(ID3D11Device *device, const wchar *path, const char *entryName, 
+	const char **shaderDescs, int numDescs, std::unordered_map<uint32, PixelShaderPtr> &out)
+{
+	CompileOptions opts;
+	bool32 *states = (bool32 *)malloc(numDescs * sizeof(bool32));
+	GenPSRecursive(device, 0, states, &opts, path, entryName, shaderDescs, numDescs, out);
+	free(states);
+}
+
+void MeshRenderer::GenPSRecursive(ID3D11Device *device, int depth, bool32 *descStates, CompileOptions *opts,
+	const wchar *path, const char *entryName, const char **shaderDescs, int numDescs, std::unordered_map<uint32, PixelShaderPtr> &out)
+{
+	if (depth == numDescs)
+	{
+		if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+			return;
+
+		opts->Reset();
+		for (int i = 0; i < numDescs; i++)
+		{
+			opts->Add(shaderDescs[i], descStates[i]);
+			printf("%s ", shaderDescs[i]);
+			printf("%d ", descStates[i]);
+		}
+
+		printf("\n");
+
+		uint32 bits = boolArrToUint32(descStates, numDescs);
+		printf("Bits: %d\n", bits);
+		PixelShaderPtr ptr = CompilePSFromFile(device, path, entryName, "ps_5_0", *opts);
+		out.insert(std::make_pair(bits, ptr));
+	}
+	else
+	{
+		for (int i = 0; i < 2; i++)
+		{
+			descStates[numDescs - 1 - depth] = i;
+			GenPSRecursive(device, depth + 1, descStates, opts, path, entryName, shaderDescs, numDescs, out);
+		}
+	}
+}
+
+
 void MeshRenderer::LoadShaders()
 {
-    // Load the mesh shaders
-    _meshDepthVS = CompileVSFromFile(_device, L"DepthOnly.hlsl", "VS", "vs_5_0");
+	_totalShaderNum = (int)pow(2, 5) + (int)pow(2, 6) + 8;
 
     CompileOptions opts;
-    opts.Add("UseNormalMapping_", 0);
 
-    _meshVS[0] = CompileVSFromFile(_device, L"Mesh.hlsl", "VS", "vs_5_0", opts);
+	// Mesh.hlsl
+	const char *vsDescs[] = { "UseNormalMapping_", "UseAlbedoMap_", "UseMetallicMap_", "UseRoughnessMap_", "UseEmissiveMap_" };
+	const char *psDescs[] = { "UseNormalMapping_", "UseAlbedoMap_", "UseMetallicMap_", "UseRoughnessMap_", "UseEmissiveMap_", "CentroidSampling_" };
+	GenVSShaderPermutations(_device, L"Mesh.hlsl", "VS", vsDescs, _countof(vsDescs), _meshVertexShaders);
+	GenPSShaderPermutations(_device, L"Mesh.hlsl", "PS", psDescs, _countof(psDescs), _meshPixelShaders);
 
-    opts.Reset();
-    opts.Add("UseNormalMapping_", 1);
-    _meshVS[1] = CompileVSFromFile(_device, L"Mesh.hlsl", "VS", "vs_5_0", opts);
+	// DepthOnly.hlsl
+	_meshDepthVS = CompileVSFromFile(_device, L"DepthOnly.hlsl", "VS", "vs_5_0");
+	if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+		return;
 
-    for(uint32 useNormalMapping = 0; useNormalMapping < 2; ++useNormalMapping)
-    {
-        for(uint32 centroidSampling = 0; centroidSampling < 2; ++centroidSampling)
-        {
-            opts.Reset();
-            opts.Add("UseNormalMapping_", useNormalMapping);
-            opts.Add("CentroidSampling_", centroidSampling);
-            _meshPS[useNormalMapping][centroidSampling] = CompilePSFromFile(_device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
-        }
-    }
-
+	// EVSMConvert.hlsl
     _fullScreenVS = CompileVSFromFile(_device, L"EVSMConvert.hlsl", "FullScreenVS");
+	if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+		return;
 
     opts.Reset();
     opts.Add("MSAASamples_", ShadowMSAASamples);
     _evsmConvertPS = CompilePSFromFile(_device, L"EVSMConvert.hlsl", "ConvertToEVSM", "ps_5_0", opts);
+	if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+		return;
 
     opts.Reset();
     opts.Add("Horizontal_", 1);
     opts.Add("Vertical_", 0);
     opts.Add("SampleRadius_", SampleRadius);
     _evsmBlurH = CompilePSFromFile(_device, L"EVSMConvert.hlsl", "BlurEVSM", "ps_5_0", opts);
+	if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+		return;
 
     opts.Reset();
     opts.Add("Horizontal_", 0);
     opts.Add("Vertical_", 1);
     opts.Add("SampleRadius_", SampleRadius);
     _evsmBlurV = CompilePSFromFile(_device, L"EVSMConvert.hlsl", "BlurEVSM", "ps_5_0", opts);
+	if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+		return;
 
+	// DepthReduction.hlsl
     opts.Reset();
     opts.Add("MSAA_", 0);
     _depthReductionInitialCS[0] = CompileCSFromFile(_device, L"DepthReduction.hlsl", "DepthReductionInitialCS", "cs_5_0", opts);
+	if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+		return;
 
     opts.Reset();
     opts.Add("MSAA_", 1);
     _depthReductionInitialCS[1] = CompileCSFromFile(_device, L"DepthReduction.hlsl", "DepthReductionInitialCS", "cs_5_0", opts);
+	if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+		return;
 
     _depthReductionCS = CompileCSFromFile(_device, L"DepthReduction.hlsl", "DepthReductionCS");
+	if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+		return;
 }
 
 void MeshRenderer::CreateShadowMaps()
@@ -124,26 +256,61 @@ void MeshRenderer::SetScene(Scene *scene)
 	_meshInputLayouts.clear();
 	_meshDepthInputLayouts.clear();
 
+	_meshVertexShadersMap.clear();
+	_meshPixelShadersMap.clear();
+
 	// generate input layout for every model's mesh
 	for (uint64 i = 0; i < _scene->getNumModels(); i++)
 	{
-		genAndCacheMeshInputLayout(&_scene->getModelsPtr()[i]);
+		Model *m = &_scene->getModelsPtr()[i];
+		GenMeshShaderMap(m);
+		GenAndCacheMeshInputLayout(m);
 	}
 }
 
-void MeshRenderer::genAndCacheMeshInputLayout(const Model* model)
+void MeshRenderer::GenMeshShaderMap(const Model *model)
 {
-    // this->_model = model;
+	// Map mesh to shaders
+	for (uint64 i = 0; i < model->Meshes().size(); ++i)
+	{
+		const Mesh &mesh = model->Meshes()[i];
+		const bool32 *materialFlags = mesh.MaterialFlags();
 
-	/* _meshInputLayouts.clear();
-	 _meshDepthInputLayouts.clear();*/
+		// TODO: use AppSettings to automate the process - data driven
+		// decouple string dependency
+		bool32 arr[6]; // five maps
+		materialFlags[(uint64)MaterialFlag::HasNormalMap] ? arr[0] = true : arr[0] = false;
+		materialFlags[(uint64)MaterialFlag::HasAlbedoMap] ? arr[1] = true : arr[1] = false;
+		materialFlags[(uint64)MaterialFlag::HasRoughnessMap] ? arr[2] = true : arr[2] = false;
+		materialFlags[(uint64)MaterialFlag::HasMetallicMap] ? arr[3] = true : arr[3] = false;
+		materialFlags[(uint64)MaterialFlag::HasEmissiveMap] ? arr[4] = true : arr[4] = false;
 
-    VertexShaderPtr vs = AppSettings::UseNormalMapping() ? _meshVS[1] : _meshVS[0];
+		// TODO: the following case somehow defeats the purpose of the design
+		AppSettings::CentroidSampling ? arr[5] = true : arr[5] = false;
+
+		uint32 vsbits = boolArrToUint32(arr, 5);
+		uint32 psbits = boolArrToUint32(arr, 6);
+
+		VertexShaderPtr vs = _meshVertexShaders[vsbits];
+		PixelShaderPtr ps = _meshPixelShaders[psbits];
+
+		_meshVertexShadersMap.insert(std::make_pair(&mesh, vs));
+		_meshPixelShadersMap.insert(std::make_pair(&mesh, ps));
+	}
+}
+
+void MeshRenderer::GenAndCacheMeshInputLayout(const Model* model)
+{
+    // VertexShaderPtr vs = AppSettings::UseNormalMapping() ? _meshVS[1] : _meshVS[0];
+
+	// VertexShaderPtr = _meshVertexShaders[model];
 
 	// TODO: optimize this; group meshes with the same input layout to reduce api calls
     for(uint64 i = 0; i < model->Meshes().size(); ++i)
     {
         const Mesh& mesh = model->Meshes()[i];
+		VertexShaderPtr vs = _meshVertexShadersMap[&mesh];
+
 		ID3D11InputLayoutPtr inputLayout;
 
 		if (_meshInputLayouts.find(&mesh) == _meshInputLayouts.end())
@@ -153,7 +320,6 @@ void MeshRenderer::genAndCacheMeshInputLayout(const Model* model)
 			_meshInputLayouts.insert(std::make_pair(&mesh, inputLayout));
 		}
         // _meshInputLayouts.push_back(inputLayout);
-
 
 		if (_meshDepthInputLayouts.find(&mesh) == _meshDepthInputLayouts.end())
 		{
@@ -179,6 +345,9 @@ void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context
     _meshPSConstants.Initialize(device);
     _evsmConstants.Initialize(device);
     _reductionConstants.Initialize(device);
+
+	_curShaderNum = 0;
+	_totalShaderNum = 0;
 
     LoadShaders();
 
@@ -478,8 +647,8 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     context->DSSetShader(nullptr, nullptr, 0);
     context->HSSetShader(nullptr, nullptr, 0);
     context->GSSetShader(nullptr, nullptr, 0);
-    context->VSSetShader(_meshVS[nmlMapIdx], nullptr, 0);
-    context->PSSetShader(_meshPS[nmlMapIdx][centroidIdx], nullptr, 0);
+    //context->VSSetShader(_meshVS[nmlMapIdx], nullptr, 0);
+    //context->PSSetShader(_meshPS[nmlMapIdx][centroidIdx], nullptr, 0);
 
 	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getStaticOpaqueObjectsPtr(), _scene->getNumStaticOpaqueObjects());
 	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getDynamicOpaqueObjectsPtr(), _scene->getNumDynmamicOpaueObjects());
@@ -513,6 +682,12 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 		{
 			const Mesh& mesh = model->Meshes()[meshIdx];
 
+			// Set per mesh shaders
+			// TODO: sort by view depth
+			// TODO: batch draw calls for static object
+			context->VSSetShader(_meshVertexShadersMap[&mesh], nullptr, 0);
+			context->PSSetShader(_meshPixelShadersMap[&mesh],  nullptr, 0);
+			
 			// Set the vertices and indices
 			ID3D11Buffer* vertexBuffers[1] = { mesh.VertexBuffer() };
 			UINT vertexStrides[1] = { mesh.VertexStride() };

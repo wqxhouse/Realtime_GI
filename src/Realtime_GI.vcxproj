@@ -240,6 +240,17 @@
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\Content\Models\CornellBox\blue.dds" />
+    <Image Include="..\Content\Models\CornellBox\green.dds" />
+    <Image Include="..\Content\Models\CornellBox\red.dds" />
+    <Image Include="..\Content\Models\CornellBox\white.dds" />
+    <Image Include="..\Content\Textures\Bricks_NML.dds" />
+    <Image Include="..\Content\Textures\Default.dds" />
+    <Image Include="..\Content\Textures\DefaultNormalMap.dds" />
+    <Image Include="..\Content\Textures\DefaultWhite.dds" />
+    <Image Include="..\Content\Textures\SpecularLookup.dds" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
