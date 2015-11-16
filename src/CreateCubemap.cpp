@@ -16,8 +16,8 @@ const CreateCubemap::CameraStruct CreateCubemap::DefaultCubemapCameraStruct[6] =
 		//{ DefaultPosition, Float3(0.0f, 0.0f, 1.0f), Float3(-1.0f, 0.0f, 0.0f) }, //Up
 		//{ DefaultPosition, Float3(0.0f, 0.0f, -1.0f), Float3(1.0f, 0.0f, 0.0f) }  //Down
 		{ DefaultPosition, Float3(0.0f, 0.0f, 1.0f), Float3(0.0f, 1.0f, 0.0f) }, //Center
-		{ DefaultPosition, Float3(1.0f, 0.0f, 0.0f), Float3(0.0f, 1.0f, 0.0f) },//Left
 		{ DefaultPosition, Float3(0.0f, 0.0f, -1.0f), Float3(0.0f, 1.0f, 0.0f) },//Back
+		{ DefaultPosition, Float3(1.0f, 0.0f, 0.0f), Float3(0.0f, 1.0f, 0.0f) },//Left
 		{ DefaultPosition, Float3(-1.0f, 0.0f, 0.0f), Float3(0.0f, 1.0f, 0.0f) },//Right
 		{ DefaultPosition, Float3(0.0f, 1.0f, 0.0f), Float3(0.0f, 0.0f, 1.0f) },//Up
 		{ DefaultPosition, Float3(0.0f, -1.0f, 0.0f), Float3(0.0f, 0.0f, 1.0f) }//Down
@@ -48,7 +48,7 @@ VOID CreateCubemap::SetPosition(Float3 newPosition){
 }
 
 
-VOID CreateCubemap::Create(CONST DeviceManager &deviceManager/*ID3D11DeviceContext *context*/, MeshRenderer *meshRenderer,
+VOID CreateCubemap::Create(CONST DeviceManager &deviceManager, MeshRenderer *meshRenderer,
 	CONST RenderTarget2D &velocityTarget, CONST Float4x4 &modelTransform, ID3D11ShaderResourceView *environmentMap,
 	CONST SH9Color &environmentMapSH, CONST Float2 &jitterOffset, Skybox *skybox){
 
@@ -66,14 +66,14 @@ VOID CreateCubemap::Create(CONST DeviceManager &deviceManager/*ID3D11DeviceConte
 		deviceManager.ImmediateContext()->ClearRenderTargetView(RTView, clearColor);
 		deviceManager.ImmediateContext()->ClearDepthStencilView(DSView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-		ID3D11RenderTargetView *renderTarget[2] = { RTView, nullptr };
+		ID3D11RenderTargetView *renderTarget[1] = { RTView };
 		deviceManager.ImmediateContext()->OMSetRenderTargets(1, renderTarget, DSView);
 		meshRenderer->RenderDepth(deviceManager.ImmediateContext(), cubemapCamera, modelTransform, false);
 
 		renderTarget[0] = RTView;
-		renderTarget[1] = velocityTarget.RTView;
-		//context->OMSetRenderTargets(2, renderTarget, DSView);
-		//meshRenderer->Render(context, cubemapCamera, modelTransform, environmentMap, environmentMapSH, jitterOffset);
+		deviceManager.ImmediateContext()->OMSetRenderTargets(1, renderTarget, DSView);
+		meshRenderer->Render(deviceManager.ImmediateContext(), cubemapCamera, modelTransform, 
+			environmentMap, environmentMapSH, jitterOffset, TRUE);
 
 		if (AppSettings::RenderBackground){
 			skybox->RenderEnvironmentMap(deviceManager.ImmediateContext(), environmentMap, cubemapCamera.ViewMatrix(),

@@ -102,7 +102,7 @@ float4 PSCommon(in VSOutput input, in float3 baseColor) : SV_Target
 float4 SkyboxPS(in VSOutput input) : SV_Target
 {
     // Sample the environment map
-    float3 envMapClr = EnvironmentMap.Sample(LinearSampler, normalize(input.TexCoord)).rgb;
+    float3 envMapClr = EnvironmentMap.Sample(LinearSampler, normalize(input.TexCoord)).rgb * 2;
     return PSCommon(input, envMapClr);
 }
 
