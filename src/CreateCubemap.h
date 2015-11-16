@@ -5,7 +5,9 @@
 
 #pragma once
 
+#include <App.h>
 #include <PCH.h>
+#include <Utility.h>
 #include <Graphics\\Camera.h>
 #include <Graphics\\Skybox.h>
 #include <Graphics\\GraphicsTypes.h>
@@ -39,9 +41,9 @@ public:
 	VOID SetPosition(Float3 position);
 	CONST PerspectiveCamera &GetCubemapCamera();
 	VOID GetTargetViews(RenderTarget2D &resCubemapTarget, DepthStencilBuffer &resCubemapDepthTarget);
-	VOID Create(ID3D11DeviceContext *context, MeshRenderer *meshRender, RenderTarget2D velocityTarget,
-		Float4x4 modelTransform, ID3D11ShaderResourceView* environmentMap,
-		SH9Color environmentMapSH, Float2 jitterOffset, Skybox skybox);
+	VOID Create(CONST DeviceManager &deviceManager, MeshRenderer *meshRenderer,
+		CONST RenderTarget2D &velocityTarget, CONST Float4x4 &modelTransform, ID3D11ShaderResourceView *environmentMap,
+		CONST SH9Color &environmentMapSH, CONST Float2 &jitterOffset, Skybox *skybox);
 	~CreateCubemap();
 };
 

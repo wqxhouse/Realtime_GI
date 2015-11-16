@@ -1,3 +1,9 @@
+/*
+	Author : bxs3514
+	Date   : 2015.11
+	Create environment cube map from a specific position of the world.
+*/
+
 #include "CreateCubemap.h"
 
 const Float3 CreateCubemap::DefaultPosition = { 0.0f, 0.0f, 0.0f };
@@ -42,29 +48,27 @@ VOID CreateCubemap::SetPosition(Float3 newPosition){
 }
 
 
-VOID CreateCubemap::Create(ID3D11DeviceContext *context, MeshRenderer *meshRenderer, 
-	RenderTarget2D velocityTarget, Float4x4 modelTransform,
-	ID3D11ShaderResourceView* environmentMap,
-	SH9Color environmentMapSH, Float2 jitterOffset, Skybox skybox){
+VOID CreateCubemap::Create(CONST DeviceManager &deviceManager/*ID3D11DeviceContext *context*/, MeshRenderer *meshRenderer,
+	CONST RenderTarget2D &velocityTarget, CONST Float4x4 &modelTransform, ID3D11ShaderResourceView *environmentMap,
+	CONST SH9Color &environmentMapSH, CONST Float2 &jitterOffset, Skybox *skybox){
 
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	//ID3D11RenderTargetView *renderTarget[6] = { nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, };
+	SetViewport(deviceManager.ImmediateContext(), 128, 128);
 
-	for (int cubeboxFaceIndex = 0; cubeboxFaceIndex < 6; cubeboxFaceIndex++){
-		//int cubeboxFaceIndex = 0;
+	for (int cubeboxFaceIndex = 0; cubeboxFaceIndex < 6; cubeboxFaceIndex++)
+	{
 		ID3D11RenderTargetViewPtr RTView = cubemapTarget.RTVArraySlices.at(cubeboxFaceIndex);
 		ID3D11DepthStencilViewPtr DSView = cubemapDepthTarget.ArraySlices.at(cubeboxFaceIndex);
 		cubemapCamera.SetLookAt(DefaultCubemapCameraStruct[cubeboxFaceIndex].Eye,
 			DefaultCubemapCameraStruct[cubeboxFaceIndex].LookAt,
 			DefaultCubemapCameraStruct[cubeboxFaceIndex].Up);
 
-		context->ClearRenderTargetView(RTView, clearColor);
-		context->ClearDepthStencilView(DSView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+		deviceManager.ImmediateContext()->ClearRenderTargetView(RTView, clearColor);
+		deviceManager.ImmediateContext()->ClearDepthStencilView(DSView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-		//renderTarget[cubeboxFaceIndex] = RTView;
 		ID3D11RenderTargetView *renderTarget[2] = { RTView, nullptr };
-		context->OMSetRenderTargets(1, renderTarget, DSView);
-		meshRenderer->RenderDepth(context, cubemapCamera, modelTransform, false);
+		deviceManager.ImmediateContext()->OMSetRenderTargets(1, renderTarget, DSView);
+		meshRenderer->RenderDepth(deviceManager.ImmediateContext(), cubemapCamera, modelTransform, false);
 
 		renderTarget[0] = RTView;
 		renderTarget[1] = velocityTarget.RTView;
@@ -72,12 +76,14 @@ VOID CreateCubemap::Create(ID3D11DeviceContext *context, MeshRenderer *meshRende
 		//meshRenderer->Render(context, cubemapCamera, modelTransform, environmentMap, environmentMapSH, jitterOffset);
 
 		if (AppSettings::RenderBackground){
-			skybox.RenderEnvironmentMap(context, environmentMap, cubemapCamera.ViewMatrix(),
+			skybox->RenderEnvironmentMap(deviceManager.ImmediateContext(), environmentMap, cubemapCamera.ViewMatrix(),
 				cubemapCamera.ProjectionMatrix(), Float3(std::exp2(AppSettings::ExposureScale)));
 		}
 		renderTarget[0] = nullptr;
-		context->OMSetRenderTargets(1, renderTarget, nullptr);
+		deviceManager.ImmediateContext()->OMSetRenderTargets(1, renderTarget, nullptr);
 	}
+
+	SetViewport(deviceManager.ImmediateContext(), deviceManager.BackBufferWidth(), deviceManager.BackBufferHeight());
 }
 
 
