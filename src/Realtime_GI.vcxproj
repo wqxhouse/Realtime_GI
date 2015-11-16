@@ -241,6 +241,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Image Include="..\..\..\Users\wqxho_000\Downloads\Cerberus_by_Andrew_Maximov\Cerberus_by_Andrew_Maximov\Textures\Normal\Cerberus_N.dds" />
     <Image Include="..\Content\Models\CornellBox\blue.dds" />
     <Image Include="..\Content\Models\CornellBox\green.dds" />
     <Image Include="..\Content\Models\CornellBox\red.dds" />

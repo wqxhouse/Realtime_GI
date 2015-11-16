@@ -707,16 +707,19 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 				const MeshMaterial& material = model->Materials()[part.MaterialIdx];
 
 				// Set the textures
-				ID3D11ShaderResourceView* psTextures[5] =
+				ID3D11ShaderResourceView* psTextures[] =
 				{
 					material.DiffuseMap,
 					material.NormalMap,
 					_varianceShadowMap.SRView,
 					envMap,
-					_specularLookupTexture
+					_specularLookupTexture,
+					material.RoughnessMap, 
+					material.MetallicMap, 
+					material.EmissiveMap
 				};
 
-				context->PSSetShaderResources(0, 5, psTextures);
+				context->PSSetShaderResources(0, _countof(psTextures), psTextures);
 				context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
 			}
 		}

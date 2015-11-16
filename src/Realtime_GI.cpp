@@ -44,9 +44,10 @@ static const Float3 ModelPositions[uint64(Scenes::NumValues)] = { Float3(-1.0f, 
 // Model filenames
 static const wstring ModelPaths[uint64(Scenes::NumValues)] =
 {
+	L"C:\\Users\\wqxho_000\\Downloads\\Cerberus_by_Andrew_Maximov\\Cerberus_by_Andrew_Maximov\\testfbxascii.fbx",
 	// L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
 	// L"..\\Content\\Models\\CornellBox\\CornellBox_Max.obj",
-	L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaNon_PBR\\Converted\\sponza.obj",
+	//L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaNon_PBR\\Converted\\sponza.obj",
     // L"..\\Content\\Models\\Powerplant\\Powerplant.sdkmesh",
     // L"..\\Content\\Models\\RoboHand\\RoboHand.meshdata",
     // L"",
