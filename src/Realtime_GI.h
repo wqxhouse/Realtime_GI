@@ -69,6 +69,11 @@ protected:
     Float2 _jitterOffset;
     Float2 _prevJitter;
 
+	// Camera momentum
+	float _prevForward;
+	float _prevStrafe;
+	float _prevAscend;
+
     struct ResolveConstants
     {
         uint32 SampleRadius;
@@ -98,6 +103,8 @@ protected:
     void RenderBackgroundVelocity();
     void RenderAA();
     void RenderHUD();
+
+	void ApplyMomentum(float &prevVal, float &val, float deltaTime);
 
 public:
 

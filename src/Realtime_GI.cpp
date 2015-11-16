@@ -44,8 +44,9 @@ static const Float3 ModelPositions[uint64(Scenes::NumValues)] = { Float3(-1.0f, 
 // Model filenames
 static const wstring ModelPaths[uint64(Scenes::NumValues)] =
 {
-	L"C:\\Users\\wqxho_000\\Downloads\\Cerberus_by_Andrew_Maximov\\Cerberus_by_Andrew_Maximov\\testfbxascii.fbx",
-	// L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
+	// L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\Converted\\sponza.obj",
+	//L"C:\\Users\\wqxho_000\\Downloads\\Cerberus_by_Andrew_Maximov\\Cerberus_by_Andrew_Maximov\\testfbxascii.fbx",
+	L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
 	// L"..\\Content\\Models\\CornellBox\\CornellBox_Max.obj",
 	//L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaNon_PBR\\Converted\\sponza.obj",
     // L"..\\Content\\Models\\Powerplant\\Powerplant.sdkmesh",
@@ -54,7 +55,8 @@ static const wstring ModelPaths[uint64(Scenes::NumValues)] =
 };
 
 Realtime_GI::Realtime_GI() :  App(L"Realtime GI (CSCI 580)", MAKEINTRESOURCEW(IDI_DEFAULT)),
-                            _camera(WindowWidthF / WindowHeightF, Pi_4 * 0.75f, NearClip, FarClip)
+                            _camera(WindowWidthF / WindowHeightF, Pi_4 * 0.75f, NearClip, FarClip), 
+							_prevForward(0.0f), _prevStrafe(0.0f), _prevAscend(0.0f)
 {
     _deviceManager.SetBackBufferWidth(WindowWidth);
     _deviceManager.SetBackBufferHeight(WindowHeight);
@@ -167,6 +169,17 @@ void Realtime_GI::CreateRenderTargets()
     }
 }
 
+void Realtime_GI::ApplyMomentum(float &prevVal, float &val, float deltaTime)
+{
+	float blendedValue;
+	if (fabs(val) > fabs(prevVal))
+		blendedValue = Lerp(val, prevVal, pow(0.6f, deltaTime * 60.0f));
+	else
+		blendedValue = Lerp(val, prevVal, pow(0.8f, deltaTime * 60.0f));
+	prevVal = blendedValue;
+	val = blendedValue;
+}
+
 void Realtime_GI::Update(const Timer& timer)
 {
     AppSettings::UpdateUI();
@@ -177,27 +190,37 @@ void Realtime_GI::Update(const Timer& timer)
     if(kbState.IsKeyDown(KeyboardState::Escape))
         _window.Destroy();
 
-    float CamMoveSpeed = 5.0f * timer.DeltaSecondsF();
-    const float CamRotSpeed = 0.180f * timer.DeltaSecondsF();
-    const float MeshRotSpeed = 0.180f * timer.DeltaSecondsF();
+	float deltaSec = timer.DeltaSecondsF();;
+	float CamMoveSpeed = 5.0f * deltaSec;
+	const float CamRotSpeed = 0.180f * deltaSec;
+	const float MeshRotSpeed = 0.180f * deltaSec;
 
     // Move the camera with keyboard input
     if(kbState.IsKeyDown(KeyboardState::LeftShift))
         CamMoveSpeed *= 0.25f;
 
+	float forward = CamMoveSpeed *
+		((kbState.IsKeyDown(KeyboardState::W) ? 1 : 0.0f) +
+		(kbState.IsKeyDown(KeyboardState::S) ? -1 : 0.0f));
+
+	float strafe = CamMoveSpeed *
+		((kbState.IsKeyDown(KeyboardState::A) ? 1 : 0.0f) +
+		(kbState.IsKeyDown(KeyboardState::D) ? -1 : 0.0f));
+
+	float ascend = CamMoveSpeed * 
+		((kbState.IsKeyDown(KeyboardState::Q) ? 1 : 0.0f) +
+		(kbState.IsKeyDown(KeyboardState::E) ? -1 : 0.0f));
+
     Float3 camPos = _camera.Position();
-    if(kbState.IsKeyDown(KeyboardState::W))
-        camPos += _camera.Forward() * CamMoveSpeed;
-    else if (kbState.IsKeyDown(KeyboardState::S))
-        camPos += _camera.Back() * CamMoveSpeed;
-    if(kbState.IsKeyDown(KeyboardState::A))
-        camPos += _camera.Left() * CamMoveSpeed;
-    else if (kbState.IsKeyDown(KeyboardState::D))
-        camPos += _camera.Right() * CamMoveSpeed;
-    if(kbState.IsKeyDown(KeyboardState::Q))
-        camPos += _camera.Up() * CamMoveSpeed;
-    else if (kbState.IsKeyDown(KeyboardState::E))
-        camPos += _camera.Down() * CamMoveSpeed;
+
+	ApplyMomentum(_prevForward, forward, deltaSec);
+	ApplyMomentum(_prevStrafe, strafe, deltaSec);
+	ApplyMomentum(_prevAscend, ascend, deltaSec);
+
+	camPos += _camera.Forward() * forward;
+	camPos += _camera.Left() * strafe;
+	camPos += _camera.Up() * ascend;
+
     _camera.SetPosition(camPos);
 
     // Rotate the camera with the mouse
