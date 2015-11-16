@@ -208,7 +208,6 @@
     <ClInclude Include="..\SampleFramework11\v1.01\Graphics\DeviceManager.h">
       <Filter>SampleFramework11\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="AppPCH.h" />
     <ClInclude Include="..\SampleFramework11\v1.01\TinyEXR.h">
       <Filter>SampleFramework11</Filter>
     </ClInclude>
@@ -234,6 +233,9 @@
       <Filter>Shader</Filter>
     </ClInclude>
     <ClInclude Include="Scene.h" />
+    <ClInclude Include="AppPCH.h">
+      <Filter>Misc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="AppSettings.hlsl">

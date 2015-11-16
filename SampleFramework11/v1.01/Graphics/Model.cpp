@@ -944,21 +944,38 @@ void Model::CreateWithAssimp(ID3D11Device* device, const wchar* fileName, bool f
         aiString roughnessMapPath;
         aiString metallicMapPath;
         aiString emissiveMapPath;
-        if(mat.GetTexture(aiTextureType_DIFFUSE, 0, &diffuseTexPath) == aiReturn_SUCCESS)
-            material.DiffuseMapName = GetFileName(AnsiToWString(diffuseTexPath.C_Str()).c_str());
 
-        if(mat.GetTexture(aiTextureType_NORMALS, 0, &normalMapPath) == aiReturn_SUCCESS
-           || mat.GetTexture(aiTextureType_HEIGHT, 0, &normalMapPath) == aiReturn_SUCCESS)
-            material.NormalMapName = GetFileName(AnsiToWString(normalMapPath.C_Str()).c_str());
+		std::wstring texPath = L""; 
+		if (mat.GetTexture(aiTextureType_DIFFUSE, 0, &diffuseTexPath) == aiReturn_SUCCESS)
+		{
+			texPath = AnsiToWString(diffuseTexPath.C_Str());
+			material.DiffuseMapName = DirectoryIsRelative(texPath.c_str()) ? texPath.c_str() : GetFileName(texPath.c_str());
+		}
+
+		if (mat.GetTexture(aiTextureType_NORMALS, 0, &normalMapPath) == aiReturn_SUCCESS
+			|| mat.GetTexture(aiTextureType_HEIGHT, 0, &normalMapPath) == aiReturn_SUCCESS)
+		{
+			texPath = AnsiToWString(normalMapPath.C_Str());
+			material.NormalMapName = DirectoryIsRelative(texPath.c_str()) ? texPath.c_str() : GetFileName(texPath.c_str());
+		}
 
 		if (mat.GetTexture(aiTextureType_SPECULAR, 0, &metallicMapPath) == aiReturn_SUCCESS)
-			material.MetallicMapName = GetFileName(AnsiToWString(metallicMapPath.C_Str()).c_str());
+		{
+			texPath = AnsiToWString(metallicMapPath.C_Str());
+			material.MetallicMapName = DirectoryIsRelative(texPath.c_str()) ? texPath.c_str() : GetFileName(texPath.c_str());
+		}
 
 		if (mat.GetTexture(aiTextureType_SHININESS, 0, &roughnessMapPath) == aiReturn_SUCCESS)
-			material.RoughnessMapName = GetFileName(AnsiToWString(roughnessMapPath.C_Str()).c_str());
+		{
+			texPath = AnsiToWString(roughnessMapPath.C_Str());
+			material.RoughnessMapName = DirectoryIsRelative(texPath.c_str()) ? texPath.c_str() : GetFileName(texPath.c_str());
+		}
 
 		if (mat.GetTexture(aiTextureType_EMISSIVE, 0, &emissiveMapPath) == aiReturn_SUCCESS)
-			material.EmissiveMapName = GetFileName(AnsiToWString(emissiveMapPath.C_Str()).c_str());
+		{
+			texPath = AnsiToWString(emissiveMapPath.C_Str());
+			material.EmissiveMapName = DirectoryIsRelative(texPath.c_str()) ? texPath.c_str() : GetFileName(texPath.c_str());
+		}
 
         LoadMaterialResources(material, fileDirectory, device, forceSRGB);
 

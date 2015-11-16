@@ -38,15 +38,15 @@ const float WindowHeightF = static_cast<float>(WindowHeight);
 static const float NearClip = 0.01f;
 static const float FarClip = 300.0f;
 
-static const float ModelScales[uint64(Scenes::NumValues)] = { 0.1f, 1.0f };
+static const float ModelScales[uint64(Scenes::NumValues)] = { 0.01f, 1.0f };
 static const Float3 ModelPositions[uint64(Scenes::NumValues)] = { Float3(-1.0f, 2.0f, 0.0f), Float3(0.0f, 0.0f, 0.0f) };
 
 // Model filenames
 static const wstring ModelPaths[uint64(Scenes::NumValues)] =
 {
-	L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
+	// L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
 	// L"..\\Content\\Models\\CornellBox\\CornellBox_Max.obj",
-	// "C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\sponza.obj",
+	L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaNon_PBR\\Converted\\sponza.obj",
     // L"..\\Content\\Models\\Powerplant\\Powerplant.sdkmesh",
     // L"..\\Content\\Models\\RoboHand\\RoboHand.meshdata",
     // L"",
