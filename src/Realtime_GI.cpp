@@ -49,7 +49,8 @@ static const wstring ModelPaths[uint64(Scenes::NumValues)] =
 };
 
 Realtime_GI::Realtime_GI() :  App(L"Realtime GI (CSCI 580)", MAKEINTRESOURCEW(IDI_DEFAULT)),
-                            _camera(WindowWidthF / WindowHeightF, Pi_4 * 0.75f, NearClip, FarClip)
+                            _camera(WindowWidthF / WindowHeightF, Pi_4 * 0.75f, NearClip, FarClip),
+							createCubeMap(NearClip, FarClip)
 {
     _deviceManager.SetBackBufferWidth(WindowWidth);
     _deviceManager.SetBackBufferHeight(WindowHeight);
@@ -91,14 +92,20 @@ void Realtime_GI::Initialize()
     // Camera setup
     _camera.SetPosition(Float3(0.0f, 2.5f, -10.0f));
 
+	//Test
+	_camera.SetPosition(Float3(0, 0, 0));
+	_camera.SetLookAt(Float3(0, 0, 0), Float3(0.0f, 0.0f, 1.0f), Float3(0.0f, 1.0f, 0.0f));
+	_camera.SetFieldOfView(90.0f * (Pi / 180));
+
     // Load the scenes
     for(uint64 i = 0; i < uint64(Scenes::NumValues); ++i)
     {
-        if(i == uint64(Scenes::Plane))
-            _models[i].GeneratePlaneScene(device, Float2(10.0f, 10.0f), Float3(), Quaternion(),
-                                         L"", L"Bricks_NML.dds");
-        else
-            _models[i].CreateFromMeshData(device, ModelPaths[i].c_str());
+		if (i == uint64(Scenes::Plane)){
+			_models[i].CreateWithAssimp(device, L"..\\Content\\Models\\Sphere\\sphere.obj", false);
+		}
+		else{
+			_models[i].CreateFromMeshData(device, ModelPaths[i].c_str());
+		}
     }
 
     _modelOrientations[uint64(Scenes::RoboHand)] = Quaternion(0.41f, -0.55f, -0.29f, 0.67f);
@@ -131,6 +138,7 @@ void Realtime_GI::Initialize()
 
     // Init the post processor
     _postProcessor.Initialize(device);
+
 }
 
 // Creates all required render targets
@@ -145,6 +153,10 @@ void Realtime_GI::CreateRenderTargets()
     _colorTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, NumSamples, Quality);
     _depthBuffer.Initialize(device, width, height, DXGI_FORMAT_D32_FLOAT, true, NumSamples, Quality);
     _velocityTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16_FLOAT, true, NumSamples, Quality);
+
+	if (_frameCount == 0){
+		createCubeMap.Initialize(device, 1, NumSamples, Quality);
+	}
 
     if(_resolveTarget.Width != width || _resolveTarget.Height != height)
     {
@@ -278,7 +290,8 @@ void Realtime_GI::RenderAA()
     context->PSSetShader(pixelShader, nullptr, 0);
     context->VSSetShader(_resolveVS, nullptr, 0);
 
-    _resolveConstants.Data.TextureSize = Float2(static_cast<float>(_colorTarget.Width), static_cast<float>(_colorTarget.Height));
+    _resolveConstants.Data.TextureSize = Float2(static_cast<float>(_colorTarget.Width), 
+		static_cast<float>(_colorTarget.Height));
     _resolveConstants.Data.SampleRadius = SampleRadius;;
     _resolveConstants.ApplyChanges(context);
     _resolveConstants.SetPS(context, 0);
@@ -331,7 +344,6 @@ void Realtime_GI::Render(const Timer& timer)
     context->OMSetRenderTargets(1, renderTargets, NULL);
 
     SetViewport(context, _deviceManager.BackBufferWidth(), _deviceManager.BackBufferHeight());
-
     RenderHUD();
 
     ++_frameCount;
@@ -342,8 +354,18 @@ void Realtime_GI::RenderScene()
     PIXEvent event(L"Render Scene");
 
     ID3D11DeviceContextPtr context = _deviceManager.ImmediateContext();
+	RenderTarget2D cubemapRenderTarget;
 
     SetViewport(context, _colorTarget.Width, _colorTarget.Height);
+
+	if (_frameCount == 0){
+		createCubeMap.SetPosition(float3(0.0f, 0.0f, 0.0f));
+		createCubeMap.Create(_deviceManager, &_meshRenderer, _velocityTarget, 
+			_modelTransform, _envMap, _envMapSH, _jitterOffset, &_skybox);
+	}
+	else{
+		createCubeMap.GetTargetViews(cubemapRenderTarget);
+	}
 
     float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
     context->ClearRenderTargetView(_colorTarget.RTView, clearColor);
@@ -361,14 +383,15 @@ void Realtime_GI::RenderScene()
     renderTargets[1] = _velocityTarget.RTView;
     context->OMSetRenderTargets(2, renderTargets, _depthBuffer.DSView);
 
-    _meshRenderer.Render(context, _camera, _modelTransform, _envMap, _envMapSH, _jitterOffset);
+	_meshRenderer.Render(context, _camera, _modelTransform, cubemapRenderTarget.SRView, _envMapSH, _jitterOffset);
 
     renderTargets[0] = _colorTarget.RTView;
     renderTargets[1] = nullptr;
-    context->OMSetRenderTargets(2, renderTargets, _depthBuffer.DSView);
+	context->OMSetRenderTargets(2, renderTargets, _depthBuffer.DSView);
 
     if(AppSettings::RenderBackground)
-        _skybox.RenderEnvironmentMap(context, _envMap, _camera.ViewMatrix(), _camera.ProjectionMatrix(), Float3(std::exp2(AppSettings::ExposureScale)));
+        _skybox.RenderEnvironmentMap(context, _envMap, _camera.ViewMatrix(), _camera.ProjectionMatrix(),
+		Float3(std::exp2(AppSettings::ExposureScale)));
 
     renderTargets[0] = renderTargets[1] = nullptr;
     context->OMSetRenderTargets(2, renderTargets, nullptr);
@@ -384,7 +407,6 @@ void Realtime_GI::RenderBackgroundVelocity()
 
     // Don't use camera translation for background velocity
     FirstPersonCamera tempCamera = _camera;
-    tempCamera.SetPosition(Float3(0.0f, 0.0f, 0.0f));
 
     _backgroundVelocityConstants.Data.InvViewProjection = Float4x4::Transpose(Float4x4::Invert(tempCamera.ViewProjectionMatrix()));
     _backgroundVelocityConstants.Data.PrevViewProjection = Float4x4::Transpose(_prevViewProjection);

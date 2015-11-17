@@ -66,10 +66,15 @@ void MeshRenderer::LoadShaders()
     {
         for(uint32 centroidSampling = 0; centroidSampling < 2; ++centroidSampling)
         {
-            opts.Reset();
-            opts.Add("UseNormalMapping_", useNormalMapping);
-            opts.Add("CentroidSampling_", centroidSampling);
-            _meshPS[useNormalMapping][centroidSampling] = CompilePSFromFile(_device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
+			for (uint32 createCubemap = 0; createCubemap < 2; ++createCubemap)
+			{
+				opts.Reset();
+				opts.Add("UseNormalMapping_", useNormalMapping);
+				opts.Add("CentroidSampling_", centroidSampling);
+				opts.Add("CreateCubemap_", createCubemap);
+				_meshPS[useNormalMapping][centroidSampling][createCubemap] = 
+					CompilePSFromFile(_device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
+			}
         }
     }
 
@@ -143,6 +148,7 @@ void MeshRenderer::SetModel(const Model* model)
 void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
     this->_device = device;
+	this->_cubeMap = FALSE;
 
     _blendStates.Initialize(device);
     _rasterizerStates.Initialize(device);
@@ -462,7 +468,7 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     context->HSSetShader(nullptr, nullptr, 0);
     context->GSSetShader(nullptr, nullptr, 0);
     context->VSSetShader(_meshVS[nmlMapIdx], nullptr, 0);
-    context->PSSetShader(_meshPS[nmlMapIdx][centroidIdx], nullptr, 0);
+	context->PSSetShader(_meshPS[nmlMapIdx][centroidIdx][_cubeMap], nullptr, 0);//!
 
     // Draw all meshes
     uint32 partCount = 0;
@@ -505,6 +511,16 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     ID3D11ShaderResourceView* nullSRVs[5] = { nullptr };
     context->PSSetShaderResources(0, 5, nullSRVs);
 }
+
+void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, const Float4x4& world,
+	ID3D11ShaderResourceView* envMap, const SH9Color& envMapSH,
+	Float2 jitterOffset, bool32 cubeMap)
+{
+	_cubeMap = cubeMap ? TRUE : FALSE;
+	Render(context, camera, world, envMap, envMapSH, jitterOffset);
+	_cubeMap = FALSE;
+}
+
 
 // Renders all meshes using depth-only rendering
 void MeshRenderer::RenderDepth(ID3D11DeviceContext* context, const Camera& camera,
