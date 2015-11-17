@@ -512,6 +512,16 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     context->PSSetShaderResources(0, 5, nullSRVs);
 }
 
+void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, const Float4x4& world,
+	ID3D11ShaderResourceView* envMap, const SH9Color& envMapSH,
+	Float2 jitterOffset, bool32 cubeMap)
+{
+	_cubeMap = cubeMap ? TRUE : FALSE;
+	Render(context, camera, world, envMap, envMapSH, jitterOffset);
+	_cubeMap = FALSE;
+}
+
+
 // Renders all meshes using depth-only rendering
 void MeshRenderer::RenderDepth(ID3D11DeviceContext* context, const Camera& camera,
     const Float4x4& world, bool shadowRendering)
@@ -774,13 +784,4 @@ void MeshRenderer::RenderShadowMap(ID3D11DeviceContext* context, const Camera& c
             renderTargets[i]->Release();
     if(depthStencil != NULL)
         depthStencil->Release();
-}
-
-void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, const Float4x4& world,
-	ID3D11ShaderResourceView* envMap, const SH9Color& envMapSH,
-	Float2 jitterOffset, bool32 cubeMap)
-{
-	_cubeMap = cubeMap ? TRUE : FALSE;
-	Render(context, camera, world, envMap, envMapSH, jitterOffset);
-	_cubeMap = FALSE;
 }

@@ -101,7 +101,6 @@ protected:
 
 	//Create Cubemap
 	CreateCubemap createCubeMap;
-	PerspectiveCamera m_Camera;
 public:
 
     Realtime_GI();

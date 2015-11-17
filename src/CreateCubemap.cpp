@@ -9,24 +9,17 @@
 const Float3 CreateCubemap::DefaultPosition = { 0.0f, 0.0f, 0.0f };
 
 const CreateCubemap::CameraStruct CreateCubemap::DefaultCubemapCameraStruct[6] = {
-		//{ DefaultPosition, Float3(1.0f, 0.0f, 0.0f), Float3(0.0f, 1.0f, 0.0f) }, //Center
-		//{ DefaultPosition, Float3(0.0f, 1.0f, 0.0f), Float3(0.0f, 1.0f, 0.0f) }, //Left
-		//{ DefaultPosition, Float3(-1.0f, 0.0f, 0.0f), Float3(0.0f, 0.0f, 1.0f) }, //Back
-		//{ DefaultPosition, Float3(0.0f, -1.0f, 0.0f), Float3(0.0f, 0.0f, 1.0f) }, //Right
-		//{ DefaultPosition, Float3(0.0f, 0.0f, 1.0f), Float3(-1.0f, 0.0f, 0.0f) }, //Up
-		//{ DefaultPosition, Float3(0.0f, 0.0f, -1.0f), Float3(1.0f, 0.0f, 0.0f) }  //Down
-		{ DefaultPosition, Float3(0.0f, 0.0f, 1.0f), Float3(0.0f, 1.0f, 0.0f) }, //Center
-		{ DefaultPosition, Float3(0.0f, 0.0f, -1.0f), Float3(0.0f, 1.0f, 0.0f) },//Back
 		{ DefaultPosition, Float3(1.0f, 0.0f, 0.0f), Float3(0.0f, 1.0f, 0.0f) },//Left
 		{ DefaultPosition, Float3(-1.0f, 0.0f, 0.0f), Float3(0.0f, 1.0f, 0.0f) },//Right
-		{ DefaultPosition, Float3(0.0f, 1.0f, 0.0f), Float3(0.0f, 0.0f, 1.0f) },//Up
-		{ DefaultPosition, Float3(0.0f, -1.0f, 0.0f), Float3(0.0f, 0.0f, 1.0f) }//Down
+		{ DefaultPosition, Float3(0.0f, 1.0f, 0.0f), Float3(0.0f, 0.0f, -1.0f) },//Up
+		{ DefaultPosition, Float3(0.0f, -1.0f, 0.0f), Float3(0.0f, 0.0f, 1.0f) },//Down
+		{ DefaultPosition, Float3(0.0f, 0.0f, 1.0f), Float3(0.0f, 1.0f, 0.0f) }, //Center
+		{ DefaultPosition, Float3(0.0f, 0.0f, -1.0f), Float3(0.0f, 1.0f, 0.0f) },//Back
 };
 
 CreateCubemap::CreateCubemap(const float NearClip, const float FarClip) 
 	: cubemapCamera(1.0f, 90.0f * (Pi / 180), NearClip, FarClip)
 {
-	cubemapCamera.SetFieldOfView(90.0f * (Pi / 180));
 }
 
 VOID CreateCubemap::Initialize(ID3D11Device *device, uint32 numMipLevels, uint32 multiSamples, uint32 msQuality){
@@ -59,14 +52,14 @@ VOID CreateCubemap::Create(CONST DeviceManager &deviceManager, MeshRenderer *mes
 	{
 		ID3D11RenderTargetViewPtr RTView = cubemapTarget.RTVArraySlices.at(cubeboxFaceIndex);
 		ID3D11DepthStencilViewPtr DSView = cubemapDepthTarget.ArraySlices.at(cubeboxFaceIndex);
-		cubemapCamera.SetLookAt(DefaultCubemapCameraStruct[cubeboxFaceIndex].Eye,
-			DefaultCubemapCameraStruct[cubeboxFaceIndex].LookAt,
-			DefaultCubemapCameraStruct[cubeboxFaceIndex].Up);
+		cubemapCamera.SetLookAt(CubemapCameraStruct[cubeboxFaceIndex].Eye,
+			CubemapCameraStruct[cubeboxFaceIndex].LookAt,
+			CubemapCameraStruct[cubeboxFaceIndex].Up);
 
 		deviceManager.ImmediateContext()->ClearRenderTargetView(RTView, clearColor);
 		deviceManager.ImmediateContext()->ClearDepthStencilView(DSView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-		ID3D11RenderTargetView *renderTarget[2] = { RTView };
+		ID3D11RenderTargetView *renderTarget[1] = { RTView };
 		deviceManager.ImmediateContext()->OMSetRenderTargets(1, renderTarget, DSView);
 		meshRenderer->RenderDepth(deviceManager.ImmediateContext(), cubemapCamera, modelTransform, false);
 
@@ -74,10 +67,9 @@ VOID CreateCubemap::Create(CONST DeviceManager &deviceManager, MeshRenderer *mes
 		meshRenderer->Render(deviceManager.ImmediateContext(), cubemapCamera, modelTransform, 
 			environmentMap, environmentMapSH, jitterOffset, TRUE);
 
-		//if (AppSettings::RenderBackground){
-			skybox->RenderEnvironmentMap(deviceManager.ImmediateContext(), environmentMap, cubemapCamera.ViewMatrix(),
-				cubemapCamera.ProjectionMatrix(), Float3(std::exp2(AppSettings::ExposureScale)));
-		//}
+		skybox->RenderEnvironmentMap(deviceManager.ImmediateContext(), environmentMap, cubemapCamera.ViewMatrix(),
+			cubemapCamera.ProjectionMatrix(), Float3(std::exp2(AppSettings::ExposureScale)));
+		
 		renderTarget[0] = nullptr;
 		deviceManager.ImmediateContext()->OMSetRenderTargets(1, renderTarget, nullptr);
 	}
@@ -91,14 +83,11 @@ CONST PerspectiveCamera &CreateCubemap::GetCubemapCamera(){
 	cubemapCamera.SetLookAt(DefaultCubemapCameraStruct[face].Eye,
 		DefaultCubemapCameraStruct[face].LookAt,
 		DefaultCubemapCameraStruct[face].Up);
-	/*cubemapCamera.SetLookAt(DefaultPosition,
-		Float3(0.0f, -1.0f, 0.0f), Float3(0.0f, 0.0f, 1.0f));*/
 	return cubemapCamera;
 }
 
 VOID CreateCubemap::GetTargetViews(RenderTarget2D &resCubemapTarget){
 	resCubemapTarget = cubemapTarget;
-	//resCubemapDepthTarget = cubemapDepthTarget;
 }
 
 
