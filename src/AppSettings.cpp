@@ -188,7 +188,7 @@ namespace AppSettings
         EmissiveIntensity.Initialize(tweakBar, "EmissiveIntensity", "Scene Controls", "Emissive Intensity", "Emissive parameter for the material", 0.0000f, 0.0000f, 1.0000f, 0.0010f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&EmissiveIntensity);
 
-        SceneOrientation.Initialize(tweakBar, "SceneOrientation", "Scene Controls", "Scene Orientation", "", Quaternion(0.0000f, 1.0000f, 0.0000f, 0.0000f));
+        SceneOrientation.Initialize(tweakBar, "SceneOrientation", "Scene Controls", "Scene Orientation", "", Quaternion(0.0000f, 0.0000f, 0.0000f, 1.0000f));
         Settings.AddSetting(&SceneOrientation);
 
         ModelRotationSpeed.Initialize(tweakBar, "ModelRotationSpeed", "Scene Controls", "Model Rotation Speed", "", 0.0000f, 0.0000f, 10.0000f, 0.0100f, ConversionMode::None, 1.0000f);

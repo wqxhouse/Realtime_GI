@@ -180,7 +180,7 @@ public class Settings
         float EmissiveIntensity = 0.00f;
 
         // Orientation SceneOrientation = new Orientation(0.41f, -0.55f, -0.29f, 0.67f);
-        Orientation SceneOrientation = new Orientation(0.0f, 1.0f, 0.0f, 0.0f);
+        Orientation SceneOrientation = new Orientation(0.0f, 0.0f, 0.0f, 1.0f);
 
         [MinValue(0.0f)]
         [MaxValue(10.0f)]
