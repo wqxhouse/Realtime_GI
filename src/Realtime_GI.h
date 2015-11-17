@@ -25,6 +25,8 @@
 #include "PostProcessor.h"
 #include "MeshRenderer.h"
 
+#include "CreateCubemap.h"
+
 using namespace SampleFramework11;
 
 class Realtime_GI : public App
@@ -97,6 +99,8 @@ protected:
     void RenderAA();
     void RenderHUD();
 
+	//Create Cubemap
+	CreateCubemap createCubeMap;
 public:
 
     Realtime_GI();

@@ -44,6 +44,9 @@ public:
     void Render(ID3D11DeviceContext* context, const Camera& camera, const Float4x4& world,
                 ID3D11ShaderResourceView* envMap, const SH9Color& envMapSH,
                 Float2 JitterOffset);
+	void Render(ID3D11DeviceContext* context, const Camera& camera, const Float4x4& world,
+				ID3D11ShaderResourceView* envMap, const SH9Color& envMapSH,
+				Float2 JitterOffset, bool32 cubeMap);
 
     void Update();
 
@@ -81,7 +84,7 @@ protected:
 
     std::vector<ID3D11InputLayoutPtr> _meshInputLayouts;
     VertexShaderPtr _meshVS[2];
-    PixelShaderPtr _meshPS[2][2];
+    PixelShaderPtr _meshPS[2][2][2];
 
     std::vector<ID3D11InputLayoutPtr> _meshDepthInputLayouts;
     VertexShaderPtr _meshDepthVS;
@@ -102,6 +105,8 @@ protected:
     ID3D11ShaderResourceViewPtr _specularLookupTexture;
 
     Float4x4 _prevWVP;
+
+	bool32 _cubeMap;
 
     // Constant buffers
     struct MeshVSConstants
