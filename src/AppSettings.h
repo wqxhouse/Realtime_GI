@@ -49,8 +49,8 @@ typedef EnumSettingT<JitterModes> JitterModesSetting;
 
 enum class Scenes
 {
-    RoboHand = 0,
-    Plane = 1,
+    CornellBox = 0,
+    Boxes = 1,
 
     NumValues
 };
@@ -168,11 +168,6 @@ namespace AppSettings
     inline uint32 NumMSAASamples()
     {
         return NumMSAASamples(MSAAMode);
-    }
-
-    inline bool UseNormalMapping()
-    {
-        return CurrentScene == Scenes::Plane;
     }
 
     inline bool EnableJitter()

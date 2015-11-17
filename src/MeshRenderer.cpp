@@ -79,23 +79,6 @@ void MeshRenderer::GenVSShaderPermutations(ID3D11Device *device, const wchar *pa
 	const char **shaderDescs, int numDescs, std::unordered_map<uint32, VertexShaderPtr> &out)
 {
 	CompileOptions opts;
-	/*for (uint64 i = 0; i < numDescs; i++)
-	{
-	const char *macro = shaderDescs[i];
-
-	std::vector<VertexShaderPtr> pair;
-	pair.resize(2);
-	for (int k = 0; k < 2; k++)
-	{
-	opts.Reset();
-	opts.Add(macro, k);
-
-	pair[k] = CompileVSFromFile(device, paths, entryName, "vs_5_0", opts);
-	}
-
-	out.insert(std::make_pair(macro, pair));
-	}*/
-
 	bool32 *states = (bool32 *)malloc(numDescs * sizeof(bool32));
 	GenVSRecursive(device, 0, states, &opts, path, entryName, shaderDescs, numDescs, out);
 	free(states);
@@ -262,7 +245,7 @@ void MeshRenderer::SetScene(Scene *scene)
 	// generate input layout for every model's mesh
 	for (uint64 i = 0; i < _scene->getNumModels(); i++)
 	{
-		Model *m = &_scene->getModelsPtr()[i];
+		Model *m = _scene->getModel(i);
 		GenMeshShaderMap(m);
 		GenAndCacheMeshInputLayout(m);
 	}
@@ -301,10 +284,6 @@ void MeshRenderer::GenMeshShaderMap(const Model *model)
 
 void MeshRenderer::GenAndCacheMeshInputLayout(const Model* model)
 {
-    // VertexShaderPtr vs = AppSettings::UseNormalMapping() ? _meshVS[1] : _meshVS[0];
-
-	// VertexShaderPtr = _meshVertexShaders[model];
-
 	// TODO: optimize this; group meshes with the same input layout to reduce api calls
     for(uint64 i = 0; i < model->Meshes().size(); ++i)
     {
@@ -319,7 +298,6 @@ void MeshRenderer::GenAndCacheMeshInputLayout(const Model* model)
 				vs->ByteCode->GetBufferPointer(), vs->ByteCode->GetBufferSize(), &inputLayout));
 			_meshInputLayouts.insert(std::make_pair(&mesh, inputLayout));
 		}
-        // _meshInputLayouts.push_back(inputLayout);
 
 		if (_meshDepthInputLayouts.find(&mesh) == _meshDepthInputLayouts.end())
 		{
@@ -327,7 +305,6 @@ void MeshRenderer::GenAndCacheMeshInputLayout(const Model* model)
 				_meshDepthVS->ByteCode->GetBufferPointer(), _meshDepthVS->ByteCode->GetBufferSize(), &inputLayout));
 			_meshDepthInputLayouts.insert(std::make_pair(&mesh, inputLayout));
 		}
-        // _meshDepthInputLayouts.push_back(inputLayout);
     }
 }
 
@@ -640,15 +617,10 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     _meshPSConstants.ApplyChanges(context);
     _meshPSConstants.SetPS(context, 0);
 
-    const uint64 nmlMapIdx = AppSettings::UseNormalMapping() ? 1 : 0;
-    const uint64 centroidIdx = AppSettings::CentroidSampling ? 1 : 0;
-
     // Set shaders
     context->DSSetShader(nullptr, nullptr, 0);
     context->HSSetShader(nullptr, nullptr, 0);
     context->GSSetShader(nullptr, nullptr, 0);
-    //context->VSSetShader(_meshVS[nmlMapIdx], nullptr, 0);
-    //context->PSSetShader(_meshPS[nmlMapIdx][centroidIdx], nullptr, 0);
 
 	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getStaticOpaqueObjectsPtr(), _scene->getNumStaticOpaqueObjects());
 	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getDynamicOpaqueObjectsPtr(), _scene->getNumDynmamicOpaueObjects());
@@ -782,7 +754,6 @@ void MeshRenderer::RenderDepthSceneObjects(ID3D11DeviceContext* context, const F
 			context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 			// Set the input layout
-			// context->IASetInputLayout(_meshDepthInputLayouts[meshIdx]);
 			context->IASetInputLayout(_meshDepthInputLayouts[&mesh]);
 
 			// Draw all parts

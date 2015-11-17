@@ -33,6 +33,9 @@ class Realtime_GI : public App
 
 protected:
 
+	// Caution: too large will stack overflow
+	static const uint32 MAX_SCENES = 5;
+
     FirstPersonCamera _camera;
 
     SpriteFont _font;
@@ -48,13 +51,12 @@ protected:
     RenderTarget2D _velocityResolveTarget;
     uint64 _frameCount = 0;
 
-    // Model
-    // Model _models[uint64(Scenes::NumValues)];
-	Scene _scene;
+	Scene _scenes[MAX_SCENES];
+	uint32 _numScenes;
+
     MeshRenderer _meshRenderer;
 
     Float4x4 _globalTransform;
-    // Quaternion _modelOrientations[uint64(Scenes::NumValues)];
 
     ID3D11ShaderResourceViewPtr _envMap;
     SH9Color _envMapSH;
@@ -92,6 +94,9 @@ protected:
     ConstantBuffer<BackgroundVelocityConstants> _backgroundVelocityConstants;
 
     virtual void Initialize() override;
+	void LoadScenes(ID3D11DevicePtr device);
+	void LoadShaders(ID3D11DevicePtr device);
+
     virtual void Render(const Timer& timer) override;
     virtual void Update(const Timer& timer) override;
     virtual void BeforeReset() override;

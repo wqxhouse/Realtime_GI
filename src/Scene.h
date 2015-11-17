@@ -63,45 +63,55 @@ public:
 	SceneObject *addStaticOpaqueObject(Model *model, float scale=1.0f, const Float3 &pos=Float3(), const Quaternion &rot=Quaternion());
 	SceneObject *addDynamicOpaqueObject(Model *model, float scale= 1.0f, const Float3 &pos = Float3(), const Quaternion &rot = Quaternion());
 
+	SceneObject *addDynamicOpaqueBoxObject(float scale = 1.0f, const Float3 &pos = Float3(), const Quaternion &rot = Quaternion());
+	SceneObject *addDynamicOpaquePlaneObject(float scale = 1.0f, const Float3 &pos = Float3(), const Quaternion &rot = Quaternion());
+
 	void sortSceneObjects(const Float4x4 &viewMatrix);
 
 	inline int getNumStaticOpaqueObjects() { return _numStaticObjects;  }
 	inline int getNumDynmamicOpaueObjects() { return _numDynamicObjects; }
-	inline int getNumModels() { return _numModels; }
+	inline int getNumModels() { return (int)_modelIndices.size(); }
+	inline Model *getModel(uint64 index) { return &_models[index]; }
 
 	inline SceneObject *getStaticOpaqueObjectsPtr() { return _staticOpaqueObjects; }
 	inline SceneObject *getDynamicOpaqueObjectsPtr() { return _dynamicOpaqueObjects; }
-	inline Model *getModelsPtr() { return _models; }
+
+	inline Quaternion getSceneOrientation()
+	{
+		return _sceneOrientation;
+	}
 	
 private:
-	Float4x4 createBase(float scale, const Float3 &pos, const Quaternion &rot);
-
-	static const int MAX_STATIC_OBJECTS = 256;
-	static const int MAX_DYNAMIC_OBJECTS = 1024;
-	static const int MAX_MODELS = 64;
-	static const int MAX_OBJECT_MATRICES = MAX_STATIC_OBJECTS + MAX_DYNAMIC_OBJECTS;
 
 	ID3D11Device *_device;
 
-	int _numModels;
+	std::vector<int> _modelIndices;
+	Quaternion _sceneOrientation;
+	Float3 _sceneTranslation;
+
+	float _sceneScale;
 	int _numStaticObjects;
 	int _numDynamicObjects;
 	int _numObjectBases;
 	int _numPrevWVPs;
 
+	Float4x4 createBase(float scale, const Float3 &pos, const Quaternion &rot);
+
+	// Caution: too large will stack overflow
+	static const int MAX_STATIC_OBJECTS = 32;
+	static const int MAX_DYNAMIC_OBJECTS = 128;
+	static const int MAX_MODELS = 64;
+	static const int MAX_OBJECT_MATRICES = MAX_STATIC_OBJECTS + MAX_DYNAMIC_OBJECTS;
+
 	SceneObject _staticOpaqueObjects[MAX_STATIC_OBJECTS];
 	SceneObject _dynamicOpaqueObjects[MAX_DYNAMIC_OBJECTS];
-	Model _models[MAX_MODELS];
 	Float4x4 _objectBases[MAX_OBJECT_MATRICES];
 	Float4x4 _prevWVPs[MAX_OBJECT_MATRICES];
 
-	//std::vector<SceneObject> _staticOpaqueObjects;
-	//std::vector<SceneObject> _dynamicOpaqueObjects;
-	/*std::vector<SceneObject> _staticTransparentObjects;
-	std::vector<SceneObject> _dynamicTransparentObjects;*/
-	//std::vector<Model> _models;
-	//std::vector<Float4x4> _objectBases;
-	//std::vector<Float4x4> _prevWVPs;
-
-	static int _highest_id;
+	static int _highestSceneObjId;
+	static int _numTotalModelsShared;
+	static Model _models[MAX_MODELS];
+	static Model *_boxModel;
+	static Model *_planeModel;
+	static std::unordered_map<std::wstring, Model *> _modelCache; // share model across scenes
 };

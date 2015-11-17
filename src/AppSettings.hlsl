@@ -61,8 +61,8 @@ static const int JitterModes_None = 0;
 static const int JitterModes_Uniform2x = 1;
 static const int JitterModes_Hammersly16 = 2;
 
-static const int Scenes_RoboHand = 0;
-static const int Scenes_Plane = 1;
+static const int Scenes_CornellBox = 0;
+static const int Scenes_Boxes = 1;
 
 static const bool EnableAutoExposure = false;
 static const float KeyValue = 0.1150f;
