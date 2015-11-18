@@ -183,7 +183,10 @@ void Realtime_GI::CreateRenderTargets()
     _velocityTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16_FLOAT, true, NumSamples, Quality);
 
 	// TODO: remove multi sample for cubemap
-	_cubemapGenerator.Initialize(device, 1, NumSamples, Quality);
+	if (_firstFrame)
+	{
+		_cubemapGenerator.Initialize(device, 1, NumSamples, Quality);
+	}
 
     if(_resolveTarget.Width != width || _resolveTarget.Height != height)
     {
