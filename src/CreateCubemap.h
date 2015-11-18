@@ -18,32 +18,35 @@ using namespace SampleFramework11;
 
 class CreateCubemap
 {
+
+public:
+	CreateCubemap(const FLOAT NearClip, const FLOAT FarClip);
+	~CreateCubemap();
+
+	void Initialize(ID3D11Device *device, uint32 numMipLevels, uint32 multiSamples, uint32 msQuality);
+	void SetPosition(Float3 position);
+	void GetTargetViews(RenderTarget2D &resCubemapTarget);
+	void Create(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
+		const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox);
+
+	const PerspectiveCamera &GetCubemapCamera();
+
 private:
 	const uint32 CubemapWidth = 128;
 	const uint32 CubemapHeight = 128;
 
-	//MeshRenderer *meshRenderer = nullptr;
-
-	PerspectiveCamera cubemapCamera;//Camera used to catch scenes in 6 directions
+	PerspectiveCamera cubemapCamera;
 	RenderTarget2D cubemapTarget;
 	DepthStencilBuffer cubemapDepthTarget;
 	Float3 position;
+
 	struct CameraStruct{
 		Float3 Eye;
 		Float3 LookAt;
 		Float3 Up;
-	}CubemapCameraStruct[6];
-	static CONST CameraStruct DefaultCubemapCameraStruct[6];
-	static CONST Float3 DefaultPosition;
-public:
-	CreateCubemap(CONST FLOAT NearClip, CONST FLOAT FarClip);
-	VOID Initialize(ID3D11Device *device, uint32 numMipLevels, uint32 multiSamples, uint32 msQuality);
-	VOID SetPosition(Float3 position);
-	CONST PerspectiveCamera &GetCubemapCamera();
-	VOID GetTargetViews(RenderTarget2D &resCubemapTarget);
-	VOID Create(CONST DeviceManager &deviceManager, MeshRenderer *meshRenderer,
-		CONST RenderTarget2D &velocityTarget, CONST Float4x4 &modelTransform, ID3D11ShaderResourceView *environmentMap,
-		CONST SH9Color &environmentMapSH, CONST Float2 &jitterOffset, Skybox *skybox);
-	~CreateCubemap();
+	} CubemapCameraStruct[6];
+
+	static const CameraStruct DefaultCubemapCameraStruct[6];
+	static const Float3 DefaultPosition;
 };
 

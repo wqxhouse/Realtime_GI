@@ -16,6 +16,8 @@
 #include <SH.hlsl>
 #include "AppSettings.hlsl"
 
+#define UseMaps_ (UseNormalMapping_ || UseAlbedoMap_ || UseMetallicMap_ || UseRoughnessMap_ || UseEmissiveMap_)
+
 //=================================================================================================
 // Constants
 //=================================================================================================
@@ -58,6 +60,10 @@ Texture2DArray ShadowMap : register(t2);
 TextureCube<float3> SpecularCubemap : register(t3);
 Texture2D<float2> SpecularCubemapLookup : register(t4);
 
+Texture2D RoughnessMap : register(t5);
+Texture2D MetallicMap : register(t6);
+Texture2D EmissiveMap : register(t7);
+
 SamplerState AnisoSampler : register(s0);
 SamplerState EVSMSampler : register(s1);
 SamplerState LinearSampler : register(s2);
@@ -70,8 +76,11 @@ struct VSInput
     float3 PositionOS 		    : POSITION;
     float3 NormalOS 		    : NORMAL;
 
+	#if UseMaps_
+		float2 UV				: TEXCOORD;
+	#endif
+
     #if UseNormalMapping_
-        float2 UV               : TEXCOORD;
         float3 TangentOS        : TANGENT;
         float3 BitangentOS      : BITANGENT;
     #endif
@@ -88,8 +97,11 @@ struct VSOutput
 
     float3 PrevPosition         : PREVPOSITION;
 
+	#if UseMaps_
+		float2 UV				: UV;
+	#endif
+
     #if UseNormalMapping_
-        float2 UV               : UV;
         float3 TangentWS        : TANGENT;
         float3 BitangentWS      : BITANGENT;
     #endif
@@ -112,8 +124,11 @@ struct PSInput
 
     SampleMode_ float3 PrevPosition         : PREVPOSITION;
 
+	#if UseMaps_
+		SampleMode_ float2 UV				: UV;
+	#endif
+
     #if UseNormalMapping_
-        SampleMode_ float2 UV               : UV;
         SampleMode_ float3 TangentWS        : TANGENT;
         SampleMode_ float3 BitangentWS      : BITANGENT;
     #endif
@@ -150,8 +165,11 @@ VSOutput VS(in VSInput input, in uint VertexID : SV_VertexID)
 
     output.PrevPosition = mul(float4(input.PositionOS, 1.0f), PrevWorldViewProjection).xyw;
 
+	#if UseMaps_
+		output.UV = input.UV;
+	#endif
+
     #if UseNormalMapping_
-        output.UV = input.UV;
         output.TangentWS = normalize(mul(input.TangentOS, (float3x3)World));
         output.BitangentWS = normalize(mul(input.BitangentOS, (float3x3)World));
     #endif
@@ -325,19 +343,49 @@ PSOutput PS(in PSInput input)
         }
     #endif
 
-    float4 albedoMap = 1.0f;
+	float4 albedoMap = 1.0f;
+	float4 roughnessMap = 1.0f;
+	float4 metallicMap = 1.0f;
+	float4 emissiveMap = 1.0f;
+
+	#if UseAlbedoMap_
+		albedoMap = AlbedoMap.Sample(AnisoSampler, input.UV);
+	#endif
+
+	// TODO: optimize - combine the maps in one texture in different channels
+	#if UseRoughnessMap_
+		roughnessMap = RoughnessMap.Sample(AnisoSampler, input.UV);
+	#endif
+
+	#if UseMetallicMap_
+		metallicMap = MetallicMap.Sample(AnisoSampler, input.UV);
+	#endif
+	
+	#if UseEmissiveMap_
+		emissiveMap = EmissiveMap.Sample(AnisoSampler, input.UV);
+	#endif
+
+	float metallic = metallicMap.r * SpecularIntensity;
+	float roughness = roughnessMap.r * Roughness;
+
+	// TODO: currently, emissive is the actual color
+	// Later make emissive as only a mask
+	// The actual color is going to be passed in as cbuffer 
+	float3 emissiveColor = emissiveMap.rgb * EmissiveIntensity;
 
     float3 diffuseAlbedo = albedoMap.xyz;
     diffuseAlbedo *= DiffuseIntensity;
-    diffuseAlbedo *= (1.0f - SpecularIntensity);
+    diffuseAlbedo *= (1.0f - metallic);
+
+	float3 specularColor = lerp(0.04, albedoMap.xyz, metallic);
 
     // Add in the primary directional light
     float shadowVisibility = EnableShadows ? ShadowVisibility(positionWS, input.DepthVS) : 1.0f;
     float3 lighting = 0.0f;
 
     if(EnableDirectLighting)
-        lighting += CalcLighting(normalWS, LightDirection, LightColor, diffuseAlbedo, SpecularIntensity,
-                                 Roughness, positionWS) * shadowVisibility;
+        lighting += CalcLighting(normalWS, LightDirection, LightColor, diffuseAlbedo, specularColor,
+                                 roughness, positionWS);
 
 	// Add in the ambient
     if(EnableAmbientLighting)
@@ -352,7 +400,7 @@ PSOutput PS(in PSInput input)
         uint width, height, numMips;
         SpecularCubemap.GetDimensions(0, width, height, numMips);
 
-        const float SqrtRoughness = sqrt(Roughness);
+        const float SqrtRoughness = sqrt(roughness);
 
         // Compute the mip level, assuming the top level is a roughness of 0.01
         float mipLevel = saturate(SqrtRoughness - 0.01f) * (numMips - 1.0f);
@@ -364,22 +412,23 @@ PSOutput PS(in PSInput input)
         // Compute fresnel
         float viewAngle = saturate(dot(viewWS, normalWS));
         float2 AB = SpecularCubemapLookup.SampleLevel(LinearSampler, float2(viewAngle, SqrtRoughness), 0.0f);
-        float fresnel = SpecularIntensity * AB.x + AB.y;
-        fresnel *= saturate(SpecularIntensity * 100.0f);
+        float fresnel = metallic * AB.x + AB.y;
+        fresnel *= saturate(metallic * 100.0f);
 
         lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;
     }
 
+	
+	// Emissive term
+	lighting += emissiveColor;
+	lighting *= shadowVisibility;
+
 	PSOutput output;
-	#if CreateCubemap_
-		output.Color = float4(lighting, 1.0f);
 
-		output.Color.xyz *= exp2(ExposureScale);
-	#else
-		output.Color = float4(lighting, 1.0f);
+	output.Color = float4(lighting, 1.0f);
+	output.Color.xyz *= exp2(ExposureScale);
 
-		output.Color.xyz *= exp2(ExposureScale);
-
+	#if !CreateCubemap_
 		float2 prevPositionSS = (input.PrevPosition.xy / input.PrevPosition.z) * float2(0.5f, -0.5f) + 0.5f;
 		prevPositionSS *= RTSize;
 		output.Velocity = input.PositionSS.xy - prevPositionSS;

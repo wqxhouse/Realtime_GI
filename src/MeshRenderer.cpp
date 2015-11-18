@@ -48,63 +48,173 @@ static const uint32 ShadowAnisotropy = 16;
 static const bool EnableShadowMips = true;
 #endif
 
+// Renders a text string indicating the current progress for compiling shaders
+static bool32 RenderShaderProgress(uint32 currShader, uint32 numShaders)
+{
+	float percent = Round((currShader / static_cast<float>(numShaders)) * 100.0f);
+	std::wstring progressText = L"Compiling shaders (" + ToString(percent) + L"%)";
+	GlobalApp->RenderCenteredText(progressText);
+	return GlobalApp->Window().IsAlive();
+}
+
+uint32 MeshRenderer::boolArrToUint32(bool32 *arr, int num)
+{
+	uint32 bits = 0;
+	for (int i = 0; i < num; i++)
+	{
+		bits |= (arr[i] & 0x1) << i;
+	}
+	return bits;
+}
+
+void MeshRenderer::uint32ToBoolArr(uint32 bits, bool32 *arr)
+{
+	for (int i = 0; i < 32; i++)
+	{
+		arr[i] = (bits & (1 << i)) >> i;
+	}
+}
+
+void MeshRenderer::GenVSShaderPermutations(ID3D11Device *device, const wchar *path, const char *entryName, 
+	const char **shaderDescs, int numDescs, std::unordered_map<uint32, VertexShaderPtr> &out)
+{
+	CompileOptions opts;
+	bool32 *states = (bool32 *)malloc(numDescs * sizeof(bool32));
+	GenVSRecursive(device, 0, states, &opts, path, entryName, shaderDescs, numDescs, out);
+	free(states);
+}
+
+void MeshRenderer::GenVSRecursive(ID3D11Device *device, int depth, bool32 *descStates, CompileOptions *opts, 
+	const wchar *path, const char *entryName, const char **shaderDescs, int numDescs, std::unordered_map<uint32, VertexShaderPtr> &out)
+{
+	if (depth == numDescs)
+	{
+		if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+			return;
+
+		opts->Reset();
+		for (int i = 0; i < numDescs; i++)
+		{
+			opts->Add(shaderDescs[i], descStates[i]);
+		}
+
+		uint32 bits = boolArrToUint32(descStates, numDescs);
+		VertexShaderPtr ptr = CompileVSFromFile(device, path, entryName, "vs_5_0", *opts);
+		out.insert(std::make_pair(bits, ptr));
+	}
+	else
+	{
+		for (int i = 0; i < 2; i++)
+		{
+			descStates[numDescs - 1 - depth] = i;
+			GenVSRecursive(device, depth + 1, descStates, opts, path, entryName, shaderDescs, numDescs, out);
+		}
+	}
+}
+
+void MeshRenderer::GenPSShaderPermutations(ID3D11Device *device, const wchar *path, const char *entryName, 
+	const char **shaderDescs, int numDescs, std::unordered_map<uint32, PixelShaderPtr> &out)
+{
+	CompileOptions opts;
+	bool32 *states = (bool32 *)malloc(numDescs * sizeof(bool32));
+	GenPSRecursive(device, 0, states, &opts, path, entryName, shaderDescs, numDescs, out);
+	free(states);
+}
+
+void MeshRenderer::GenPSRecursive(ID3D11Device *device, int depth, bool32 *descStates, CompileOptions *opts,
+	const wchar *path, const char *entryName, const char **shaderDescs, int numDescs, std::unordered_map<uint32, PixelShaderPtr> &out)
+{
+	if (depth == numDescs)
+	{
+		if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+			return;
+
+		opts->Reset();
+		for (int i = 0; i < numDescs; i++)
+		{
+			opts->Add(shaderDescs[i], descStates[i]);
+			printf("%s ", shaderDescs[i]);
+			printf("%d ", descStates[i]);
+		}
+
+		printf("\n");
+
+		uint32 bits = boolArrToUint32(descStates, numDescs);
+		printf("Bits: %d\n", bits);
+		PixelShaderPtr ptr = CompilePSFromFile(device, path, entryName, "ps_5_0", *opts);
+		out.insert(std::make_pair(bits, ptr));
+	}
+	else
+	{
+		for (int i = 0; i < 2; i++)
+		{
+			descStates[numDescs - 1 - depth] = i;
+			GenPSRecursive(device, depth + 1, descStates, opts, path, entryName, shaderDescs, numDescs, out);
+		}
+	}
+}
+
+
 void MeshRenderer::LoadShaders()
 {
-    // Load the mesh shaders
-    _meshDepthVS = CompileVSFromFile(_device, L"DepthOnly.hlsl", "VS", "vs_5_0");
+	_totalShaderNum = (int)pow(2, 5) + (int)pow(2, 7) + 8;
 
     CompileOptions opts;
-    opts.Add("UseNormalMapping_", 0);
 
-    _meshVS[0] = CompileVSFromFile(_device, L"Mesh.hlsl", "VS", "vs_5_0", opts);
+	// Mesh.hlsl
+	const char *vsDescs[] = { "UseNormalMapping_", "UseAlbedoMap_", "UseMetallicMap_", "UseRoughnessMap_", "UseEmissiveMap_" };
+	const char *psDescs[] = { "UseNormalMapping_", "UseAlbedoMap_", "UseMetallicMap_", "UseRoughnessMap_", "UseEmissiveMap_", "CreateCubemap_", "CentroidSampling_" };
+	GenVSShaderPermutations(_device, L"Mesh.hlsl", "VS", vsDescs, _countof(vsDescs), _meshVertexShaders);
+	GenPSShaderPermutations(_device, L"Mesh.hlsl", "PS", psDescs, _countof(psDescs), _meshPixelShaders);
 
-    opts.Reset();
-    opts.Add("UseNormalMapping_", 1);
-    _meshVS[1] = CompileVSFromFile(_device, L"Mesh.hlsl", "VS", "vs_5_0", opts);
+	// DepthOnly.hlsl
+	_meshDepthVS = CompileVSFromFile(_device, L"DepthOnly.hlsl", "VS", "vs_5_0");
+	if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+		return;
 
-    for(uint32 useNormalMapping = 0; useNormalMapping < 2; ++useNormalMapping)
-    {
-        for(uint32 centroidSampling = 0; centroidSampling < 2; ++centroidSampling)
-        {
-			for (uint32 createCubemap = 0; createCubemap < 2; ++createCubemap)
-			{
-				opts.Reset();
-				opts.Add("UseNormalMapping_", useNormalMapping);
-				opts.Add("CentroidSampling_", centroidSampling);
-				opts.Add("CreateCubemap_", createCubemap);
-				_meshPS[useNormalMapping][centroidSampling][createCubemap] = 
-					CompilePSFromFile(_device, L"Mesh.hlsl", "PS", "ps_5_0", opts);
-			}
-        }
-    }
-
+	// EVSMConvert.hlsl
     _fullScreenVS = CompileVSFromFile(_device, L"EVSMConvert.hlsl", "FullScreenVS");
+	if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+		return;
 
     opts.Reset();
     opts.Add("MSAASamples_", ShadowMSAASamples);
     _evsmConvertPS = CompilePSFromFile(_device, L"EVSMConvert.hlsl", "ConvertToEVSM", "ps_5_0", opts);
+	if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+		return;
 
     opts.Reset();
     opts.Add("Horizontal_", 1);
     opts.Add("Vertical_", 0);
     opts.Add("SampleRadius_", SampleRadius);
     _evsmBlurH = CompilePSFromFile(_device, L"EVSMConvert.hlsl", "BlurEVSM", "ps_5_0", opts);
+	if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+		return;
 
     opts.Reset();
     opts.Add("Horizontal_", 0);
     opts.Add("Vertical_", 1);
     opts.Add("SampleRadius_", SampleRadius);
     _evsmBlurV = CompilePSFromFile(_device, L"EVSMConvert.hlsl", "BlurEVSM", "ps_5_0", opts);
+	if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+		return;
 
+	// DepthReduction.hlsl
     opts.Reset();
     opts.Add("MSAA_", 0);
     _depthReductionInitialCS[0] = CompileCSFromFile(_device, L"DepthReduction.hlsl", "DepthReductionInitialCS", "cs_5_0", opts);
+	if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+		return;
 
     opts.Reset();
     opts.Add("MSAA_", 1);
     _depthReductionInitialCS[1] = CompileCSFromFile(_device, L"DepthReduction.hlsl", "DepthReductionInitialCS", "cs_5_0", opts);
+	if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+		return;
 
     _depthReductionCS = CompileCSFromFile(_device, L"DepthReduction.hlsl", "DepthReductionCS");
+	if (RenderShaderProgress(_curShaderNum++, _totalShaderNum) == false)
+		return;
 }
 
 void MeshRenderer::CreateShadowMaps()
@@ -121,26 +231,108 @@ void MeshRenderer::CreateShadowMaps()
     _tempVSM.Initialize(_device, ShadowMapSize, ShadowMapSize, smFmt, 1, 1, 0, false, false, 1, false);
 }
 
-void MeshRenderer::SetModel(const Model* model)
+void MeshRenderer::SetCubemapCapture(bool32 tf)
 {
-    this->_model = model;
+	_drawingCubemap = tf;
+	if (_drawingCubemap)
+	{
+		ReMapMeshShaders();
+	}
+}
 
-    _meshInputLayouts.clear();
-    _meshDepthInputLayouts.clear();
+void MeshRenderer::ReMapMeshShaders()
+{
+	_meshVertexShadersMap.clear();
+	_meshPixelShadersMap.clear();
 
-    VertexShaderPtr vs = AppSettings::UseNormalMapping() ? _meshVS[1] : _meshVS[0];
+	// re-map shader for cubemap
+	for (uint64 i = 0; i < _scene->getNumModels(); i++)
+	{
+		Model *m = _scene->getModel(i);
+		GenMeshShaderMap(m);
+	}
+}
 
+void MeshRenderer::SetScene(Scene *scene)
+{
+	// unless the scene json or scene gui option or model has changed, 
+	// this function will only be called once
+	_scene = scene;
+	_meshInputLayouts.clear();
+	_meshDepthInputLayouts.clear();
+
+	_meshVertexShadersMap.clear();
+	_meshPixelShadersMap.clear();
+
+	// generate input layout for every model's mesh
+	for (uint64 i = 0; i < _scene->getNumModels(); i++)
+	{
+		Model *m = _scene->getModel(i);
+		GenMeshShaderMap(m);
+		GenAndCacheMeshInputLayout(m);
+	}
+}
+
+void MeshRenderer::SortSceneObjects(const Float4x4 &viewMatrix)
+{
+	_scene->sortSceneObjects(viewMatrix);
+}
+
+void MeshRenderer::GenMeshShaderMap(const Model *model)
+{
+	// Map mesh to shaders
+	for (uint64 i = 0; i < model->Meshes().size(); ++i)
+	{
+		const Mesh &mesh = model->Meshes()[i];
+		const bool32 *materialFlags = mesh.MaterialFlags();
+
+		// TODO: use AppSettings to automate the process - data driven
+		// decouple string dependency
+		bool32 arr[7]; // five maps + two modes
+		materialFlags[(uint64)MaterialFlag::HasNormalMap] ? arr[0] = true : arr[0] = false;
+		materialFlags[(uint64)MaterialFlag::HasAlbedoMap] ? arr[1] = true : arr[1] = false;
+		materialFlags[(uint64)MaterialFlag::HasRoughnessMap] ? arr[2] = true : arr[2] = false;
+		materialFlags[(uint64)MaterialFlag::HasMetallicMap] ? arr[3] = true : arr[3] = false;
+		materialFlags[(uint64)MaterialFlag::HasEmissiveMap] ? arr[4] = true : arr[4] = false;
+
+		// TODO: the following case somehow defeats the purpose of the design
+		_drawingCubemap ? arr[5] = true : arr[5] = false;
+		AppSettings::CentroidSampling ? arr[6] = true : arr[6] = false;
+
+		uint32 vsbits = boolArrToUint32(arr, 5);
+		uint32 psbits = boolArrToUint32(arr, 7);
+
+		VertexShaderPtr vs = _meshVertexShaders[vsbits];
+		PixelShaderPtr ps = _meshPixelShaders[psbits];
+
+		_meshVertexShadersMap.insert(std::make_pair(&mesh, vs));
+		_meshPixelShadersMap.insert(std::make_pair(&mesh, ps));
+	}
+}
+
+void MeshRenderer::GenAndCacheMeshInputLayout(const Model* model)
+{
+	// TODO: optimize this; group meshes with the same input layout to reduce api calls
     for(uint64 i = 0; i < model->Meshes().size(); ++i)
     {
         const Mesh& mesh = model->Meshes()[i];
-        ID3D11InputLayoutPtr inputLayout;
-        DXCall(_device->CreateInputLayout(mesh.InputElements(), mesh.NumInputElements(),
-               vs->ByteCode->GetBufferPointer(), vs->ByteCode->GetBufferSize(), &inputLayout));
-        _meshInputLayouts.push_back(inputLayout);
+		VertexShaderPtr vs = _meshVertexShadersMap[&mesh];
 
-        DXCall(_device->CreateInputLayout(mesh.InputElements(), mesh.NumInputElements(),
-               _meshDepthVS->ByteCode->GetBufferPointer(), _meshDepthVS->ByteCode->GetBufferSize(), &inputLayout));
-        _meshDepthInputLayouts.push_back(inputLayout);
+		ID3D11InputLayoutPtr inputLayout;
+
+		if (_meshInputLayouts.find(&mesh) == _meshInputLayouts.end())
+		{
+			DXCall(_device->CreateInputLayout(mesh.InputElements(), mesh.NumInputElements(),
+				vs->ByteCode->GetBufferPointer(), vs->ByteCode->GetBufferSize(), &inputLayout));
+			_meshInputLayouts.insert(std::make_pair(&mesh, inputLayout));
+		}
+
+		if (_meshDepthInputLayouts.find(&mesh) == _meshDepthInputLayouts.end())
+		{
+			DXCall(_device->CreateInputLayout(mesh.InputElements(), mesh.NumInputElements(),
+				_meshDepthVS->ByteCode->GetBufferPointer(), _meshDepthVS->ByteCode->GetBufferSize(), &inputLayout));
+			_meshDepthInputLayouts.insert(std::make_pair(&mesh, inputLayout));
+		}
     }
 }
 
@@ -148,7 +340,7 @@ void MeshRenderer::SetModel(const Model* model)
 void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
     this->_device = device;
-	this->_cubeMap = FALSE;
+	this->_drawingCubemap = false;
 
     _blendStates.Initialize(device);
     _rasterizerStates.Initialize(device);
@@ -159,6 +351,9 @@ void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context
     _meshPSConstants.Initialize(device);
     _evsmConstants.Initialize(device);
     _reductionConstants.Initialize(device);
+
+	_curShaderNum = 0;
+	_totalShaderNum = 0;
 
     LoadShaders();
 
@@ -290,35 +485,35 @@ void MeshRenderer::ReduceDepth(ID3D11DeviceContext* context, DepthStencilBuffer&
 }
 
 // Computes shadow depth bounds on the CPU using the mesh vertex positions
-void MeshRenderer::ComputeShadowDepthBounds(const Camera& camera)
-{
-    Float4x4 viewMatrix = camera.ViewMatrix();
-    const float nearClip = camera.NearClip();
-    const float farClip = camera.FarClip();
-    const float clipDist = farClip - nearClip;
-
-    float minDepth = 1.0f;
-    float maxDepth = 0.0f;
-    const uint64 numMeshes = _model->Meshes().size();
-    for(uint64 meshIdx = 0; meshIdx < numMeshes; ++meshIdx)
-    {
-        const Mesh& mesh = _model->Meshes()[meshIdx];
-        const uint64 numVerts = mesh.NumVertices();
-        const uint64 stride = mesh.VertexStride();
-        const uint8* vertices = mesh.Vertices();
-        for(uint64 i = 0; i < numVerts; ++i)
-        {
-            const Float3& position = *reinterpret_cast<const Float3*>(vertices);
-            float viewSpaceZ = Float3::Transform(position, viewMatrix).z;
-            float depth = Saturate((viewSpaceZ - nearClip) / clipDist);
-            minDepth = std::min(minDepth, depth);
-            maxDepth = std::max(maxDepth, depth);
-            vertices += stride;
-        }
-    }
-
-    _shadowDepthBounds = Float2(minDepth, maxDepth);
-}
+//void MeshRenderer::ComputeShadowDepthBounds(const Camera& camera)
+//{
+//    Float4x4 viewMatrix = camera.ViewMatrix();
+//    const float nearClip = camera.NearClip();
+//    const float farClip = camera.FarClip();
+//    const float clipDist = farClip - nearClip;
+//
+//    float minDepth = 1.0f;
+//    float maxDepth = 0.0f;
+//    const uint64 numMeshes = _model->Meshes().size();
+//    for(uint64 meshIdx = 0; meshIdx < numMeshes; ++meshIdx)
+//    {
+//        const Mesh& mesh = _model->Meshes()[meshIdx];
+//        const uint64 numVerts = mesh.NumVertices();
+//        const uint64 stride = mesh.VertexStride();
+//        const uint8* vertices = mesh.Vertices();
+//        for(uint64 i = 0; i < numVerts; ++i)
+//        {
+//            const Float3& position = *reinterpret_cast<const Float3*>(vertices);
+//            float viewSpaceZ = Float3::Transform(position, viewMatrix).z;
+//            float depth = Saturate((viewSpaceZ - nearClip) / clipDist);
+//            minDepth = std::min(minDepth, depth);
+//            maxDepth = std::max(maxDepth, depth);
+//            vertices += stride;
+//        }
+//    }
+//
+//    _shadowDepthBounds = Float2(minDepth, maxDepth);
+//}
 
 // Convert to an EVSM map
 void MeshRenderer::ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx, Float3 cascadeScale)
@@ -437,16 +632,7 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 
     context->PSSetSamplers(0, 3, sampStates);
 
-    // Set constant buffers
-    _meshVSConstants.Data.World = Float4x4::Transpose(world);
-    _meshVSConstants.Data.View = Float4x4::Transpose(camera.ViewMatrix());
-    _meshVSConstants.Data.WorldViewProjection = Float4x4::Transpose(world * camera.ViewProjectionMatrix());
-    _meshVSConstants.Data.PrevWorldViewProjection = _prevWVP;
-    _meshVSConstants.ApplyChanges(context);
-    _meshVSConstants.SetVS(context, 0);
-
-    _prevWVP = _meshVSConstants.Data.WorldViewProjection;
-
+	// set PS constants
     _meshPSConstants.Data.CameraPosWS = camera.Position();
     _meshPSConstants.Data.OffsetScale = OffsetScale;
     _meshPSConstants.Data.PositiveExponent = PositiveExponent;
@@ -460,67 +646,87 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     _meshPSConstants.ApplyChanges(context);
     _meshPSConstants.SetPS(context, 0);
 
-    const uint64 nmlMapIdx = AppSettings::UseNormalMapping() ? 1 : 0;
-    const uint64 centroidIdx = AppSettings::CentroidSampling ? 1 : 0;
-
     // Set shaders
     context->DSSetShader(nullptr, nullptr, 0);
     context->HSSetShader(nullptr, nullptr, 0);
     context->GSSetShader(nullptr, nullptr, 0);
-    context->VSSetShader(_meshVS[nmlMapIdx], nullptr, 0);
-	context->PSSetShader(_meshPS[nmlMapIdx][centroidIdx][_cubeMap], nullptr, 0);//!
 
-    // Draw all meshes
-    uint32 partCount = 0;
-    for(uint64 meshIdx = 0; meshIdx < _model->Meshes().size(); ++meshIdx)
-    {
-        const Mesh& mesh = _model->Meshes()[meshIdx];
-
-        // Set the vertices and indices
-        ID3D11Buffer* vertexBuffers[1] = { mesh.VertexBuffer() };
-        UINT vertexStrides[1] = { mesh.VertexStride() };
-        UINT offsets[1] = { 0 };
-        context->IASetVertexBuffers(0, 1, vertexBuffers, vertexStrides, offsets);
-        context->IASetIndexBuffer(mesh.IndexBuffer(), mesh.IndexBufferFormat(), 0);
-        context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-        // Set the input layout
-        context->IASetInputLayout(_meshInputLayouts[meshIdx]);
-
-        // Draw all parts
-        for(uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
-        {
-            const MeshPart& part = mesh.MeshParts()[partIdx];
-            const MeshMaterial& material = _model->Materials()[part.MaterialIdx];
-
-            // Set the textures
-            ID3D11ShaderResourceView* psTextures[5] =
-            {
-                material.DiffuseMap,
-                material.NormalMap,
-                _varianceShadowMap.SRView,
-                envMap,
-                _specularLookupTexture
-            };
-
-            context->PSSetShaderResources(0, 5, psTextures);
-            context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
-        }
-    }
+	_scene->sortSceneObjects(camera.ViewMatrix());
+	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getStaticOpaqueObjectsPtr(), _scene->getNumStaticOpaqueObjects());
+	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getDynamicOpaqueObjectsPtr(), _scene->getNumDynmamicOpaueObjects());
 
     ID3D11ShaderResourceView* nullSRVs[5] = { nullptr };
     context->PSSetShaderResources(0, 5, nullSRVs);
 }
 
-void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, const Float4x4& world,
+void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4x4 &world, const Camera& camera,
 	ID3D11ShaderResourceView* envMap, const SH9Color& envMapSH,
-	Float2 jitterOffset, bool32 cubeMap)
+	Float2 jitterOffset, SceneObject *sceneObjectsArr, int numSceneObjs)
 {
-	_cubeMap = cubeMap ? TRUE : FALSE;
-	Render(context, camera, world, envMap, envMapSH, jitterOffset);
-	_cubeMap = FALSE;
-}
+	for (uint64 objIndex = 0; objIndex < numSceneObjs; objIndex++)
+	{
+		Float4x4 worldMat = *sceneObjectsArr[objIndex].base * world;
+		Model *model = sceneObjectsArr[objIndex].model;
 
+		// Set VS constant buffer
+		_meshVSConstants.Data.World = Float4x4::Transpose(worldMat);
+		_meshVSConstants.Data.View = Float4x4::Transpose(camera.ViewMatrix());
+		_meshVSConstants.Data.WorldViewProjection = Float4x4::Transpose(worldMat * camera.ViewProjectionMatrix());
+		_meshVSConstants.Data.PrevWorldViewProjection = *sceneObjectsArr[objIndex].prevWVP;
+		_meshVSConstants.ApplyChanges(context);
+		_meshVSConstants.SetVS(context, 0);
+
+		*sceneObjectsArr[objIndex].prevWVP = _meshVSConstants.Data.WorldViewProjection;
+
+		// Draw all meshes
+		uint32 partCount = 0;
+		for (uint64 meshIdx = 0; meshIdx < model->Meshes().size(); ++meshIdx)
+		{
+			const Mesh& mesh = model->Meshes()[meshIdx];
+
+			// Set per mesh shaders
+			// TODO: sort by view depth
+			// TODO: batch draw calls for static object
+			context->VSSetShader(_meshVertexShadersMap[&mesh], nullptr, 0);
+			context->PSSetShader(_meshPixelShadersMap[&mesh],  nullptr, 0);
+			
+			// Set the vertices and indices
+			ID3D11Buffer* vertexBuffers[1] = { mesh.VertexBuffer() };
+			UINT vertexStrides[1] = { mesh.VertexStride() };
+			UINT offsets[1] = { 0 };
+			context->IASetVertexBuffers(0, 1, vertexBuffers, vertexStrides, offsets);
+			context->IASetIndexBuffer(mesh.IndexBuffer(), mesh.IndexBufferFormat(), 0);
+			context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+			// Set the input layout
+			// context->IASetInputLayout(_meshInputLayouts[meshIdx]);
+			context->IASetInputLayout(_meshInputLayouts[&mesh]);
+
+			// Draw all parts
+			for (uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
+			{
+				const MeshPart& part = mesh.MeshParts()[partIdx];
+				const MeshMaterial& material = model->Materials()[part.MaterialIdx];
+
+				// Set the textures
+				ID3D11ShaderResourceView* psTextures[] =
+				{
+					material.DiffuseMap,
+					material.NormalMap,
+					_varianceShadowMap.SRView,
+					envMap,
+					_specularLookupTexture,
+					material.RoughnessMap, 
+					material.MetallicMap, 
+					material.EmissiveMap
+				};
+
+				context->PSSetShaderResources(0, _countof(psTextures), psTextures);
+				context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
+			}
+		}
+	}
+}
 
 // Renders all meshes using depth-only rendering
 void MeshRenderer::RenderDepth(ID3D11DeviceContext* context, const Camera& camera,
@@ -538,13 +744,6 @@ void MeshRenderer::RenderDepth(ID3D11DeviceContext* context, const Camera& camer
     else
         context->RSSetState(_rasterizerStates.BackFaceCull());
 
-    // Set constant buffers
-    _meshVSConstants.Data.World = Float4x4::Transpose(world);
-    _meshVSConstants.Data.View = Float4x4::Transpose(camera.ViewMatrix());
-    _meshVSConstants.Data.WorldViewProjection = Float4x4::Transpose(world * camera.ViewProjectionMatrix());
-    _meshVSConstants.ApplyChanges(context);
-    _meshVSConstants.SetVS(context, 0);
-
     // Set shaders
     context->VSSetShader(_meshDepthVS, nullptr, 0);
     context->PSSetShader(nullptr, nullptr, 0);
@@ -552,30 +751,50 @@ void MeshRenderer::RenderDepth(ID3D11DeviceContext* context, const Camera& camer
     context->DSSetShader(nullptr, nullptr, 0);
     context->HSSetShader(nullptr, nullptr, 0);
 
+	_scene->sortSceneObjects(camera.ViewMatrix());
+	RenderDepthSceneObjects(context, world, camera, _scene->getStaticOpaqueObjectsPtr(), _scene->getNumStaticOpaqueObjects());
+	RenderDepthSceneObjects(context, world, camera, _scene->getDynamicOpaqueObjectsPtr(), _scene->getNumDynmamicOpaueObjects());
+}
 
-    uint32 partCount = 0;
-    for(uint32 meshIdx = 0; meshIdx < _model->Meshes().size(); ++meshIdx)
-    {
-        const Mesh& mesh = _model->Meshes()[meshIdx];
+void MeshRenderer::RenderDepthSceneObjects(ID3D11DeviceContext* context, const Float4x4 &world, 
+	const Camera& camera, SceneObject *sceneObjectsArr, int numSceneObjs)
+{
+	for (uint64 objIndex = 0; objIndex < numSceneObjs; objIndex++)
+	{
+		Float4x4 worldMat = *sceneObjectsArr[objIndex].base * world;
+		Model *model = sceneObjectsArr[objIndex].model;
 
-        // Set the vertices and indices
-        ID3D11Buffer* vertexBuffers[1] = { mesh.VertexBuffer() };
-        UINT vertexStrides[1] = { mesh.VertexStride() };
-        UINT offsets[1] = { 0 };
-        context->IASetVertexBuffers(0, 1, vertexBuffers, vertexStrides, offsets);
-        context->IASetIndexBuffer(mesh.IndexBuffer(), mesh.IndexBufferFormat(), 0);
-        context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		// Set constant buffers
+		_meshVSConstants.Data.World = Float4x4::Transpose(worldMat);
+		_meshVSConstants.Data.View = Float4x4::Transpose(camera.ViewMatrix());
+		_meshVSConstants.Data.WorldViewProjection = Float4x4::Transpose(worldMat * camera.ViewProjectionMatrix());
+		_meshVSConstants.ApplyChanges(context);
+		_meshVSConstants.SetVS(context, 0);
 
-        // Set the input layout
-        context->IASetInputLayout(_meshDepthInputLayouts[meshIdx]);
+		uint32 partCount = 0;
+		for (uint32 meshIdx = 0; meshIdx < model->Meshes().size(); ++meshIdx)
+		{
+			const Mesh& mesh = model->Meshes()[meshIdx];
 
-        // Draw all parts
-        for(uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
-        {
-            const MeshPart& part = mesh.MeshParts()[partIdx];
-            context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
-        }
-    }
+			// Set the vertices and indices
+			ID3D11Buffer* vertexBuffers[1] = { mesh.VertexBuffer() };
+			UINT vertexStrides[1] = { mesh.VertexStride() };
+			UINT offsets[1] = { 0 };
+			context->IASetVertexBuffers(0, 1, vertexBuffers, vertexStrides, offsets);
+			context->IASetIndexBuffer(mesh.IndexBuffer(), mesh.IndexBufferFormat(), 0);
+			context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+			// Set the input layout
+			context->IASetInputLayout(_meshDepthInputLayouts[&mesh]);
+
+			// Draw all parts
+			for (uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
+			{
+				const MeshPart& part = mesh.MeshParts()[partIdx];
+				context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
+			}
+		}
+	}
 }
 
 // Renders meshes using cascaded shadow mapping

@@ -37,6 +37,11 @@ bool DirectoryExists(const wchar* dirPath)
     return (fileAttr != INVALID_FILE_ATTRIBUTES && (fileAttr & FILE_ATTRIBUTE_DIRECTORY));
 }
 
+bool DirectoryIsRelative(const wchar *dirPath)
+{
+	// TODO: fails the case of C:hello.txt // which should be relative
+	return PathIsRelativeW(dirPath) != 0;
+}
 
 // Returns the directory containing a file
 std::wstring GetDirectoryFromFilePath(const wchar* filePath_)

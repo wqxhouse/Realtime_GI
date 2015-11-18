@@ -20,11 +20,11 @@
 #include <Graphics\\ShaderCompilation.h>
 
 #include "AppSettings.h"
+#include "Scene.h"
 
 using namespace SampleFramework11;
 
 struct BakeData;
-
 class MeshRenderer
 {
 
@@ -37,16 +37,13 @@ protected:
 public:
 
     void Initialize(ID3D11Device* device, ID3D11DeviceContext* context);
-    void SetModel(const Model* model);
+	void SetScene(Scene *scene);
 
     void RenderDepth(ID3D11DeviceContext* context, const Camera& camera, const Float4x4& world,
                      bool shadowRendering);
     void Render(ID3D11DeviceContext* context, const Camera& camera, const Float4x4& world,
                 ID3D11ShaderResourceView* envMap, const SH9Color& envMapSH,
                 Float2 JitterOffset);
-	void Render(ID3D11DeviceContext* context, const Camera& camera, const Float4x4& world,
-				ID3D11ShaderResourceView* envMap, const SH9Color& envMapSH,
-				Float2 JitterOffset, bool32 cubeMap);
 
     void Update();
 
@@ -55,16 +52,37 @@ public:
     void ReduceDepth(ID3D11DeviceContext* context, DepthStencilBuffer& depthBuffer,
                      const Camera& camera);
 
-    void ComputeShadowDepthBounds(const Camera& camera);
+    // void ComputeShadowDepthBounds(const Camera& camera);
 
     void RenderShadowMap(ID3D11DeviceContext* context, const Camera& camera,
                          const Float4x4& world);
 
+	void SetCubemapCapture(bool32 tf);
+	void ReMapMeshShaders();
+	void SortSceneObjects(const Float4x4 &viewMatrix);
+
 protected:
 
     void LoadShaders();
+
+	void GenVSShaderPermutations(ID3D11Device *device, const wchar *path, const char *entryName, const char **shaderDescs, int numDescs, std::unordered_map<uint32, VertexShaderPtr> &out);
+	void GenPSShaderPermutations(ID3D11Device *device, const wchar *path, const char *entryName, const char **shaderDescs, int numDescs, std::unordered_map<uint32, PixelShaderPtr> &out);
+	void GenVSRecursive(ID3D11Device *device, int depth, bool32 *descStates, CompileOptions *opts, const wchar *path, const char *entryName, const char **shaderDescs, int numDescs, std::unordered_map<uint32, VertexShaderPtr> &out);
+	void GenPSRecursive(ID3D11Device *device, int depth, bool32 *descStates, CompileOptions *opts, const wchar *path, const char *entryName, const char **shaderDescs, int numDescs, std::unordered_map<uint32, PixelShaderPtr> &out);
+	uint32 boolArrToUint32(bool32 *arr, int num);
+	void uint32ToBoolArr(uint32 bits, bool32 *arr);
+
     void CreateShadowMaps();
     void ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx, Float3 cascadeScale);
+
+	void RenderDepthSceneObjects(ID3D11DeviceContext* context, const Float4x4 &world, const Camera& camera, SceneObject *sceneObjectsArr, int numSceneObjs);
+	void RenderSceneObjects(ID3D11DeviceContext* context, const Float4x4 &world, const Camera& camera,
+		ID3D11ShaderResourceView* envMap, const SH9Color& envMapSH,
+		Float2 jitterOffset, SceneObject *sceneObjectsArr, int numSceneObjs);
+
+    void GenAndCacheMeshInputLayout(const Model* model);
+	void GenMeshShaderMap(const Model *model);
+
 
     ID3D11DevicePtr _device;
 
@@ -73,7 +91,8 @@ protected:
     DepthStencilStates _depthStencilStates;
     SamplerStates _samplerStates;
 
-    const Model* _model = nullptr;
+    // const Model* _model = nullptr;
+	Scene *_scene = nullptr;
 
     DepthStencilBuffer _shadowMap;
     RenderTarget2D  _varianceShadowMap;
@@ -82,11 +101,17 @@ protected:
     ID3D11RasterizerStatePtr _shadowRSState;
     ID3D11SamplerStatePtr _evsmSampler;
 
-    std::vector<ID3D11InputLayoutPtr> _meshInputLayouts;
-    VertexShaderPtr _meshVS[2];
-    PixelShaderPtr _meshPS[2][2][2];
+	std::unordered_map<const Mesh *, ID3D11InputLayoutPtr> _meshInputLayouts;
+	std::unordered_map<const Mesh *, VertexShaderPtr> _meshVertexShadersMap;
+	std::unordered_map<const Mesh *, PixelShaderPtr>  _meshPixelShadersMap;
 
-    std::vector<ID3D11InputLayoutPtr> _meshDepthInputLayouts;
+	std::unordered_map<uint32, VertexShaderPtr> _meshVertexShaders;
+	std::unordered_map<uint32, PixelShaderPtr> _meshPixelShaders;
+
+	uint32 _curShaderNum;
+	uint32 _totalShaderNum;
+
+	std::unordered_map<const Mesh *, ID3D11InputLayoutPtr> _meshDepthInputLayouts;
     VertexShaderPtr _meshDepthVS;
 
     VertexShaderPtr _fullScreenVS;
@@ -104,9 +129,7 @@ protected:
 
     ID3D11ShaderResourceViewPtr _specularLookupTexture;
 
-    Float4x4 _prevWVP;
-
-	bool32 _cubeMap;
+	bool32 _drawingCubemap;
 
     // Constant buffers
     struct MeshVSConstants
@@ -164,5 +187,5 @@ protected:
     ConstantBuffer<MeshPSConstants> _meshPSConstants;
 	//ConstantBuffer<MeshPSConstants> 
     ConstantBuffer<EVSMConstants> _evsmConstants;
-    ConstantBuffer<ReductionConstants> _reductionConstants;
+	ConstantBuffer<ReductionConstants> _reductionConstants;
 };

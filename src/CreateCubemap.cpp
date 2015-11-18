@@ -22,7 +22,8 @@ CreateCubemap::CreateCubemap(const float NearClip, const float FarClip)
 {
 }
 
-VOID CreateCubemap::Initialize(ID3D11Device *device, uint32 numMipLevels, uint32 multiSamples, uint32 msQuality){
+void CreateCubemap::Initialize(ID3D11Device *device, uint32 numMipLevels, uint32 multiSamples, uint32 msQuality)
+{
 	cubemapTarget.Initialize(device, CubemapWidth, CubemapHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, numMipLevels,
 		1, 0, TRUE, FALSE, 6, TRUE);
 	cubemapDepthTarget.Initialize(device, CubemapWidth, CubemapHeight, DXGI_FORMAT_D32_FLOAT, numMipLevels, 1,
@@ -30,10 +31,13 @@ VOID CreateCubemap::Initialize(ID3D11Device *device, uint32 numMipLevels, uint32
 }
 
 
-VOID CreateCubemap::SetPosition(Float3 newPosition){
+void CreateCubemap::SetPosition(Float3 newPosition)
+{
 	position = newPosition;
-	for (int faceIndex = 0; faceIndex < 6; faceIndex++){
-		CubemapCameraStruct[faceIndex] = { newPosition,
+	for (int faceIndex = 0; faceIndex < 6; faceIndex++)
+	{
+		CubemapCameraStruct[faceIndex] = 
+		{	newPosition,
 			newPosition + DefaultCubemapCameraStruct[faceIndex].LookAt,
 			newPosition + DefaultCubemapCameraStruct[faceIndex].Up
 		};
@@ -41,12 +45,13 @@ VOID CreateCubemap::SetPosition(Float3 newPosition){
 }
 
 
-VOID CreateCubemap::Create(CONST DeviceManager &deviceManager, MeshRenderer *meshRenderer,
-	CONST RenderTarget2D &velocityTarget, CONST Float4x4 &modelTransform, ID3D11ShaderResourceView *environmentMap,
-	CONST SH9Color &environmentMapSH, CONST Float2 &jitterOffset, Skybox *skybox){
+void CreateCubemap::Create(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
+	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox)
+{
+	PIXEvent event(L"Render Cube Map");
 
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	SetViewport(deviceManager.ImmediateContext(), 128, 128);
+	SetViewport(deviceManager.ImmediateContext(), CubemapWidth, CubemapHeight);
 
 	for (int cubeboxFaceIndex = 0; cubeboxFaceIndex < 6; cubeboxFaceIndex++)
 	{
@@ -56,16 +61,18 @@ VOID CreateCubemap::Create(CONST DeviceManager &deviceManager, MeshRenderer *mes
 			CubemapCameraStruct[cubeboxFaceIndex].LookAt,
 			CubemapCameraStruct[cubeboxFaceIndex].Up);
 
+		meshRenderer->SortSceneObjects(cubemapCamera.ViewMatrix());
+
 		deviceManager.ImmediateContext()->ClearRenderTargetView(RTView, clearColor);
 		deviceManager.ImmediateContext()->ClearDepthStencilView(DSView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 		ID3D11RenderTargetView *renderTarget[1] = { RTView };
 		deviceManager.ImmediateContext()->OMSetRenderTargets(1, renderTarget, DSView);
-		meshRenderer->RenderDepth(deviceManager.ImmediateContext(), cubemapCamera, modelTransform, false);
+		meshRenderer->RenderDepth(deviceManager.ImmediateContext(), cubemapCamera, sceneTransform, false);
 
 		deviceManager.ImmediateContext()->OMSetRenderTargets(1, renderTarget, DSView);
-		meshRenderer->Render(deviceManager.ImmediateContext(), cubemapCamera, modelTransform, 
-			environmentMap, environmentMapSH, jitterOffset, TRUE);
+		meshRenderer->Render(deviceManager.ImmediateContext(), cubemapCamera, sceneTransform, 
+			environmentMap, environmentMapSH, jitterOffset);
 
 		skybox->RenderEnvironmentMap(deviceManager.ImmediateContext(), environmentMap, cubemapCamera.ViewMatrix(),
 			cubemapCamera.ProjectionMatrix(), Float3(std::exp2(AppSettings::ExposureScale)));
@@ -78,7 +85,8 @@ VOID CreateCubemap::Create(CONST DeviceManager &deviceManager, MeshRenderer *mes
 }
 
 
-CONST PerspectiveCamera &CreateCubemap::GetCubemapCamera(){
+const PerspectiveCamera &CreateCubemap::GetCubemapCamera()
+{
 	const int face = 4;
 	cubemapCamera.SetLookAt(DefaultCubemapCameraStruct[face].Eye,
 		DefaultCubemapCameraStruct[face].LookAt,
@@ -86,7 +94,8 @@ CONST PerspectiveCamera &CreateCubemap::GetCubemapCamera(){
 	return cubemapCamera;
 }
 
-VOID CreateCubemap::GetTargetViews(RenderTarget2D &resCubemapTarget){
+void CreateCubemap::GetTargetViews(RenderTarget2D &resCubemapTarget)
+{
 	resCubemapTarget = cubemapTarget;
 }
 

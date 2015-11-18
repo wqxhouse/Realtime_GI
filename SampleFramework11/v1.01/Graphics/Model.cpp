@@ -630,7 +630,6 @@ void Mesh::InitCornea(ID3D11Device* device, uint32 materialIdx)
     part.MaterialIdx = materialIdx;
 }
 
-
 void Mesh::GenerateTangentFrame()
 {
     // Make sure that we have a position + texture coordinate + normal
@@ -907,7 +906,10 @@ void Model::CreateWithAssimp(ID3D11Device* device, const wchar* fileName, bool f
     std::string fileNameAnsi = WStringToAnsi(fileName);
 
     Assimp::Importer importer;
-    uint32 flags = aiProcess_CalcTangentSpace |
+	uint32 flags = // aiProcess_GenUVCoords |
+				   // aiProcess_TransformUVCoords |
+				   aiProcess_GenNormals | 
+				   aiProcess_CalcTangentSpace |
                    aiProcess_Triangulate |
                    aiProcess_JoinIdenticalVertices |
                    aiProcess_MakeLeftHanded |
@@ -939,12 +941,41 @@ void Model::CreateWithAssimp(ID3D11Device* device, const wchar* fileName, bool f
 
         aiString diffuseTexPath;
         aiString normalMapPath;
-        if(mat.GetTexture(aiTextureType_DIFFUSE, 0, &diffuseTexPath) == aiReturn_SUCCESS)
-            material.DiffuseMapName = GetFileName(AnsiToWString(diffuseTexPath.C_Str()).c_str());
+        aiString roughnessMapPath;
+        aiString metallicMapPath;
+        aiString emissiveMapPath;
 
-        if(mat.GetTexture(aiTextureType_NORMALS, 0, &normalMapPath) == aiReturn_SUCCESS
-           || mat.GetTexture(aiTextureType_HEIGHT, 0, &normalMapPath) == aiReturn_SUCCESS)
-            material.NormalMapName = GetFileName(AnsiToWString(normalMapPath.C_Str()).c_str());
+		std::wstring texPath = L""; 
+		if (mat.GetTexture(aiTextureType_DIFFUSE, 0, &diffuseTexPath) == aiReturn_SUCCESS)
+		{
+			texPath = AnsiToWString(diffuseTexPath.C_Str());
+			material.DiffuseMapName = DirectoryIsRelative(texPath.c_str()) ? texPath.c_str() : GetFileName(texPath.c_str());
+		}
+
+		if (mat.GetTexture(aiTextureType_NORMALS, 0, &normalMapPath) == aiReturn_SUCCESS
+			|| mat.GetTexture(aiTextureType_HEIGHT, 0, &normalMapPath) == aiReturn_SUCCESS)
+		{
+			texPath = AnsiToWString(normalMapPath.C_Str());
+			material.NormalMapName = DirectoryIsRelative(texPath.c_str()) ? texPath.c_str() : GetFileName(texPath.c_str());
+		}
+
+		if (mat.GetTexture(aiTextureType_SPECULAR, 0, &metallicMapPath) == aiReturn_SUCCESS)
+		{
+			texPath = AnsiToWString(metallicMapPath.C_Str());
+			material.MetallicMapName = DirectoryIsRelative(texPath.c_str()) ? texPath.c_str() : GetFileName(texPath.c_str());
+		}
+
+		if (mat.GetTexture(aiTextureType_SHININESS, 0, &roughnessMapPath) == aiReturn_SUCCESS)
+		{
+			texPath = AnsiToWString(roughnessMapPath.C_Str());
+			material.RoughnessMapName = DirectoryIsRelative(texPath.c_str()) ? texPath.c_str() : GetFileName(texPath.c_str());
+		}
+
+		if (mat.GetTexture(aiTextureType_EMISSIVE, 0, &emissiveMapPath) == aiReturn_SUCCESS)
+		{
+			texPath = AnsiToWString(emissiveMapPath.C_Str());
+			material.EmissiveMapName = DirectoryIsRelative(texPath.c_str()) ? texPath.c_str() : GetFileName(texPath.c_str());
+		}
 
         LoadMaterialResources(material, fileDirectory, device, forceSRGB);
 
@@ -954,8 +985,13 @@ void Model::CreateWithAssimp(ID3D11Device* device, const wchar* fileName, bool f
     // Initialize the meshes
     const uint64 numMeshes = scene->mNumMeshes;
     meshes.resize(numMeshes);
-    for(uint64 i = 0; i < numMeshes; ++i)
-        meshes[i].InitFromAssimpMesh(device, *scene->mMeshes[i]);
+	for (uint64 i = 0; i < numMeshes; ++i)
+	{
+		meshes[i].InitFromAssimpMesh(device, *scene->mMeshes[i]);
+	}
+
+	// Generate Material Flags for each mesh
+	GenerateMaterialFlags(scene);
 }
 
 void Model::CreateFromMeshData(ID3D11Device* device, const wchar* fileName, bool forceSRGB)
@@ -977,6 +1013,8 @@ void Model::GenerateBoxScene(ID3D11Device* device, const Float3& dimensions, con
 
     meshes.resize(1);
     meshes[0].InitBox(device, dimensions, position, orientation, 0);
+
+	GenerateMaterialFlags(material);
 }
 
 void Model::GenerateBoxTestScene(ID3D11Device* device)
@@ -991,8 +1029,9 @@ void Model::GenerateBoxTestScene(ID3D11Device* device)
     meshes.resize(2);
     meshes[0].InitBox(device, Float3(2.0f), Float3(0.0f, 1.5f, 0.0f), Quaternion(), 0);
     meshes[1].InitBox(device, Float3(10.0f, 0.25f, 10.0f), Float3(0.0f), Quaternion(), 0);
-}
 
+	GenerateMaterialFlags(material);
+}
 
 void Model::GeneratePlaneScene(ID3D11Device* device, const Float2& dimensions, const Float3& position,
                                const Quaternion& orientation, const wchar* colorMap,
@@ -1007,6 +1046,8 @@ void Model::GeneratePlaneScene(ID3D11Device* device, const Float2& dimensions, c
 
     meshes.resize(1);
     meshes[0].InitPlane(device, dimensions, position, orientation, 0);
+
+	GenerateMaterialFlags(material);
 }
 
 void Model::GenerateCorneaScene(ID3D11Device* device)
@@ -1020,10 +1061,43 @@ void Model::GenerateCorneaScene(ID3D11Device* device)
 
     meshes.resize(1);
     meshes[0].InitCornea(device, 0);
+
+	GenerateMaterialFlags(material);
+}
+
+void Model::GenerateMaterialFlags(const MeshMaterial &mat)
+{
+	for (uint64 i = 0; i < meshes.size(); ++i)
+	{
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasAlbedoMap] = !mat.DiffuseMapName.empty();
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasNormalMap] = !mat.NormalMapName.empty();
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasRoughnessMap] = !mat.RoughnessMapName.empty();
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasMetallicMap] = !mat.MetallicMapName.empty();
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasEmissiveMap] = !mat.EmissiveMapName.empty();
+	}
+}
+
+void Model::GenerateMaterialFlags(const aiScene *scene)
+{
+	for (uint64 i = 0; i < meshes.size(); ++i)
+	{
+		MeshMaterial &mat = meshMaterials[(*scene->mMeshes[i]).mMaterialIndex];
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasAlbedoMap] = !mat.DiffuseMapName.empty();
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasNormalMap] = !mat.NormalMapName.empty();
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasRoughnessMap] = !mat.RoughnessMapName.empty();
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasMetallicMap] = !mat.MetallicMapName.empty();
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasEmissiveMap] = !mat.EmissiveMapName.empty();
+	}
 }
 
 void Model::LoadMaterialResources(MeshMaterial& material, const wstring& directory, ID3D11Device* device, bool forceSRGB)
 {
+	// Note the default texture map is used when mesh parts of a model does not have the map
+	// where as the model in tagged has map
+	// Could do shader switch per mesh parts, but can be expensive
+	// TODO: sort mesh parts by shader will solve the problem - thus default map is no longer needed
+	// since the uber shader will exclude the case of not having map per mesh part
+
     // Load the diffuse map
     wstring diffuseMapPath = directory + material.DiffuseMapName;
     if(material.DiffuseMapName.length() > 1 && FileExists(diffuseMapPath.c_str()))
@@ -1048,6 +1122,31 @@ void Model::LoadMaterialResources(MeshMaterial& material, const wstring& directo
             defaultNormalMap = LoadTexture(device, L"..\\Content\\Textures\\DefaultNormalMap.dds");
         material.NormalMap = defaultNormalMap;
     }
+
+	static ID3D11ShaderResourceViewPtr defaultWhite = LoadTexture(device, L"..\\Content\\Textures\\DefaultWhite.dds");
+	wstring roughnessMapPath = directory + material.RoughnessMapName;
+	if (material.RoughnessMapName.length() > 1 && FileExists(roughnessMapPath.c_str()))
+		material.RoughnessMap = LoadTexture(device, roughnessMapPath.c_str());
+	else
+	{
+		material.RoughnessMap = defaultWhite;
+	}
+
+	wstring metallicMapPath = directory + material.MetallicMapName;
+	if (material.MetallicMapName.length() > 1 && FileExists(metallicMapPath.c_str()))
+		material.MetallicMap = LoadTexture(device, metallicMapPath.c_str());
+	else
+	{
+		material.MetallicMap = defaultWhite;
+	}
+
+	wstring emissiveMapPath = directory + material.EmissiveMapName;
+	if (material.EmissiveMapName.length() > 1 && FileExists(emissiveMapPath.c_str()))
+		material.EmissiveMap = LoadTexture(device, emissiveMapPath.c_str());
+	else
+	{
+		material.EmissiveMap = defaultWhite;
+	}
 }
 
 }

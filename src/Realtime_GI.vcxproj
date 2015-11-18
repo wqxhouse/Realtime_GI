@@ -77,7 +77,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
-      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -136,8 +136,10 @@
     <ClCompile Include="..\SampleFramework11\v1.01\TwHelper.cpp" />
     <ClCompile Include="..\SampleFramework11\v1.01\Utility.cpp" />
     <ClCompile Include="..\SampleFramework11\v1.01\Window.cpp" />
+    <ClCompile Include="CreateCubemap.cpp" />
     <ClCompile Include="MeshRenderer.cpp" />
     <ClCompile Include="AppSettings.cpp" />
+    <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Realtime_GI.cpp" />
     <ClCompile Include="PostProcessor.cpp" />
   </ItemGroup>
@@ -180,8 +182,10 @@
     <ClInclude Include="..\SampleFramework11\v1.01\Utility.h" />
     <ClInclude Include="..\SampleFramework11\v1.01\Window.h" />
     <ClInclude Include="AppPCH.h" />
+    <ClInclude Include="CreateCubemap.h" />
     <ClInclude Include="MeshRenderer.h" />
     <ClInclude Include="AppSettings.h" />
+    <ClInclude Include="Scene.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="PostProcessor.h" />
     <ClInclude Include="Realtime_GI.h" />
@@ -237,6 +241,18 @@
     <None Include="BackgroundVelocity.hlsl">
       <FileType>Document</FileType>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\..\..\Users\wqxho_000\Downloads\Cerberus_by_Andrew_Maximov\Cerberus_by_Andrew_Maximov\Textures\Normal\Cerberus_N.dds" />
+    <Image Include="..\Content\Models\CornellBox\blue.dds" />
+    <Image Include="..\Content\Models\CornellBox\green.dds" />
+    <Image Include="..\Content\Models\CornellBox\red.dds" />
+    <Image Include="..\Content\Models\CornellBox\white.dds" />
+    <Image Include="..\Content\Textures\Bricks_NML.dds" />
+    <Image Include="..\Content\Textures\Default.dds" />
+    <Image Include="..\Content\Textures\DefaultNormalMap.dds" />
+    <Image Include="..\Content\Textures\DefaultWhite.dds" />
+    <Image Include="..\Content\Textures\SpecularLookup.dds" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

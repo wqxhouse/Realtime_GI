@@ -103,6 +103,8 @@
     <ClCompile Include="AppSettings.cpp">
       <Filter>AppSettings</Filter>
     </ClCompile>
+    <ClCompile Include="Scene.cpp" />
+    <ClCompile Include="CreateCubemap.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PostProcessor.h" />
@@ -207,7 +209,6 @@
     <ClInclude Include="..\SampleFramework11\v1.01\Graphics\DeviceManager.h">
       <Filter>SampleFramework11\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="AppPCH.h" />
     <ClInclude Include="..\SampleFramework11\v1.01\TinyEXR.h">
       <Filter>SampleFramework11</Filter>
     </ClInclude>
@@ -232,9 +233,13 @@
     <ClInclude Include="SharedConstants.h">
       <Filter>Shader</Filter>
     </ClInclude>
+    <ClInclude Include="Scene.h" />
+    <ClInclude Include="AppPCH.h">
+      <Filter>Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="CreateCubemap.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="PostProcessing.hlsl" />
     <None Include="AppSettings.hlsl">
       <Filter>Shader</Filter>
     </None>
@@ -265,6 +270,9 @@
     <None Include="Resolve.hlsl">
       <Filter>Shader</Filter>
     </None>
+    <None Include="PostProcessing.hlsl">
+      <Filter>Shader</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="SampleFramework11">
@@ -285,6 +293,15 @@
     <Filter Include="AppSettings">
       <UniqueIdentifier>{8fb942f4-c518-447f-ba29-a9e4f3802dc3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Contents">
+      <UniqueIdentifier>{e9bb0b02-a2cf-49d9-ad40-b12897eca28d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Contents\Textures">
+      <UniqueIdentifier>{822be5f7-75d8-4523-803a-8b8e5cb481e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Contents\Textures\CornellBox">
+      <UniqueIdentifier>{40289545-e11f-4c57-940c-9eab44dc2469}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\Externals\AntTweakBar\bin\AntTweakBar64.dll">
@@ -304,5 +321,37 @@
     <ResourceCompile Include="Realtime_GI.rc">
       <Filter>Misc</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\Content\Textures\Bricks_NML.dds">
+      <Filter>Contents</Filter>
+    </Image>
+    <Image Include="..\Content\Textures\Default.dds">
+      <Filter>Contents</Filter>
+    </Image>
+    <Image Include="..\Content\Textures\DefaultNormalMap.dds">
+      <Filter>Contents</Filter>
+    </Image>
+    <Image Include="..\Content\Textures\DefaultWhite.dds">
+      <Filter>Contents</Filter>
+    </Image>
+    <Image Include="..\Content\Textures\SpecularLookup.dds">
+      <Filter>Contents</Filter>
+    </Image>
+    <Image Include="..\Content\Models\CornellBox\blue.dds">
+      <Filter>Contents\Textures\CornellBox</Filter>
+    </Image>
+    <Image Include="..\Content\Models\CornellBox\green.dds">
+      <Filter>Contents\Textures\CornellBox</Filter>
+    </Image>
+    <Image Include="..\Content\Models\CornellBox\red.dds">
+      <Filter>Contents\Textures\CornellBox</Filter>
+    </Image>
+    <Image Include="..\Content\Models\CornellBox\white.dds">
+      <Filter>Contents\Textures\CornellBox</Filter>
+    </Image>
+    <Image Include="..\..\..\Users\wqxho_000\Downloads\Cerberus_by_Andrew_Maximov\Cerberus_by_Andrew_Maximov\Textures\Normal\Cerberus_N.dds">
+      <Filter>Contents</Filter>
+    </Image>
   </ItemGroup>
 </Project>

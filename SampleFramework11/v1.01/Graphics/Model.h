@@ -32,8 +32,14 @@ struct MeshMaterial
     float Alpha = 1.0f;
     std::wstring DiffuseMapName;
     std::wstring NormalMapName;
-    ID3D11ShaderResourceViewPtr DiffuseMap;
-    ID3D11ShaderResourceViewPtr NormalMap;
+	std::wstring RoughnessMapName;
+	std::wstring MetallicMapName;
+	std::wstring EmissiveMapName;
+    ID3D11ShaderResourceViewPtr DiffuseMap   = nullptr;
+    ID3D11ShaderResourceViewPtr NormalMap    = nullptr;
+	ID3D11ShaderResourceViewPtr RoughnessMap = nullptr;
+	ID3D11ShaderResourceViewPtr MetallicMap  = nullptr;
+	ID3D11ShaderResourceViewPtr EmissiveMap  = nullptr;
 
     template<typename TSerializer> void Serialize(TSerializer& serializer)
     {
@@ -67,11 +73,23 @@ enum class IndexType
     Index32Bit = 1
 };
 
+enum class MaterialFlag
+{
+	HasAlbedoMap,
+	HasNormalMap,
+	HasRoughnessMap, 
+	HasMetallicMap,
+	HasEmissiveMap,
+	NumMaterialFlags
+};
+
 class Mesh
 {
     friend class Model;
 
 public:
+
+	Mesh() { memset(materialFlags, 0, sizeof(bool32) * 5); }
 
     // Init from loaded files
     void InitFromSDKMesh(ID3D11Device* device, SDKMesh& sdkmesh, uint32 meshIdx, bool generateTangents);
@@ -95,6 +113,9 @@ public:
 
     std::vector<MeshPart>& MeshParts() { return meshParts; }
     const std::vector<MeshPart>& MeshParts() const { return meshParts; }
+
+	const bool32* MaterialFlags() const { return materialFlags; }
+	bool32* MaterialFlags() { return materialFlags; }
 
     const D3D11_INPUT_ELEMENT_DESC* InputElements() const { return &inputElements[0]; }
     uint32 NumInputElements() const { return static_cast<uint32>(inputElements.size()); }
@@ -152,6 +173,7 @@ protected:
     uint32 numIndices = 0;
 
     IndexType indexType = IndexType::Index16Bit;
+	bool32 materialFlags[5];
 
     std::vector<uint8> vertices;
     std::vector<uint8> indices;
@@ -215,9 +237,14 @@ public:
 
 protected:
 
+	// void GenerateMaterialFlags(int numMeshes);
+	void GenerateMaterialFlags(const MeshMaterial &mat);
+	void GenerateMaterialFlags(const aiScene *scene);
     static void LoadMaterialResources(MeshMaterial& material, const std::wstring& directory, ID3D11Device* device, bool forceSRGB);
 
     std::vector<Mesh> meshes;
+
+	// TODO: separate material manager to cache loaded material
     std::vector<MeshMaterial> meshMaterials;
     std::wstring fileDirectory;
 };

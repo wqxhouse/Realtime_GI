@@ -20,6 +20,8 @@ namespace SampleFramework11
 // Utility functions
 bool FileExists(const wchar* filePath);
 bool DirectoryExists(const wchar* dirPath);
+bool DirectoryIsRelative(const wchar *dirPath);
+
 std::wstring GetDirectoryFromFilePath(const wchar* filePath);
 std::wstring GetFileName(const wchar* filePath);
 std::wstring GetFileNameWithoutExtension(const wchar* filePath);
