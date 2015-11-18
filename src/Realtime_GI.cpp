@@ -41,7 +41,8 @@ static const float FarClip = 300.0f;
 
 Realtime_GI::Realtime_GI() :  App(L"Realtime GI (CSCI 580)", MAKEINTRESOURCEW(IDI_DEFAULT)),
                             _camera(WindowWidthF / WindowHeightF, Pi_4 * 0.75f, NearClip, FarClip), 
-							_prevForward(0.0f), _prevStrafe(0.0f), _prevAscend(0.0f), _numScenes(0)
+							_prevForward(0.0f), _prevStrafe(0.0f), _prevAscend(0.0f), _numScenes(0),
+							_cubemapGenerator(NearClip, FarClip)
 {
     _deviceManager.SetBackBufferWidth(WindowWidth);
     _deviceManager.SetBackBufferHeight(WindowHeight);
@@ -105,6 +106,14 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	scene->addDynamicOpaqueBoxObject(1.5f, Float3(0.0f, 0.0f, 0.0f), Quaternion(-0.7f, 1.0f, 0.0f, 0.3f));
 	scene->addDynamicOpaqueBoxObject(2.0f, Float3(1.0f, 0.0f, 0.0f), Quaternion(0.0f, 1.0f, 0.7f, 0.3f));
 	_numScenes++;
+
+	/// Scene 3 /////////////////////////////////////////////////////////////
+	_scenes[_numScenes] = Scene();
+	scene = &_scenes[_numScenes];
+	scene->Initialize(device);
+
+	scene->addDynamicOpaquePlaneObject(10.0f, Float3(0.0f, 0.0f, 0.0f), Quaternion(0.0f, 0.0f, 0.0f, 1.0f));
+	_numScenes++;
 }
 
 void Realtime_GI::LoadShaders(ID3D11DevicePtr device)
@@ -157,6 +166,7 @@ void Realtime_GI::Initialize()
 
     // Init the post processor
     _postProcessor.Initialize(device);
+
 }
 
 // Creates all required render targets
@@ -171,6 +181,9 @@ void Realtime_GI::CreateRenderTargets()
     _colorTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, NumSamples, Quality);
     _depthBuffer.Initialize(device, width, height, DXGI_FORMAT_D32_FLOAT, true, NumSamples, Quality);
     _velocityTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16_FLOAT, true, NumSamples, Quality);
+
+	// TODO: remove multi sample for cubemap
+	_cubemapGenerator.Initialize(device, 1, NumSamples, Quality);
 
     if(_resolveTarget.Width != width || _resolveTarget.Height != height)
     {
@@ -275,6 +288,12 @@ void Realtime_GI::Update(const Timer& timer)
     _jitterOffset = (jitter - _prevJitter) * 0.5f;
     _prevJitter = jitter;
 
+	// Set centroid sampling mode - change shader bindings
+	if (AppSettings::CentroidSampling.Changed())
+	{
+		_meshRenderer.ReMapMeshShaders();
+	}
+
     // Toggle VSYNC
     if(kbState.RisingEdge(KeyboardState::V))
         _deviceManager.SetVSYNCEnabled(!_deviceManager.VSYNCEnabled());
@@ -293,7 +312,9 @@ void Realtime_GI::Update(const Timer& timer)
 		AppSettings::ModelRotationSpeed * timer.DeltaSecondsF());
 
 	AppSettings::SceneOrientation.SetValue(orientation);
-	_globalTransform = orientation.ToFloat4x4();
+	_globalTransform = orientation.ToFloat4x4() *
+		Float4x4::ScaleMatrix(_scenes[AppSettings::CurrentScene].getSceneScale()) *
+		Float4x4::TranslationMatrix(_scenes[AppSettings::CurrentScene].getSceneTranslation());
 }
 
 void Realtime_GI::RenderAA()
@@ -328,7 +349,8 @@ void Realtime_GI::RenderAA()
     context->PSSetShader(pixelShader, nullptr, 0);
     context->VSSetShader(_resolveVS, nullptr, 0);
 
-    _resolveConstants.Data.TextureSize = Float2(static_cast<float>(_colorTarget.Width), static_cast<float>(_colorTarget.Height));
+    _resolveConstants.Data.TextureSize = Float2(static_cast<float>(_colorTarget.Width), 
+		static_cast<float>(_colorTarget.Height));
     _resolveConstants.Data.SampleRadius = SampleRadius;;
     _resolveConstants.ApplyChanges(context);
     _resolveConstants.SetPS(context, 0);
@@ -356,6 +378,16 @@ void Realtime_GI::RenderAA()
     context->CopyResource(_prevFrameTarget.Texture, _resolveTarget.Texture);
 }
 
+void Realtime_GI::RenderSceneCubemaps()
+{
+	_meshRenderer.SetCubemapCapture(true);
+
+	// TODO: make a separate cubemap manager to set different locations
+	_cubemapGenerator.SetPosition(float3(0.0f, 0.0f, 0.0f));
+	_cubemapGenerator.Create(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox);
+	_meshRenderer.SetCubemapCapture(false);
+}
+
 void Realtime_GI::Render(const Timer& timer)
 {
     if(AppSettings::MSAAMode.Changed())
@@ -365,7 +397,13 @@ void Realtime_GI::Render(const Timer& timer)
 
     AppSettings::UpdateCBuffer(context);
 
-	_scenes[AppSettings::CurrentScene].sortSceneObjects(_camera.ViewMatrix());
+	if (_firstFrame || AppSettings::CurrentScene.Changed())
+	{
+		// render cubemap every time scene has changed
+		RenderSceneCubemaps();
+	}
+
+	// _scenes[AppSettings::CurrentScene].sortSceneObjects(_camera.ViewMatrix());
 
     RenderScene();
 
@@ -383,10 +421,10 @@ void Realtime_GI::Render(const Timer& timer)
     context->OMSetRenderTargets(1, renderTargets, NULL);
 
     SetViewport(context, _deviceManager.BackBufferWidth(), _deviceManager.BackBufferHeight());
-
     RenderHUD();
 
-    ++_frameCount;
+    ++_frameCount; 
+	_firstFrame = false;
 }
 
 void Realtime_GI::RenderScene()
@@ -394,8 +432,11 @@ void Realtime_GI::RenderScene()
     PIXEvent event(L"Render Scene");
 
     ID3D11DeviceContextPtr context = _deviceManager.ImmediateContext();
+	RenderTarget2D cubemapRenderTarget;
 
     SetViewport(context, _colorTarget.Width, _colorTarget.Height);
+
+	_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
 
     float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
     context->ClearRenderTargetView(_colorTarget.RTView, clearColor);
@@ -415,14 +456,16 @@ void Realtime_GI::RenderScene()
     renderTargets[1] = _velocityTarget.RTView;
     context->OMSetRenderTargets(2, renderTargets, _depthBuffer.DSView);
 
-    _meshRenderer.Render(context, _camera, _globalTransform, _envMap, _envMapSH, _jitterOffset);
+    // _meshRenderer.Render(context, _camera, _globalTransform, _envMap, _envMapSH, _jitterOffset);
+	_meshRenderer.Render(context, _camera, _globalTransform, cubemapRenderTarget.SRView, _envMapSH, _jitterOffset);
 
     renderTargets[0] = _colorTarget.RTView;
     renderTargets[1] = nullptr;
-    context->OMSetRenderTargets(2, renderTargets, _depthBuffer.DSView);
+	context->OMSetRenderTargets(2, renderTargets, _depthBuffer.DSView);
 
     if(AppSettings::RenderBackground)
-        _skybox.RenderEnvironmentMap(context, _envMap, _camera.ViewMatrix(), _camera.ProjectionMatrix(), Float3(std::exp2(AppSettings::ExposureScale)));
+        _skybox.RenderEnvironmentMap(context, _envMap, _camera.ViewMatrix(), _camera.ProjectionMatrix(),
+		Float3(std::exp2(AppSettings::ExposureScale)));
 
     renderTargets[0] = renderTargets[1] = nullptr;
     context->OMSetRenderTargets(2, renderTargets, nullptr);
@@ -438,7 +481,6 @@ void Realtime_GI::RenderBackgroundVelocity()
 
     // Don't use camera translation for background velocity
     FirstPersonCamera tempCamera = _camera;
-    tempCamera.SetPosition(Float3(0.0f, 0.0f, 0.0f));
 
     _backgroundVelocityConstants.Data.InvViewProjection = Float4x4::Transpose(Float4x4::Invert(tempCamera.ViewProjectionMatrix()));
     _backgroundVelocityConstants.Data.PrevViewProjection = Float4x4::Transpose(_prevViewProjection);

@@ -136,6 +136,7 @@
     <ClCompile Include="..\SampleFramework11\v1.01\TwHelper.cpp" />
     <ClCompile Include="..\SampleFramework11\v1.01\Utility.cpp" />
     <ClCompile Include="..\SampleFramework11\v1.01\Window.cpp" />
+    <ClCompile Include="CreateCubemap.cpp" />
     <ClCompile Include="MeshRenderer.cpp" />
     <ClCompile Include="AppSettings.cpp" />
     <ClCompile Include="Scene.cpp" />
@@ -181,6 +182,7 @@
     <ClInclude Include="..\SampleFramework11\v1.01\Utility.h" />
     <ClInclude Include="..\SampleFramework11\v1.01\Window.h" />
     <ClInclude Include="AppPCH.h" />
+    <ClInclude Include="CreateCubemap.h" />
     <ClInclude Include="MeshRenderer.h" />
     <ClInclude Include="AppSettings.h" />
     <ClInclude Include="Scene.h" />

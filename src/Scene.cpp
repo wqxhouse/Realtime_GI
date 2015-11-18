@@ -16,13 +16,12 @@ Scene::Scene()
 {
 	_device = NULL;
 	
-	_numTotalModelsShared = 0;
 	_numStaticObjects = 0;
 	_numDynamicObjects = 0;
 	_numObjectBases = 0;
 	_numPrevWVPs = 0;
 
-	_sceneScale = 0;
+	_sceneScale = 1;
 }
 
 Scene::~Scene()
@@ -32,15 +31,27 @@ Scene::~Scene()
 void Scene::Initialize(ID3D11Device *device)
 {
 	_device = device;
+}
 
-	// pre-load useful models
-	_modelIndices.push_back(0);
-	_modelIndices.push_back(1);
+Model *Scene::addBoxModel()
+{
+	if (!_boxModel)
+	{
+		_models[_numTotalModelsShared++].GenerateBoxScene(_device);
+		_boxModel = &_models[_numTotalModelsShared - 1];
+	}
+	return _boxModel;
+}
 
-	_models[_numTotalModelsShared++].GenerateBoxScene(device);
-	_boxModel = &_models[_numTotalModelsShared - 1];
-	_models[_numTotalModelsShared++].GeneratePlaneScene(device);
-	_planeModel = &_models[_numTotalModelsShared - 1];
+Model *Scene::addPlaneModel()
+{
+	if (!_planeModel)
+	{
+		_models[_numTotalModelsShared++].GeneratePlaneScene(_device, 1.0, Float3(), Quaternion(), L"", L"Bricks_NML.dds");
+		_planeModel = &_models[_numTotalModelsShared - 1];
+	}
+
+	return _planeModel;
 }
 
 Model *Scene::addModel(const std::wstring &modelPath)
@@ -81,6 +92,12 @@ Model *Scene::addModel(const std::wstring &modelPath)
 
 SceneObject *Scene::addDynamicOpaqueBoxObject(float scale, const Float3 &pos, const Quaternion &rot)
 {
+	if (!_boxModel)
+	{
+		addBoxModel();
+		_modelIndices.push_back(_numTotalModelsShared - 1);
+	}
+
 	_objectBases[_numObjectBases] = createBase(scale, pos, rot);
 	_prevWVPs[_numPrevWVPs] = _objectBases[_numObjectBases];
 
@@ -99,6 +116,12 @@ SceneObject *Scene::addDynamicOpaqueBoxObject(float scale, const Float3 &pos, co
 
 SceneObject *Scene::addDynamicOpaquePlaneObject(float scale, const Float3 &pos, const Quaternion &rot)
 {
+	if (!_planeModel)
+	{
+		addPlaneModel();
+		_modelIndices.push_back(_numTotalModelsShared - 1);
+	}
+
 	_objectBases[_numObjectBases] = createBase(scale, pos, rot);
 	_prevWVPs[_numPrevWVPs] = _objectBases[_numObjectBases];
 

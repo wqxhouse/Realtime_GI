@@ -57,6 +57,10 @@ public:
     void RenderShadowMap(ID3D11DeviceContext* context, const Camera& camera,
                          const Float4x4& world);
 
+	void SetCubemapCapture(bool32 tf);
+	void ReMapMeshShaders();
+	void SortSceneObjects(const Float4x4 &viewMatrix);
+
 protected:
 
     void LoadShaders();
@@ -79,6 +83,7 @@ protected:
     void GenAndCacheMeshInputLayout(const Model* model);
 	void GenMeshShaderMap(const Model *model);
 
+
     ID3D11DevicePtr _device;
 
     BlendStates _blendStates;
@@ -96,14 +101,9 @@ protected:
     ID3D11RasterizerStatePtr _shadowRSState;
     ID3D11SamplerStatePtr _evsmSampler;
 
-    // std::vector<ID3D11InputLayoutPtr> _meshInputLayouts;
 	std::unordered_map<const Mesh *, ID3D11InputLayoutPtr> _meshInputLayouts;
-
 	std::unordered_map<const Mesh *, VertexShaderPtr> _meshVertexShadersMap;
 	std::unordered_map<const Mesh *, PixelShaderPtr>  _meshPixelShadersMap;
-
-	//std::unordered_map<const char *, std::vector<VertexShaderPtr> > _meshVertexShaders;
-	//std::unordered_map<const char *, std::vector<PixelShaderPtr> >  _meshPixelShaders;
 
 	std::unordered_map<uint32, VertexShaderPtr> _meshVertexShaders;
 	std::unordered_map<uint32, PixelShaderPtr> _meshPixelShaders;
@@ -111,10 +111,6 @@ protected:
 	uint32 _curShaderNum;
 	uint32 _totalShaderNum;
 
-    // VertexShaderPtr _meshVS[2];
-    // PixelShaderPtr _meshPS[2][2];
-
-    // std::vector<ID3D11InputLayoutPtr> _meshDepthInputLayouts;
 	std::unordered_map<const Mesh *, ID3D11InputLayoutPtr> _meshDepthInputLayouts;
     VertexShaderPtr _meshDepthVS;
 
@@ -133,8 +129,7 @@ protected:
 
     ID3D11ShaderResourceViewPtr _specularLookupTexture;
 
-    // Float4x4 _prevWVP;
-	
+	bool32 _drawingCubemap;
 
     // Constant buffers
     struct MeshVSConstants

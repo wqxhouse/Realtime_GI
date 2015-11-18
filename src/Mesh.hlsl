@@ -136,8 +136,12 @@ struct PSInput
 
 struct PSOutput
 {
-    float4 Color                : SV_Target0;
-    float2 Velocity             : SV_Target1;
+	#if CreateCubemap_
+		float4 Color                : SV_Target0;
+	#else
+		float4 Color                : SV_Target0;
+		float2 Velocity             : SV_Target1;
+	#endif
 };
 
 //=================================================================================================
@@ -414,19 +418,22 @@ PSOutput PS(in PSInput input)
         lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;
     }
 
+	
 	// Emissive term
 	lighting += emissiveColor;
 	lighting *= shadowVisibility;
 
-    PSOutput output;
-    output.Color = float4(lighting, 1.0f);
+	PSOutput output;
 
-    output.Color.xyz *= exp2(ExposureScale);
+	output.Color = float4(lighting, 1.0f);
+	output.Color.xyz *= exp2(ExposureScale);
 
-    float2 prevPositionSS = (input.PrevPosition.xy / input.PrevPosition.z) * float2(0.5f, -0.5f) + 0.5f;
-    prevPositionSS *= RTSize;
-    output.Velocity = input.PositionSS.xy - prevPositionSS;
-    output.Velocity -= JitterOffset;
+	#if !CreateCubemap_
+		float2 prevPositionSS = (input.PrevPosition.xy / input.PrevPosition.z) * float2(0.5f, -0.5f) + 0.5f;
+		prevPositionSS *= RTSize;
+		output.Velocity = input.PositionSS.xy - prevPositionSS;
+		output.Velocity -= JitterOffset;
+	#endif
 
     return output;
 }
