@@ -26,6 +26,8 @@
 #include "MeshRenderer.h"
 #include "Scene.h"
 
+#include "CreateCubemap.h"
+
 using namespace SampleFramework11;
 
 class Realtime_GI : public App
@@ -50,6 +52,7 @@ protected:
     RenderTarget2D _velocityTarget;
     RenderTarget2D _velocityResolveTarget;
     uint64 _frameCount = 0;
+	bool32 _firstFrame = 1;
 
 	Scene _scenes[MAX_SCENES];
 	uint32 _numScenes;
@@ -105,12 +108,15 @@ protected:
     void CreateRenderTargets();
 
     void RenderScene();
+	void RenderSceneCubemaps();
     void RenderBackgroundVelocity();
     void RenderAA();
     void RenderHUD();
 
 	void ApplyMomentum(float &prevVal, float &val, float deltaTime);
 
+	//Create Cubemap
+	CreateCubemap _cubemapGenerator;
 public:
 
     Realtime_GI();

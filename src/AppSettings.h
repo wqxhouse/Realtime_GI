@@ -51,6 +51,7 @@ enum class Scenes
 {
     CornellBox = 0,
     Boxes = 1,
+    Plane = 2,
 
     NumValues
 };

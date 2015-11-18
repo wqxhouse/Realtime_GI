@@ -157,13 +157,13 @@ void MeshRenderer::GenPSRecursive(ID3D11Device *device, int depth, bool32 *descS
 
 void MeshRenderer::LoadShaders()
 {
-	_totalShaderNum = (int)pow(2, 5) + (int)pow(2, 6) + 8;
+	_totalShaderNum = (int)pow(2, 5) + (int)pow(2, 7) + 8;
 
     CompileOptions opts;
 
 	// Mesh.hlsl
 	const char *vsDescs[] = { "UseNormalMapping_", "UseAlbedoMap_", "UseMetallicMap_", "UseRoughnessMap_", "UseEmissiveMap_" };
-	const char *psDescs[] = { "UseNormalMapping_", "UseAlbedoMap_", "UseMetallicMap_", "UseRoughnessMap_", "UseEmissiveMap_", "CentroidSampling_" };
+	const char *psDescs[] = { "UseNormalMapping_", "UseAlbedoMap_", "UseMetallicMap_", "UseRoughnessMap_", "UseEmissiveMap_", "CreateCubemap_", "CentroidSampling_" };
 	GenVSShaderPermutations(_device, L"Mesh.hlsl", "VS", vsDescs, _countof(vsDescs), _meshVertexShaders);
 	GenPSShaderPermutations(_device, L"Mesh.hlsl", "PS", psDescs, _countof(psDescs), _meshPixelShaders);
 
@@ -231,6 +231,28 @@ void MeshRenderer::CreateShadowMaps()
     _tempVSM.Initialize(_device, ShadowMapSize, ShadowMapSize, smFmt, 1, 1, 0, false, false, 1, false);
 }
 
+void MeshRenderer::SetCubemapCapture(bool32 tf)
+{
+	_drawingCubemap = tf;
+	if (_drawingCubemap)
+	{
+		ReMapMeshShaders();
+	}
+}
+
+void MeshRenderer::ReMapMeshShaders()
+{
+	_meshVertexShadersMap.clear();
+	_meshPixelShadersMap.clear();
+
+	// re-map shader for cubemap
+	for (uint64 i = 0; i < _scene->getNumModels(); i++)
+	{
+		Model *m = _scene->getModel(i);
+		GenMeshShaderMap(m);
+	}
+}
+
 void MeshRenderer::SetScene(Scene *scene)
 {
 	// unless the scene json or scene gui option or model has changed, 
@@ -251,6 +273,11 @@ void MeshRenderer::SetScene(Scene *scene)
 	}
 }
 
+void MeshRenderer::SortSceneObjects(const Float4x4 &viewMatrix)
+{
+	_scene->sortSceneObjects(viewMatrix);
+}
+
 void MeshRenderer::GenMeshShaderMap(const Model *model)
 {
 	// Map mesh to shaders
@@ -261,7 +288,7 @@ void MeshRenderer::GenMeshShaderMap(const Model *model)
 
 		// TODO: use AppSettings to automate the process - data driven
 		// decouple string dependency
-		bool32 arr[6]; // five maps
+		bool32 arr[7]; // five maps + two modes
 		materialFlags[(uint64)MaterialFlag::HasNormalMap] ? arr[0] = true : arr[0] = false;
 		materialFlags[(uint64)MaterialFlag::HasAlbedoMap] ? arr[1] = true : arr[1] = false;
 		materialFlags[(uint64)MaterialFlag::HasRoughnessMap] ? arr[2] = true : arr[2] = false;
@@ -269,10 +296,11 @@ void MeshRenderer::GenMeshShaderMap(const Model *model)
 		materialFlags[(uint64)MaterialFlag::HasEmissiveMap] ? arr[4] = true : arr[4] = false;
 
 		// TODO: the following case somehow defeats the purpose of the design
-		AppSettings::CentroidSampling ? arr[5] = true : arr[5] = false;
+		_drawingCubemap ? arr[5] = true : arr[5] = false;
+		AppSettings::CentroidSampling ? arr[6] = true : arr[6] = false;
 
 		uint32 vsbits = boolArrToUint32(arr, 5);
-		uint32 psbits = boolArrToUint32(arr, 6);
+		uint32 psbits = boolArrToUint32(arr, 7);
 
 		VertexShaderPtr vs = _meshVertexShaders[vsbits];
 		PixelShaderPtr ps = _meshPixelShaders[psbits];
@@ -312,6 +340,7 @@ void MeshRenderer::GenAndCacheMeshInputLayout(const Model* model)
 void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
     this->_device = device;
+	this->_drawingCubemap = false;
 
     _blendStates.Initialize(device);
     _rasterizerStates.Initialize(device);
@@ -622,6 +651,7 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     context->HSSetShader(nullptr, nullptr, 0);
     context->GSSetShader(nullptr, nullptr, 0);
 
+	_scene->sortSceneObjects(camera.ViewMatrix());
 	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getStaticOpaqueObjectsPtr(), _scene->getNumStaticOpaqueObjects());
 	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getDynamicOpaqueObjectsPtr(), _scene->getNumDynmamicOpaueObjects());
 
@@ -721,6 +751,7 @@ void MeshRenderer::RenderDepth(ID3D11DeviceContext* context, const Camera& camer
     context->DSSetShader(nullptr, nullptr, 0);
     context->HSSetShader(nullptr, nullptr, 0);
 
+	_scene->sortSceneObjects(camera.ViewMatrix());
 	RenderDepthSceneObjects(context, world, camera, _scene->getStaticOpaqueObjectsPtr(), _scene->getNumStaticOpaqueObjects());
 	RenderDepthSceneObjects(context, world, camera, _scene->getDynamicOpaqueObjectsPtr(), _scene->getNumDynmamicOpaueObjects());
 }

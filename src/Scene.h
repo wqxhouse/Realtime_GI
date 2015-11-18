@@ -54,6 +54,8 @@ public:
 	void Initialize(ID3D11Device *device);
 
 	Model *addModel(const std::wstring &modelPath);
+	Model *addBoxModel();
+	Model *addPlaneModel();
 
 	// TODO: note that this approach fails to account for 
 	// cases that a model can have semi-static semi-dynamic 
@@ -71,7 +73,10 @@ public:
 	inline int getNumStaticOpaqueObjects() { return _numStaticObjects;  }
 	inline int getNumDynmamicOpaueObjects() { return _numDynamicObjects; }
 	inline int getNumModels() { return (int)_modelIndices.size(); }
-	inline Model *getModel(uint64 index) { return &_models[index]; }
+	inline Model *getModel(uint64 index) { return &_models[_modelIndices[index]]; }
+
+	inline Float3 getSceneTranslation() { return _sceneTranslation; }
+	inline float getSceneScale() { return _sceneScale;  }
 
 	inline SceneObject *getStaticOpaqueObjectsPtr() { return _staticOpaqueObjects; }
 	inline SceneObject *getDynamicOpaqueObjectsPtr() { return _dynamicOpaqueObjects; }
@@ -94,6 +99,7 @@ private:
 	int _numDynamicObjects;
 	int _numObjectBases;
 	int _numPrevWVPs;
+
 
 	Float4x4 createBase(float scale, const Float3 &pos, const Quaternion &rot);
 

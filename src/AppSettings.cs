@@ -42,7 +42,8 @@ public class Settings
     enum Scenes
     {
         CornellBox,
-        Boxes 
+        Boxes, 
+        Plane,
     }
 
     enum JitterModes

@@ -991,15 +991,7 @@ void Model::CreateWithAssimp(ID3D11Device* device, const wchar* fileName, bool f
 	}
 
 	// Generate Material Flags for each mesh
-	for (uint64 i = 0; i < numMeshes; ++i)
-	{
-		MeshMaterial &mat = meshMaterials[(*scene->mMeshes[i]).mMaterialIndex];
-		meshes[i].materialFlags[(uint64)MaterialFlag::HasAlbedoMap] =	 !mat.DiffuseMapName.empty();
-		meshes[i].materialFlags[(uint64)MaterialFlag::HasNormalMap] =	 !mat.NormalMapName.empty();
-		meshes[i].materialFlags[(uint64)MaterialFlag::HasRoughnessMap] = !mat.RoughnessMapName.empty();
-		meshes[i].materialFlags[(uint64)MaterialFlag::HasMetallicMap] =  !mat.MetallicMapName.empty();
-		meshes[i].materialFlags[(uint64)MaterialFlag::HasEmissiveMap] =  !mat.EmissiveMapName.empty();
-	}
+	GenerateMaterialFlags(scene);
 }
 
 void Model::CreateFromMeshData(ID3D11Device* device, const wchar* fileName, bool forceSRGB)
@@ -1021,6 +1013,8 @@ void Model::GenerateBoxScene(ID3D11Device* device, const Float3& dimensions, con
 
     meshes.resize(1);
     meshes[0].InitBox(device, dimensions, position, orientation, 0);
+
+	GenerateMaterialFlags(material);
 }
 
 void Model::GenerateBoxTestScene(ID3D11Device* device)
@@ -1035,8 +1029,9 @@ void Model::GenerateBoxTestScene(ID3D11Device* device)
     meshes.resize(2);
     meshes[0].InitBox(device, Float3(2.0f), Float3(0.0f, 1.5f, 0.0f), Quaternion(), 0);
     meshes[1].InitBox(device, Float3(10.0f, 0.25f, 10.0f), Float3(0.0f), Quaternion(), 0);
-}
 
+	GenerateMaterialFlags(material);
+}
 
 void Model::GeneratePlaneScene(ID3D11Device* device, const Float2& dimensions, const Float3& position,
                                const Quaternion& orientation, const wchar* colorMap,
@@ -1051,6 +1046,8 @@ void Model::GeneratePlaneScene(ID3D11Device* device, const Float2& dimensions, c
 
     meshes.resize(1);
     meshes[0].InitPlane(device, dimensions, position, orientation, 0);
+
+	GenerateMaterialFlags(material);
 }
 
 void Model::GenerateCorneaScene(ID3D11Device* device)
@@ -1064,6 +1061,33 @@ void Model::GenerateCorneaScene(ID3D11Device* device)
 
     meshes.resize(1);
     meshes[0].InitCornea(device, 0);
+
+	GenerateMaterialFlags(material);
+}
+
+void Model::GenerateMaterialFlags(const MeshMaterial &mat)
+{
+	for (uint64 i = 0; i < meshes.size(); ++i)
+	{
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasAlbedoMap] = !mat.DiffuseMapName.empty();
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasNormalMap] = !mat.NormalMapName.empty();
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasRoughnessMap] = !mat.RoughnessMapName.empty();
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasMetallicMap] = !mat.MetallicMapName.empty();
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasEmissiveMap] = !mat.EmissiveMapName.empty();
+	}
+}
+
+void Model::GenerateMaterialFlags(const aiScene *scene)
+{
+	for (uint64 i = 0; i < meshes.size(); ++i)
+	{
+		MeshMaterial &mat = meshMaterials[(*scene->mMeshes[i]).mMaterialIndex];
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasAlbedoMap] = !mat.DiffuseMapName.empty();
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasNormalMap] = !mat.NormalMapName.empty();
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasRoughnessMap] = !mat.RoughnessMapName.empty();
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasMetallicMap] = !mat.MetallicMapName.empty();
+		meshes[i].materialFlags[(uint64)MaterialFlag::HasEmissiveMap] = !mat.EmissiveMapName.empty();
+	}
 }
 
 void Model::LoadMaterialResources(MeshMaterial& material, const wstring& directory, ID3D11Device* device, bool forceSRGB)

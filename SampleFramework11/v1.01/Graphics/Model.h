@@ -237,6 +237,9 @@ public:
 
 protected:
 
+	// void GenerateMaterialFlags(int numMeshes);
+	void GenerateMaterialFlags(const MeshMaterial &mat);
+	void GenerateMaterialFlags(const aiScene *scene);
     static void LoadMaterialResources(MeshMaterial& material, const std::wstring& directory, ID3D11Device* device, bool forceSRGB);
 
     std::vector<Mesh> meshes;
