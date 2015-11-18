@@ -148,6 +148,8 @@ public class Settings
 
         bool EnableNormalMaps = true;
 
+        bool EnableRealtimeCubemap = false;
+
         [MinValue(0.0f)]
         [MaxValue(1.0f)]
         float NormalMapIntensity = 1.0f;

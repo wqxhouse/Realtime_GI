@@ -52,7 +52,7 @@ public:
     void ReduceDepth(ID3D11DeviceContext* context, DepthStencilBuffer& depthBuffer,
                      const Camera& camera);
 
-    // void ComputeShadowDepthBounds(const Camera& camera);
+    void ComputeShadowDepthBoundsCPU(const Camera& camera);
 
     void RenderShadowMap(ID3D11DeviceContext* context, const Camera& camera,
                          const Float4x4& world);

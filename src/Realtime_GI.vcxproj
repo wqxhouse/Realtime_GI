@@ -244,6 +244,7 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\..\..\Users\wqxho_000\Downloads\Cerberus_by_Andrew_Maximov\Cerberus_by_Andrew_Maximov\Textures\Normal\Cerberus_N.dds" />
+    <Image Include="..\Content\EnvMaps\Ennis.dds" />
     <Image Include="..\Content\Models\CornellBox\blue.dds" />
     <Image Include="..\Content\Models\CornellBox\green.dds" />
     <Image Include="..\Content\Models\CornellBox\red.dds" />
@@ -253,6 +254,8 @@
     <Image Include="..\Content\Textures\DefaultNormalMap.dds" />
     <Image Include="..\Content\Textures\DefaultWhite.dds" />
     <Image Include="..\Content\Textures\SpecularLookup.dds" />
+    <Image Include="Debug\x64\t1.dds" />
+    <Image Include="Debug\x64\t2.dds" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -26,6 +26,7 @@ cbuffer AppSettings : register(b7)
     bool RenderBackground;
     bool EnableShadows;
     bool EnableNormalMaps;
+    bool EnableRealtimeCubemap;
     float NormalMapIntensity;
     float DiffuseIntensity;
     float Roughness;
