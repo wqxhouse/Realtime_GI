@@ -7,3 +7,6 @@
 //  All code licensed under the MIT license
 //
 //=================================================================================================
+
+#include <Shlwapi.h>
+#include <unordered_map>

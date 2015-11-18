@@ -24,6 +24,7 @@
 
 #include "PostProcessor.h"
 #include "MeshRenderer.h"
+#include "Scene.h"
 
 using namespace SampleFramework11;
 
@@ -31,6 +32,9 @@ class Realtime_GI : public App
 {
 
 protected:
+
+	// Caution: too large will stack overflow
+	static const uint32 MAX_SCENES = 5;
 
     FirstPersonCamera _camera;
 
@@ -47,12 +51,12 @@ protected:
     RenderTarget2D _velocityResolveTarget;
     uint64 _frameCount = 0;
 
-    // Model
-    Model _models[uint64(Scenes::NumValues)];
+	Scene _scenes[MAX_SCENES];
+	uint32 _numScenes;
+
     MeshRenderer _meshRenderer;
 
-    Float4x4 _modelTransform;
-    Quaternion _modelOrientations[uint64(Scenes::NumValues)];
+    Float4x4 _globalTransform;
 
     ID3D11ShaderResourceViewPtr _envMap;
     SH9Color _envMapSH;
@@ -66,6 +70,11 @@ protected:
 
     Float2 _jitterOffset;
     Float2 _prevJitter;
+
+	// Camera momentum
+	float _prevForward;
+	float _prevStrafe;
+	float _prevAscend;
 
     struct ResolveConstants
     {
@@ -85,6 +94,9 @@ protected:
     ConstantBuffer<BackgroundVelocityConstants> _backgroundVelocityConstants;
 
     virtual void Initialize() override;
+	void LoadScenes(ID3D11DevicePtr device);
+	void LoadShaders(ID3D11DevicePtr device);
+
     virtual void Render(const Timer& timer) override;
     virtual void Update(const Timer& timer) override;
     virtual void BeforeReset() override;
@@ -96,6 +108,8 @@ protected:
     void RenderBackgroundVelocity();
     void RenderAA();
     void RenderHUD();
+
+	void ApplyMomentum(float &prevVal, float &val, float deltaTime);
 
 public:
 

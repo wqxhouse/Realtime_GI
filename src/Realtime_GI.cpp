@@ -36,20 +36,12 @@ const float WindowWidthF = static_cast<float>(WindowWidth);
 const float WindowHeightF = static_cast<float>(WindowHeight);
 
 static const float NearClip = 0.01f;
-static const float FarClip = 100.0f;
+static const float FarClip = 300.0f;
 
-static const float ModelScales[uint64(Scenes::NumValues)] = { 0.1f, 1.0f };
-static const Float3 ModelPositions[uint64(Scenes::NumValues)] = { Float3(-1.0f, 2.0f, 0.0f), Float3(0.0f, 0.0f, 0.0f) };
-
-// Model filenames
-static const wstring ModelPaths[uint64(Scenes::NumValues)] =
-{
-    L"..\\Content\\Models\\RoboHand\\RoboHand.meshdata",
-    L"",
-};
 
 Realtime_GI::Realtime_GI() :  App(L"Realtime GI (CSCI 580)", MAKEINTRESOURCEW(IDI_DEFAULT)),
-                            _camera(WindowWidthF / WindowHeightF, Pi_4 * 0.75f, NearClip, FarClip)
+                            _camera(WindowWidthF / WindowHeightF, Pi_4 * 0.75f, NearClip, FarClip), 
+							_prevForward(0.0f), _prevStrafe(0.0f), _prevAscend(0.0f), _numScenes(0)
 {
     _deviceManager.SetBackBufferWidth(WindowWidth);
     _deviceManager.SetBackBufferHeight(WindowHeight);
@@ -65,16 +57,71 @@ void Realtime_GI::BeforeReset()
 
 void Realtime_GI::AfterReset()
 {
-    App::AfterReset();
+	App::AfterReset();
 
-    float aspect = static_cast<float>(_deviceManager.BackBufferWidth()) / _deviceManager.BackBufferHeight();
-    _camera.SetAspectRatio(aspect);
+	float aspect = static_cast<float>(_deviceManager.BackBufferWidth()) / _deviceManager.BackBufferHeight();
+	_camera.SetAspectRatio(aspect);
 
-    CreateRenderTargets();
+	CreateRenderTargets();
 
-    _meshRenderer.CreateReductionTargets(_deviceManager.BackBufferWidth(), _deviceManager.BackBufferHeight());
+	_meshRenderer.CreateReductionTargets(_deviceManager.BackBufferWidth(), _deviceManager.BackBufferHeight());
 
-    _postProcessor.AfterReset(_deviceManager.BackBufferWidth(), _deviceManager.BackBufferHeight());
+	_postProcessor.AfterReset(_deviceManager.BackBufferWidth(), _deviceManager.BackBufferHeight());
+}
+
+void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
+{
+	// TODO: put the following in json
+	static const wstring ModelPaths[uint64(Scenes::NumValues)] =
+	{
+		// L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\Converted\\sponza.obj",
+		//L"C:\\Users\\wqxho_000\\Downloads\\Cerberus_by_Andrew_Maximov\\Cerberus_by_Andrew_Maximov\\testfbxascii.fbx",
+		L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
+		// L"..\\Content\\Models\\CornellBox\\CornellBox_Max.obj",
+		//L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaNon_PBR\\Converted\\sponza.obj",
+		// L"..\\Content\\Models\\Powerplant\\Powerplant.sdkmesh",
+		// L"..\\Content\\Models\\RoboHand\\RoboHand.meshdata",
+		// L"",
+	};
+
+	Scene *scene = nullptr;
+
+
+	/// Scene 1 /////////////////////////////////////////////////////////////
+	_scenes[_numScenes] = Scene();
+	scene = &_scenes[_numScenes];
+	scene->Initialize(device);
+
+	Model *m = scene->addModel(ModelPaths[0]);
+	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 0, 0), Quaternion());
+	_numScenes++;
+
+	/// Scene 2 /////////////////////////////////////////////////////////////
+	_scenes[_numScenes] = Scene();
+	scene = &_scenes[_numScenes];
+	scene->Initialize(device);
+
+	scene->addDynamicOpaqueBoxObject(1.0f, Float3(-1.0f, 0.0f, 0.0f), Quaternion(0.0f, 1.0f, 0.0f, 0.3f));
+	scene->addDynamicOpaqueBoxObject(1.5f, Float3(0.0f, 0.0f, 0.0f), Quaternion(-0.7f, 1.0f, 0.0f, 0.3f));
+	scene->addDynamicOpaqueBoxObject(2.0f, Float3(1.0f, 0.0f, 0.0f), Quaternion(0.0f, 1.0f, 0.7f, 0.3f));
+	_numScenes++;
+}
+
+void Realtime_GI::LoadShaders(ID3D11DevicePtr device)
+{
+	// Load shaders
+	for (uint32 msaaMode = 0; msaaMode < uint32(MSAAModes::NumValues); ++msaaMode)
+	{
+		CompileOptions opts;
+		opts.Add("MSAASamples_", AppSettings::NumMSAASamples(MSAAModes(msaaMode)));
+		_resolvePS[msaaMode] = CompilePSFromFile(device, L"Resolve.hlsl", "ResolvePS", "ps_5_0", opts);
+	}
+
+	_resolveVS = CompileVSFromFile(device, L"Resolve.hlsl", "ResolveVS");
+
+	_backgroundVelocityVS = CompileVSFromFile(device, L"BackgroundVelocity.hlsl", "BackgroundVelocityVS");
+	_backgroundVelocityPS = CompilePSFromFile(device, L"BackgroundVelocity.hlsl", "BackgroundVelocityPS");
+
 }
 
 void Realtime_GI::Initialize()
@@ -91,21 +138,11 @@ void Realtime_GI::Initialize()
     // Camera setup
     _camera.SetPosition(Float3(0.0f, 2.5f, -10.0f));
 
-    // Load the scenes
-    for(uint64 i = 0; i < uint64(Scenes::NumValues); ++i)
-    {
-        if(i == uint64(Scenes::Plane))
-            _models[i].GeneratePlaneScene(device, Float2(10.0f, 10.0f), Float3(), Quaternion(),
-                                         L"", L"Bricks_NML.dds");
-        else
-            _models[i].CreateFromMeshData(device, ModelPaths[i].c_str());
-    }
-
-    _modelOrientations[uint64(Scenes::RoboHand)] = Quaternion(0.41f, -0.55f, -0.29f, 0.67f);
-    AppSettings::ModelOrientation.SetValue(_modelOrientations[AppSettings::CurrentScene]);
+	LoadScenes(device);
 
     _meshRenderer.Initialize(device, _deviceManager.ImmediateContext());
-    _meshRenderer.SetModel(&_models[AppSettings::CurrentScene]);
+    _meshRenderer.SetScene(&_scenes[0]);
+
     _skybox.Initialize(device);
 
     _envMap = LoadTexture(device, L"..\\Content\\EnvMaps\\Ennis.dds");
@@ -113,19 +150,8 @@ void Realtime_GI::Initialize()
     FileReadSerializer serializer(L"..\\Content\\EnvMaps\\Ennis.shdata");
     SerializeItem(serializer, _envMapSH);
 
-    // Load shaders
-    for(uint32 msaaMode = 0; msaaMode < uint32(MSAAModes::NumValues); ++msaaMode)
-    {
-        CompileOptions opts;
-        opts.Add("MSAASamples_", AppSettings::NumMSAASamples(MSAAModes(msaaMode)));
-        _resolvePS[msaaMode] = CompilePSFromFile(device, L"Resolve.hlsl", "ResolvePS", "ps_5_0", opts);
-    }
-
-    _resolveVS = CompileVSFromFile(device, L"Resolve.hlsl", "ResolveVS");
-
-    _backgroundVelocityVS = CompileVSFromFile(device, L"BackgroundVelocity.hlsl", "BackgroundVelocityVS");
-    _backgroundVelocityPS = CompilePSFromFile(device, L"BackgroundVelocity.hlsl", "BackgroundVelocityPS");
-
+	LoadShaders(device);
+   
     _resolveConstants.Initialize(device);
     _backgroundVelocityConstants.Initialize(device);
 
@@ -154,6 +180,17 @@ void Realtime_GI::CreateRenderTargets()
     }
 }
 
+void Realtime_GI::ApplyMomentum(float &prevVal, float &val, float deltaTime)
+{
+	float blendedValue;
+	if (fabs(val) > fabs(prevVal))
+		blendedValue = Lerp(val, prevVal, pow(0.6f, deltaTime * 60.0f));
+	else
+		blendedValue = Lerp(val, prevVal, pow(0.8f, deltaTime * 60.0f));
+	prevVal = blendedValue;
+	val = blendedValue;
+}
+
 void Realtime_GI::Update(const Timer& timer)
 {
     AppSettings::UpdateUI();
@@ -164,27 +201,37 @@ void Realtime_GI::Update(const Timer& timer)
     if(kbState.IsKeyDown(KeyboardState::Escape))
         _window.Destroy();
 
-    float CamMoveSpeed = 5.0f * timer.DeltaSecondsF();
-    const float CamRotSpeed = 0.180f * timer.DeltaSecondsF();
-    const float MeshRotSpeed = 0.180f * timer.DeltaSecondsF();
+	float deltaSec = timer.DeltaSecondsF();;
+	float CamMoveSpeed = 5.0f * deltaSec;
+	const float CamRotSpeed = 0.180f * deltaSec;
+	const float MeshRotSpeed = 0.180f * deltaSec;
 
     // Move the camera with keyboard input
     if(kbState.IsKeyDown(KeyboardState::LeftShift))
         CamMoveSpeed *= 0.25f;
 
+	float forward = CamMoveSpeed *
+		((kbState.IsKeyDown(KeyboardState::W) ? 1 : 0.0f) +
+		(kbState.IsKeyDown(KeyboardState::S) ? -1 : 0.0f));
+
+	float strafe = CamMoveSpeed *
+		((kbState.IsKeyDown(KeyboardState::A) ? 1 : 0.0f) +
+		(kbState.IsKeyDown(KeyboardState::D) ? -1 : 0.0f));
+
+	float ascend = CamMoveSpeed * 
+		((kbState.IsKeyDown(KeyboardState::Q) ? 1 : 0.0f) +
+		(kbState.IsKeyDown(KeyboardState::E) ? -1 : 0.0f));
+
     Float3 camPos = _camera.Position();
-    if(kbState.IsKeyDown(KeyboardState::W))
-        camPos += _camera.Forward() * CamMoveSpeed;
-    else if (kbState.IsKeyDown(KeyboardState::S))
-        camPos += _camera.Back() * CamMoveSpeed;
-    if(kbState.IsKeyDown(KeyboardState::A))
-        camPos += _camera.Left() * CamMoveSpeed;
-    else if (kbState.IsKeyDown(KeyboardState::D))
-        camPos += _camera.Right() * CamMoveSpeed;
-    if(kbState.IsKeyDown(KeyboardState::Q))
-        camPos += _camera.Up() * CamMoveSpeed;
-    else if (kbState.IsKeyDown(KeyboardState::E))
-        camPos += _camera.Down() * CamMoveSpeed;
+
+	ApplyMomentum(_prevForward, forward, deltaSec);
+	ApplyMomentum(_prevStrafe, strafe, deltaSec);
+	ApplyMomentum(_prevAscend, ascend, deltaSec);
+
+	camPos += _camera.Forward() * forward;
+	camPos += _camera.Left() * strafe;
+	camPos += _camera.Up() * ascend;
+
     _camera.SetPosition(camPos);
 
     // Rotate the camera with the mouse
@@ -201,7 +248,9 @@ void Realtime_GI::Update(const Timer& timer)
     // Reset the camera projection
     _camera.SetAspectRatio(_camera.AspectRatio());
     Float2 jitter = 0.0f;
-    if(AppSettings::EnableTemporalAA && AppSettings::EnableJitter() && AppSettings::UseStandardResolve == false)
+    if (AppSettings::EnableTemporalAA 
+	 && AppSettings::EnableJitter() 
+	 && AppSettings::UseStandardResolve == false)
     {
         const float jitterScale = 0.5f;
 
@@ -234,16 +283,17 @@ void Realtime_GI::Update(const Timer& timer)
 
     if(AppSettings::CurrentScene.Changed())
     {
-        _meshRenderer.SetModel(&_models[AppSettings::CurrentScene]);
-        AppSettings::ModelOrientation.SetValue(_modelOrientations[AppSettings::CurrentScene]);
+		Scene *currScene = &_scenes[AppSettings::CurrentScene];
+		_meshRenderer.SetScene(currScene);
+        AppSettings::SceneOrientation.SetValue(currScene->getSceneOrientation());
     }
 
-    Quaternion orientation = AppSettings::ModelOrientation;
-    orientation = orientation * Quaternion::FromAxisAngle(Float3(0.0f, 1.0f, 0.0f), AppSettings::ModelRotationSpeed * timer.DeltaSecondsF());
-    AppSettings::ModelOrientation.SetValue(orientation);
+	Quaternion orientation = AppSettings::SceneOrientation;
+	orientation = orientation * Quaternion::FromAxisAngle(Float3(0.0f, 1.0f, 0.0f), 
+		AppSettings::ModelRotationSpeed * timer.DeltaSecondsF());
 
-    _modelTransform = orientation.ToFloat4x4() * Float4x4::ScaleMatrix(ModelScales[AppSettings::CurrentScene]);
-    _modelTransform.SetTranslation(ModelPositions[AppSettings::CurrentScene]);
+	AppSettings::SceneOrientation.SetValue(orientation);
+	_globalTransform = orientation.ToFloat4x4();
 }
 
 void Realtime_GI::RenderAA()
@@ -315,6 +365,8 @@ void Realtime_GI::Render(const Timer& timer)
 
     AppSettings::UpdateCBuffer(context);
 
+	_scenes[AppSettings::CurrentScene].sortSceneObjects(_camera.ViewMatrix());
+
     RenderScene();
 
     RenderBackgroundVelocity();
@@ -352,16 +404,18 @@ void Realtime_GI::RenderScene()
 
     ID3D11RenderTargetView* renderTargets[2] = { nullptr, nullptr };
     context->OMSetRenderTargets(1, renderTargets, _depthBuffer.DSView);
-    _meshRenderer.RenderDepth(context, _camera, _modelTransform, false);
+	
+	// TODO: reduce api calls
+    _meshRenderer.RenderDepth(context, _camera, _globalTransform, false);
 
     _meshRenderer.ReduceDepth(context, _depthBuffer, _camera);
-    _meshRenderer.RenderShadowMap(context, _camera, _modelTransform);
+    _meshRenderer.RenderShadowMap(context, _camera, _globalTransform);
 
     renderTargets[0] = _colorTarget.RTView;
     renderTargets[1] = _velocityTarget.RTView;
     context->OMSetRenderTargets(2, renderTargets, _depthBuffer.DSView);
 
-    _meshRenderer.Render(context, _camera, _modelTransform, _envMap, _envMapSH, _jitterOffset);
+    _meshRenderer.Render(context, _camera, _globalTransform, _envMap, _envMapSH, _jitterOffset);
 
     renderTargets[0] = _colorTarget.RTView;
     renderTargets[1] = nullptr;

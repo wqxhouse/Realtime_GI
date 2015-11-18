@@ -49,8 +49,8 @@ typedef EnumSettingT<JitterModes> JitterModesSetting;
 
 enum class Scenes
 {
-    RoboHand = 0,
-    Plane = 1,
+    CornellBox = 0,
+    Boxes = 1,
 
     NumValues
 };
@@ -95,7 +95,8 @@ namespace AppSettings
     extern FloatSetting DiffuseIntensity;
     extern FloatSetting Roughness;
     extern FloatSetting SpecularIntensity;
-    extern OrientationSetting ModelOrientation;
+    extern FloatSetting EmissiveIntensity;
+    extern OrientationSetting SceneOrientation;
     extern FloatSetting ModelRotationSpeed;
     extern BoolSetting DoubleSyncInterval;
     extern FloatSetting ExposureScale;
@@ -136,7 +137,8 @@ namespace AppSettings
         float DiffuseIntensity;
         float Roughness;
         float SpecularIntensity;
-        Float4Align Quaternion ModelOrientation;
+        float EmissiveIntensity;
+        Float4Align Quaternion SceneOrientation;
         float ModelRotationSpeed;
         bool32 DoubleSyncInterval;
         float ExposureScale;
@@ -166,11 +168,6 @@ namespace AppSettings
     inline uint32 NumMSAASamples()
     {
         return NumMSAASamples(MSAAMode);
-    }
-
-    inline bool UseNormalMapping()
-    {
-        return CurrentScene == Scenes::Plane;
     }
 
     inline bool EnableJitter()

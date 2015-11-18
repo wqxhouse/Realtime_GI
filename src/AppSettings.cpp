@@ -35,8 +35,8 @@ static const char* JitterModesLabels[3] =
 
 static const char* ScenesLabels[2] =
 {
-    "RoboHand",
-    "Plane",
+    "CornellBox",
+    "Boxes",
 };
 
 namespace AppSettings
@@ -73,7 +73,8 @@ namespace AppSettings
     FloatSetting DiffuseIntensity;
     FloatSetting Roughness;
     FloatSetting SpecularIntensity;
-    OrientationSetting ModelOrientation;
+    FloatSetting EmissiveIntensity;
+    OrientationSetting SceneOrientation;
     FloatSetting ModelRotationSpeed;
     BoolSetting DoubleSyncInterval;
     FloatSetting ExposureScale;
@@ -148,7 +149,7 @@ namespace AppSettings
         SharpeningAmount.Initialize(tweakBar, "SharpeningAmount", "Anti Aliasing", "Sharpening Amount", "", 0.0000f, 0.0000f, 1.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&SharpeningAmount);
 
-        CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene Controls", "Current Scene", "", Scenes::RoboHand, 2, ScenesLabels);
+        CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene Controls", "Current Scene", "", Scenes::CornellBox, 2, ScenesLabels);
         Settings.AddSetting(&CurrentScene);
 
         LightDirection.Initialize(tweakBar, "LightDirection", "Scene Controls", "Light Direction", "The direction of the light", Float3(-0.7500f, 0.9770f, -0.4000f));
@@ -184,8 +185,11 @@ namespace AppSettings
         SpecularIntensity.Initialize(tweakBar, "SpecularIntensity", "Scene Controls", "Specular Intensity", "Specular intensity parameter for the material", 0.0500f, 0.0000f, 1.0000f, 0.0010f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&SpecularIntensity);
 
-        ModelOrientation.Initialize(tweakBar, "ModelOrientation", "Scene Controls", "Model Orientation", "", Quaternion(0.4100f, -0.5500f, -0.2900f, 0.6700f));
-        Settings.AddSetting(&ModelOrientation);
+        EmissiveIntensity.Initialize(tweakBar, "EmissiveIntensity", "Scene Controls", "Emissive Intensity", "Emissive parameter for the material", 0.0000f, 0.0000f, 1.0000f, 0.0010f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&EmissiveIntensity);
+
+        SceneOrientation.Initialize(tweakBar, "SceneOrientation", "Scene Controls", "Scene Orientation", "", Quaternion(0.0000f, 0.0000f, 0.0000f, 1.0000f));
+        Settings.AddSetting(&SceneOrientation);
 
         ModelRotationSpeed.Initialize(tweakBar, "ModelRotationSpeed", "Scene Controls", "Model Rotation Speed", "", 0.0000f, 0.0000f, 10.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&ModelRotationSpeed);
@@ -253,7 +257,8 @@ namespace AppSettings
         CBuffer.Data.DiffuseIntensity = DiffuseIntensity;
         CBuffer.Data.Roughness = Roughness;
         CBuffer.Data.SpecularIntensity = SpecularIntensity;
-        CBuffer.Data.ModelOrientation = ModelOrientation;
+        CBuffer.Data.EmissiveIntensity = EmissiveIntensity;
+        CBuffer.Data.SceneOrientation = SceneOrientation;
         CBuffer.Data.ModelRotationSpeed = ModelRotationSpeed;
         CBuffer.Data.DoubleSyncInterval = DoubleSyncInterval;
         CBuffer.Data.ExposureScale = ExposureScale;

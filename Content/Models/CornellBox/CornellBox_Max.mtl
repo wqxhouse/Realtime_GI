@@ -1,0 +1,114 @@
+# 3ds Max Wavefront OBJ Exporter v0.97b - (c)2007 guruware
+# File Created: 15.11.2015 21:03:26
+
+newmtl leftSphere
+	Ns 30.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5500 0.5500 0.5500
+	Kd 0.5500 0.5500 0.5500
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka /3DEngine/Realtime_GI/Content/Models/CornellBox/white.dds
+	map_Kd /3DEngine/Realtime_GI/Content/Models/CornellBox/white.dds
+
+newmtl rightSphere
+	Ns 30.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5500 0.5500 0.5500
+	Kd 0.5500 0.5500 0.5500
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka /3DEngine/Realtime_GI/Content/Models/CornellBox/white.dds
+	map_Kd /3DEngine/Realtime_GI/Content/Models/CornellBox/white.dds
+
+newmtl floor
+	Ns 30.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5500 0.5500 0.5500
+	Kd 0.5500 0.5500 0.5500
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka /3DEngine/Realtime_GI/Content/Models/CornellBox/white.dds
+	map_Kd /3DEngine/Realtime_GI/Content/Models/CornellBox/white.dds
+
+newmtl ceiling
+	Ns 30.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5500 0.5500 0.5500
+	Kd 0.5500 0.5500 0.5500
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka /3DEngine/Realtime_GI/Content/Models/CornellBox/white.dds
+	map_Kd /3DEngine/Realtime_GI/Content/Models/CornellBox/white.dds
+
+newmtl backWall
+	Ns 30.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5500 0.5500 0.5500
+	Kd 0.5500 0.5500 0.5500
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka /3DEngine/Realtime_GI/Content/Models/CornellBox/white.dds
+	map_Kd /3DEngine/Realtime_GI/Content/Models/CornellBox/white.dds
+
+newmtl rightWall
+	Ns 30.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5500 0.5500 0.5500
+	Kd 0.5500 0.5500 0.5500
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka /3DEngine/Realtime_GI/Content/Models/CornellBox/green.dds
+	map_Kd /3DEngine/Realtime_GI/Content/Models/CornellBox/green.dds
+
+newmtl leftWall
+	Ns 30.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5500 0.5500 0.5500
+	Kd 0.5500 0.5500 0.5500
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka /3DEngine/Realtime_GI/Content/Models/CornellBox/red.dds
+	map_Kd /3DEngine/Realtime_GI/Content/Models/CornellBox/red.dds
+
+newmtl light
+	Ns 30.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 0.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.5500 0.5500 0.5500
+	Kd 0.5500 0.5500 0.5500
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka /3DEngine/Realtime_GI/Content/Models/CornellBox/white.dds
+	map_Kd /3DEngine/Realtime_GI/Content/Models/CornellBox/white.dds
