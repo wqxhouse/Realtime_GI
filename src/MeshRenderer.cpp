@@ -667,8 +667,8 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getStaticOpaqueObjectsPtr(), _scene->getNumStaticOpaqueObjects());
 	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getDynamicOpaqueObjectsPtr(), _scene->getNumDynmamicOpaueObjects());
 
-    ID3D11ShaderResourceView* nullSRVs[5] = { nullptr };
-    context->PSSetShaderResources(0, 5, nullSRVs);
+    ID3D11ShaderResourceView* nullSRVs[8] = { nullptr };
+    context->PSSetShaderResources(0, 8, nullSRVs);
 }
 
 void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4x4 &world, const Camera& camera,
