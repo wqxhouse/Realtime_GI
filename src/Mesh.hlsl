@@ -37,6 +37,7 @@ cbuffer VSConstants : register(b0)
 cbuffer PSConstants : register(b0)
 {
     float3 CameraPosWS;
+	float3 CubemapPositionWS;
 	float4x4 ShadowMatrix;
 	float4 CascadeSplits;
     float4 CascadeOffsets[NumCascades];
@@ -49,6 +50,8 @@ cbuffer PSConstants : register(b0)
     SH9Color EnvironmentSH;
     float2 RTSize;
     float2 JitterOffset;
+	float3 BoxMax;
+	float3 BoxMin;
 }
 
 //=================================================================================================
@@ -318,8 +321,8 @@ float3 CalcLighting(in float3 normal, in float3 lightDir, in float3 lightColor,
 }
 
 
-float3 parallaxCorrection(float3 PositionWS, float3 CameraWS, float3 CubemapPositionWS, float3 NormalWS, float BoxMax, float BoxMin){
-	float3 DirectionWS = PositionWS - CameraWS;
+float3 parallaxCorrection(float3 PositionWS, float3 NormalWS){
+	float3 DirectionWS = normalize(PositionWS - CameraPosWS);
 	float3 ReflDirectionWS = reflect(DirectionWS, NormalWS);
 
 	float3 FirstPlaneIntersect = (BoxMax - PositionWS) / ReflDirectionWS;
@@ -413,7 +416,8 @@ PSOutput PS(in PSInput input)
 
         lighting += indirectDiffuse * diffuseAlbedo;
 
-		float3 reflectWS = /*parallaxCorrection(positionWS, CameraWS, CubemapPositionWS, normalWS, MaxBox, MinBox);*/reflect(-viewWS, normalWS);
+		//float3 reflectWS = parallaxCorrection(positionWS, normalize(normalWS));
+		float3 reflectWS = reflect(-viewWS, normalWS);
         float3 vtxReflectWS = reflect(-viewWS, vtxNormal);
 
         uint width, height, numMips;
@@ -435,7 +439,7 @@ PSOutput PS(in PSInput input)
         fresnel *= saturate(metallic * 100.0f);
 
 
-        lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;//!
+        lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel * 5.0f;//!
     }
 
 	

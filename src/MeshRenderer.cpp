@@ -240,6 +240,12 @@ void MeshRenderer::SetCubemapCapture(bool32 tf)
 	}
 }
 
+void MeshRenderer::SetParallaxCorrection(Float3 newProbePosWS, Float3 newMaxbox, Float3 newMinbox){
+	probePosWS = newProbePosWS;
+	maxbox = newMaxbox;
+	minbox = newMinbox;
+}
+
 void MeshRenderer::ReMapMeshShaders()
 {
 	_meshVertexShadersMap.clear();
@@ -342,8 +348,10 @@ void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context
     this->_device = device;
 	this->_drawingCubemap = false;
 
-    _blendStates.Initialize(device);
+	_blendStates.Initialize(device);
+	_rasterizerStates.Wireframe();
     _rasterizerStates.Initialize(device);
+
     _depthStencilStates.Initialize(device);
     _samplerStates.Initialize(device);
 
@@ -634,6 +642,7 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 
 	// set PS constants
     _meshPSConstants.Data.CameraPosWS = camera.Position();
+	_meshPSConstants.Data.ProbePosWS = probePosWS;
     _meshPSConstants.Data.OffsetScale = OffsetScale;
     _meshPSConstants.Data.PositiveExponent = PositiveExponent;
     _meshPSConstants.Data.NegativeExponent = NegativeExponent;
@@ -645,6 +654,8 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     _meshPSConstants.Data.JitterOffset = jitterOffset;
     _meshPSConstants.ApplyChanges(context);
     _meshPSConstants.SetPS(context, 0);
+	_meshPSConstants.Data.MaxBox = maxbox;
+	_meshPSConstants.Data.MinBox = minbox;
 
     // Set shaders
     context->DSSetShader(nullptr, nullptr, 0);

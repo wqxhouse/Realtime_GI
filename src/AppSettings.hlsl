@@ -31,6 +31,15 @@ cbuffer AppSettings : register(b7)
     float Roughness;
     float SpecularIntensity;
     float EmissiveIntensity;
+    float ProbeX;
+    float ProbeY;
+    float ProbeZ;
+    float BoxMaxX;
+    float BoxMaxY;
+    float BoxMaxZ;
+    float BoxMinX;
+    float BoxMinY;
+    float BoxMinZ;
     float4 SceneOrientation;
     float ModelRotationSpeed;
     bool DoubleSyncInterval;

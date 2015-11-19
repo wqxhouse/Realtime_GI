@@ -25,6 +25,7 @@ public:
 
 	void Initialize(ID3D11Device *device, uint32 numMipLevels, uint32 multiSamples, uint32 msQuality);
 	void SetPosition(Float3 position);
+	Float3 GetPosition();
 	void GetTargetViews(RenderTarget2D &resCubemapTarget);
 	void Create(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
 		const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox);

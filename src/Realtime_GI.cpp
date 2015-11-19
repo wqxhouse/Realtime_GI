@@ -77,12 +77,13 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	{
 		// L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\Converted\\sponza.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\Cerberus_by_Andrew_Maximov\\Cerberus_by_Andrew_Maximov\\testfbxascii.fbx",
-		L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
+		//L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
 		// L"..\\Content\\Models\\CornellBox\\CornellBox_Max.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaNon_PBR\\Converted\\sponza.obj",
 		// L"..\\Content\\Models\\Powerplant\\Powerplant.sdkmesh",
 		// L"..\\Content\\Models\\RoboHand\\RoboHand.meshdata",
 		// L"",
+		L"..\\Content\\Models\\sphere\\sphere.obj",
 	};
 
 	Scene *scene = nullptr;
@@ -95,6 +96,8 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 
 	Model *m = scene->addModel(ModelPaths[0]);
 	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 0, 0), Quaternion());
+	//scene->addDynamicOpaqueBoxObject(AppSettings::BoxMaxX - AppSettings::BoxMinX, 
+		//float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ), Quaternion());
 	_numScenes++;
 
 	/// Scene 2 /////////////////////////////////////////////////////////////
@@ -386,7 +389,9 @@ void Realtime_GI::RenderSceneCubemaps()
 	_meshRenderer.SetCubemapCapture(true);
 
 	// TODO: make a separate cubemap manager to set different locations
-	_cubemapGenerator.SetPosition(float3(0.0f, 0.0f, 0.0f));
+	//_cubemapGenerator.SetPosition(float3(0.0f, 0.0f, 0.0f));//!
+	//_cubemapGenerator.SetPosition(float3(0.5f, 0.5f, 0.5f));//!
+	_cubemapGenerator.SetPosition(float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ));
 	_cubemapGenerator.Create(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox);
 	_meshRenderer.SetCubemapCapture(false);
 }
@@ -400,7 +405,7 @@ void Realtime_GI::Render(const Timer& timer)
 
     AppSettings::UpdateCBuffer(context);
 
-	if (_firstFrame || AppSettings::CurrentScene.Changed())
+	//if (_firstFrame || AppSettings::CurrentScene.Changed())
 	{
 		// render cubemap every time scene has changed
 		RenderSceneCubemaps();
@@ -460,6 +465,10 @@ void Realtime_GI::RenderScene()
     context->OMSetRenderTargets(2, renderTargets, _depthBuffer.DSView);
 
     // _meshRenderer.Render(context, _camera, _globalTransform, _envMap, _envMapSH, _jitterOffset);
+	_meshRenderer.SetParallaxCorrection(_cubemapGenerator.GetPosition(), 
+		Float3(AppSettings::BoxMaxX, AppSettings::BoxMaxY, AppSettings::BoxMaxZ), 
+		Float3(AppSettings::BoxMinX, AppSettings::BoxMinY, AppSettings::BoxMinZ));
+
 	_meshRenderer.Render(context, _camera, _globalTransform, cubemapRenderTarget.SRView, _envMapSH, _jitterOffset);
 
     renderTargets[0] = _colorTarget.RTView;
@@ -532,10 +541,22 @@ void Realtime_GI::RenderHUD()
     fpsText += ToString(_fps) + L" (" + ToString(1000.0f / _fps) + L"ms)";
     _spriteRenderer.RenderText(_font, fpsText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));
 
-    transform._42 += 25.0f;
+    /*transform._42 += 25.0f;
     wstring vsyncText(L"VSYNC (V): ");
     vsyncText += _deviceManager.VSYNCEnabled() ? L"Enabled" : L"Disabled";
-    _spriteRenderer.RenderText(_font, vsyncText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));
+    _spriteRenderer.RenderText(_font, vsyncText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));*/
+
+	transform._42 += 25.0f;
+	wstring posText(L"Camera Position: ");
+	posText += ToString(_camera.Position()[0]) + L", " + ToString(_camera.Position()[1]) + L", "
+		+ ToString(_camera.Position()[2]) + L", ";
+	_spriteRenderer.RenderText(_font, posText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));
+
+	transform._42 += 25.0f;
+	wstring probeText(L"Probe Position: ");
+	probeText += ToString(_cubemapGenerator.GetPosition()[0]) + L", " + ToString(_cubemapGenerator.GetPosition()[1]) + L", "
+		+ ToString(_cubemapGenerator.GetPosition()[2]) + L", ";
+	_spriteRenderer.RenderText(_font, probeText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));
 
     Profiler::GlobalProfiler.EndFrame(_spriteRenderer, _font);
 

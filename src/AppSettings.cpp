@@ -75,6 +75,15 @@ namespace AppSettings
     FloatSetting Roughness;
     FloatSetting SpecularIntensity;
     FloatSetting EmissiveIntensity;
+    FloatSetting ProbeX;
+    FloatSetting ProbeY;
+    FloatSetting ProbeZ;
+    FloatSetting BoxMaxX;
+    FloatSetting BoxMaxY;
+    FloatSetting BoxMaxZ;
+    FloatSetting BoxMinX;
+    FloatSetting BoxMinY;
+    FloatSetting BoxMinZ;
     OrientationSetting SceneOrientation;
     FloatSetting ModelRotationSpeed;
     BoolSetting DoubleSyncInterval;
@@ -168,7 +177,7 @@ namespace AppSettings
         RenderBackground.Initialize(tweakBar, "RenderBackground", "Scene Controls", "Render Background", "", true);
         Settings.AddSetting(&RenderBackground);
 
-        EnableShadows.Initialize(tweakBar, "EnableShadows", "Scene Controls", "Enable Shadows", "", false);
+        EnableShadows.Initialize(tweakBar, "EnableShadows", "Scene Controls", "Enable Shadows", "", true);
         Settings.AddSetting(&EnableShadows);
 
         EnableNormalMaps.Initialize(tweakBar, "EnableNormalMaps", "Scene Controls", "Enable Normal Maps", "", true);
@@ -188,6 +197,33 @@ namespace AppSettings
 
         EmissiveIntensity.Initialize(tweakBar, "EmissiveIntensity", "Scene Controls", "Emissive Intensity", "Emissive parameter for the material", 0.0000f, 0.0000f, 1.0000f, 0.0010f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&EmissiveIntensity);
+
+        ProbeX.Initialize(tweakBar, "ProbeX", "Scene Controls", "ProbeX", "", 0.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&ProbeX);
+
+        ProbeY.Initialize(tweakBar, "ProbeY", "Scene Controls", "ProbeY", "", 0.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&ProbeY);
+
+        ProbeZ.Initialize(tweakBar, "ProbeZ", "Scene Controls", "ProbeZ", "", 0.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&ProbeZ);
+
+        BoxMaxX.Initialize(tweakBar, "BoxMaxX", "Scene Controls", "BoxMaxX", "", 1.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&BoxMaxX);
+
+        BoxMaxY.Initialize(tweakBar, "BoxMaxY", "Scene Controls", "BoxMaxY", "", 1.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&BoxMaxY);
+
+        BoxMaxZ.Initialize(tweakBar, "BoxMaxZ", "Scene Controls", "BoxMaxZ", "", 1.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&BoxMaxZ);
+
+        BoxMinX.Initialize(tweakBar, "BoxMinX", "Scene Controls", "BoxMinX", "", -1.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&BoxMinX);
+
+        BoxMinY.Initialize(tweakBar, "BoxMinY", "Scene Controls", "BoxMinY", "", -1.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&BoxMinY);
+
+        BoxMinZ.Initialize(tweakBar, "BoxMinZ", "Scene Controls", "BoxMinZ", "", -1.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&BoxMinZ);
 
         SceneOrientation.Initialize(tweakBar, "SceneOrientation", "Scene Controls", "Scene Orientation", "", Quaternion(0.0000f, 0.0000f, 0.0000f, 1.0000f));
         Settings.AddSetting(&SceneOrientation);
@@ -259,6 +295,15 @@ namespace AppSettings
         CBuffer.Data.Roughness = Roughness;
         CBuffer.Data.SpecularIntensity = SpecularIntensity;
         CBuffer.Data.EmissiveIntensity = EmissiveIntensity;
+        CBuffer.Data.ProbeX = ProbeX;
+        CBuffer.Data.ProbeY = ProbeY;
+        CBuffer.Data.ProbeZ = ProbeZ;
+        CBuffer.Data.BoxMaxX = BoxMaxX;
+        CBuffer.Data.BoxMaxY = BoxMaxY;
+        CBuffer.Data.BoxMaxZ = BoxMaxZ;
+        CBuffer.Data.BoxMinX = BoxMinX;
+        CBuffer.Data.BoxMinY = BoxMinY;
+        CBuffer.Data.BoxMinZ = BoxMinZ;
         CBuffer.Data.SceneOrientation = SceneOrientation;
         CBuffer.Data.ModelRotationSpeed = ModelRotationSpeed;
         CBuffer.Data.DoubleSyncInterval = DoubleSyncInterval;
