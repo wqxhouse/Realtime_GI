@@ -51,6 +51,12 @@ protected:
     RenderTarget2D _prevFrameTarget;
     RenderTarget2D _velocityTarget;
     RenderTarget2D _velocityResolveTarget;
+
+	// Deferred - GBuffer
+	RenderTarget2D _rt0Target;  // albedo + shadow mask
+	RenderTarget2D _rt1Target;	// roughness/metallic/emissive
+	RenderTarget2D _rt2Target;  // compressed normal + velocity
+
     uint64 _frameCount = 0;
 	bool32 _firstFrame = 1;
 
@@ -107,11 +113,13 @@ protected:
 
     void CreateRenderTargets();
 
-    void RenderScene();
+    void RenderSceneForward();
 	void RenderSceneCubemaps();
     void RenderBackgroundVelocity();
     void RenderAA();
     void RenderHUD();
+
+	void RenderSceneGBuffer();
 
 	void ApplyMomentum(float &prevVal, float &val, float deltaTime);
 

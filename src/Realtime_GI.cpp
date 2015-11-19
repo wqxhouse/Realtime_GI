@@ -177,13 +177,26 @@ void Realtime_GI::CreateRenderTargets()
     uint32 width = _deviceManager.BackBufferWidth();
     uint32 height = _deviceManager.BackBufferHeight();
 
-    const uint32 NumSamples = AppSettings::NumMSAASamples();
-    const uint32 Quality = NumSamples > 0 ? D3D11_STANDARD_MULTISAMPLE_PATTERN : 0;
-    _colorTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, NumSamples, Quality);
-    _depthBuffer.Initialize(device, width, height, DXGI_FORMAT_D32_FLOAT, true, NumSamples, Quality);
-    _velocityTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16_FLOAT, true, NumSamples, Quality);
+	const uint32 NumSamples = AppSettings::NumMSAASamples();
+	const uint32 Quality = NumSamples > 0 ? D3D11_STANDARD_MULTISAMPLE_PATTERN : 0;
 
-	// TODO: remove multi sample for cubemap
+	if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
+	{
+		_colorTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, NumSamples, Quality);
+		_depthBuffer.Initialize(device, width, height, DXGI_FORMAT_D32_FLOAT, true, NumSamples, Quality);
+		_velocityTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16_FLOAT, true, NumSamples, Quality);
+	}
+	else if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
+	{
+		// TODO: make sure re-initialize won't alloc more memory
+		// consider supporting MSAA for deferred shading later
+		_rt0Target.Initialize(device, width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
+		_rt1Target.Initialize(device, width, height, DXGI_FORMAT_R8G8B8A8_UNORM);
+		_rt2Target.Initialize(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT);
+		_depthBuffer.Initialize(device, width, height, DXGI_FORMAT_D32_FLOAT, true);
+		_colorTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	}
+
 	if (_firstFrame)
 	{
 		_cubemapGenerator.Initialize(device, 1, NumSamples, Quality);
@@ -327,7 +340,16 @@ void Realtime_GI::RenderAA()
 
     ID3D11DeviceContext* context = _deviceManager.ImmediateContext();
 
-    ID3D11ShaderResourceView* velocitySRV = _velocityTarget.SRView;
+	ID3D11ShaderResourceView* velocitySRV = nullptr;
+	if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
+	{
+		velocitySRV = _velocityTarget.SRView;
+	}
+	else if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
+	{
+		velocitySRV = _rt2Target.SRView;
+	}
+
     if(AppSettings::NumMSAASamples() > 1)
     {
         context->ResolveSubresource(_velocityResolveTarget.Texture, 0, _velocityTarget.Texture, 0, _velocityTarget.Format);
@@ -394,8 +416,15 @@ void Realtime_GI::RenderSceneCubemaps()
 
 void Realtime_GI::Render(const Timer& timer)
 {
-    if(AppSettings::MSAAMode.Changed())
+	if (AppSettings::MSAAMode.Changed() || AppSettings::CurrentShadingTech.Changed())
+	{
+		if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
+		{
+			AppSettings::MSAAMode.SetValue(MSAAModes::MSAANone);
+		}
+
         CreateRenderTargets();
+	}
 
     ID3D11DeviceContextPtr context = _deviceManager.ImmediateContext();
 
@@ -407,7 +436,14 @@ void Realtime_GI::Render(const Timer& timer)
 		RenderSceneCubemaps();
 	}
 
-    RenderScene();
+	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
+	{
+		RenderSceneGBuffer();
+	}
+	else if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
+	{
+		RenderSceneForward();
+	}
 
     RenderBackgroundVelocity();
 
@@ -429,9 +465,51 @@ void Realtime_GI::Render(const Timer& timer)
 	_firstFrame = false;
 }
 
-void Realtime_GI::RenderScene()
+void Realtime_GI::RenderSceneGBuffer()
 {
-    PIXEvent event(L"Render Scene");
+	PIXEvent event(L"Render Scene Deferred");
+
+	_meshRenderer.SetDrawGBuffer(true);
+
+	ID3D11DeviceContextPtr context = _deviceManager.ImmediateContext();
+	RenderTarget2D cubemapRenderTarget;
+
+	SetViewport(context, _colorTarget.Width, _colorTarget.Height);
+
+	_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
+
+	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	context->ClearRenderTargetView(_rt0Target.RTView, clearColor);
+	context->ClearRenderTargetView(_rt1Target.RTView, clearColor);
+	context->ClearRenderTargetView(_rt2Target.RTView, clearColor);
+
+	context->ClearDepthStencilView(_depthBuffer.DSView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+
+	ID3D11RenderTargetView* renderTargets[3] = { nullptr, nullptr, nullptr };
+	context->OMSetRenderTargets(1, renderTargets, _depthBuffer.DSView);
+
+	// TODO: here calc on cpu as reduce depth requires the depth from the pre-z, 
+	// which is not needed in deferred pass (will lower shadow cascade quality...)
+	_meshRenderer.ComputeShadowDepthBoundsCPU(_camera);
+	_meshRenderer.RenderShadowMap(context, _camera, _globalTransform);
+
+	renderTargets[0] = _rt0Target.RTView;
+	renderTargets[1] = _rt1Target.RTView;
+	renderTargets[2] = _rt2Target.RTView;
+	context->OMSetRenderTargets(3, renderTargets, _depthBuffer.DSView);
+
+	// _meshRenderer.Render(context, _camera, _globalTransform, _envMap, _envMapSH, _jitterOffset);
+	_meshRenderer.Render(context, _camera, _globalTransform, cubemapRenderTarget.SRView, _envMapSH, _jitterOffset);
+
+	renderTargets[0] = renderTargets[1] = renderTargets[2] = nullptr;
+	context->OMSetRenderTargets(3, renderTargets, nullptr);
+}
+
+void Realtime_GI::RenderSceneForward()
+{
+    PIXEvent event(L"Render Scene Forward");
+
+	_meshRenderer.SetDrawGBuffer(false);
 
     ID3D11DeviceContextPtr context = _deviceManager.ImmediateContext();
 	RenderTarget2D cubemapRenderTarget;
@@ -478,16 +556,29 @@ void Realtime_GI::RenderBackgroundVelocity()
     PIXEvent pixEvent(L"Render Background Velocity");
 
     ID3D11DeviceContextPtr context = _deviceManager.ImmediateContext();
+	int targetWidth = 0;
+	int targetHeight = 0;
 
-    SetViewport(context, _velocityTarget.Width, _velocityTarget.Height);
+	if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
+	{
+		targetWidth = _velocityTarget.Width;
+		targetHeight = _velocityTarget.Height;
+	}
+	else if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
+	{
+		targetWidth = _rt2Target.Width;
+		targetWidth = _rt2Target.Height;
+	}
+
+	SetViewport(context, targetWidth, targetHeight);
 
     // Don't use camera translation for background velocity
     FirstPersonCamera tempCamera = _camera;
 
     _backgroundVelocityConstants.Data.InvViewProjection = Float4x4::Transpose(Float4x4::Invert(tempCamera.ViewProjectionMatrix()));
     _backgroundVelocityConstants.Data.PrevViewProjection = Float4x4::Transpose(_prevViewProjection);
-    _backgroundVelocityConstants.Data.RTSize.x = float(_velocityTarget.Width);
-    _backgroundVelocityConstants.Data.RTSize.y = float(_velocityTarget.Height);
+	_backgroundVelocityConstants.Data.RTSize.x = float(targetWidth);
+	_backgroundVelocityConstants.Data.RTSize.y = float(targetHeight);
     _backgroundVelocityConstants.Data.JitterOffset = _jitterOffset;
     _backgroundVelocityConstants.ApplyChanges(context);
     _backgroundVelocityConstants.SetPS(context, 0);
@@ -495,11 +586,28 @@ void Realtime_GI::RenderBackgroundVelocity()
     _prevViewProjection = tempCamera.ViewProjectionMatrix();
 
     float blendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-    context->OMSetBlendState(_blendStates.BlendDisabled(), blendFactor, 0xFFFFFFFF);
-    context->OMSetDepthStencilState(_depthStencilStates.DepthEnabled(), 0);
-    context->RSSetState(_rasterizerStates.NoCull());
 
-    ID3D11RenderTargetView* rtvs[1] = { _velocityTarget.RTView };
+    ID3D11RenderTargetView* rtvs[1] = { nullptr };
+	if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
+	{
+		rtvs[0] = _velocityTarget.RTView;
+		context->OMSetBlendState(_blendStates.BlendDisabled(), blendFactor, 0xFFFFFFFF);
+	}
+	else if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
+	{
+		rtvs[0] = _rt2Target.RTView;
+
+		// Color writable to only r, g channel (where the velocity is)
+		D3D11_BLEND_DESC blendStateDesc = _blendStates.BlendDisabledDesc();
+		blendStateDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_RED | D3D11_COLOR_WRITE_ENABLE_GREEN;
+		ID3D11BlendStatePtr blendStatePtr;
+		DXCall(_deviceManager.Device()->CreateBlendState(&blendStateDesc, &blendStatePtr));
+		context->OMSetBlendState(blendStatePtr, blendFactor, 0xFFFFFFFF);
+	}
+
+	context->OMSetDepthStencilState(_depthStencilStates.DepthEnabled(), 0);
+	context->RSSetState(_rasterizerStates.NoCull());
+	
     context->OMSetRenderTargets(1, rtvs, _depthBuffer.DSView);
 
     context->VSSetShader(_backgroundVelocityVS, nullptr, 0);

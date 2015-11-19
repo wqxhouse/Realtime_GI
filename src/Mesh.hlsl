@@ -393,7 +393,7 @@ PSOutput PS(in PSInput input)
 
 	PSOutput output;
 
-	#if IsGBuffer_
+	#if IsGBuffer_ // Deferred path
 		output.RT0.rgb = diffuseAlbedo;
 		output.RT0.a   = shadowVisibility;
 
@@ -404,15 +404,15 @@ PSOutput PS(in PSInput input)
 		// ouput.RT1.a = SSR?;
 
 		float3 normalVS = normalize(mul(normalWS, (float3x3)View_));
-		output.RT2.xy = EncodeSphereMap(normalVS);
+		output.RT2.zw = EncodeSphereMap(normalVS);
 		
 		// Velocity
 		float2 prevPositionSS = (input.PrevPosition.xy / input.PrevPosition.z) * float2(0.5f, -0.5f) + 0.5f;
 		prevPositionSS *= RTSize;
-		output.RT2.zw = input.PositionSS.xy - prevPositionSS;
-		output.RT2.zw -= JitterOffset;
+		output.RT2.xy = input.PositionSS.xy - prevPositionSS;
+		output.RT2.xy -= JitterOffset;
 
-	#else // forward path
+	#else // Forward path
 		float3 lighting = 0.0f;
 
 		if(EnableDirectLighting)

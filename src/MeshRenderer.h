@@ -58,6 +58,7 @@ public:
                          const Float4x4& world);
 
 	void SetCubemapCapture(bool32 tf);
+	void SetDrawGBuffer(bool32 tf);
 	void ReMapMeshShaders();
 	void SortSceneObjects(const Float4x4 &viewMatrix);
 
