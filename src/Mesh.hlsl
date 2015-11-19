@@ -37,7 +37,6 @@ cbuffer VSConstants : register(b0)
 cbuffer PSConstants : register(b0)
 {
     float3 CameraPosWS;
-	float3 CubemapWS;
 	float4x4 ShadowMatrix;
 	float4 CascadeSplits;
     float4 CascadeOffsets[NumCascades];
@@ -50,8 +49,6 @@ cbuffer PSConstants : register(b0)
     SH9Color EnvironmentSH;
     float2 RTSize;
     float2 JitterOffset;
-	float3 correctBoxMax;
-	float3 correctBoxMin;
 }
 
 //=================================================================================================
@@ -321,12 +318,12 @@ float3 CalcLighting(in float3 normal, in float3 lightDir, in float3 lightColor,
 }
 
 
-float3 parallaxCorrection(float3 PositionWS, float3 NormalWS){
-	float3 DirectionWS = normalize(PositionWS - CameraPosWS);
-	float3 ReflDirectionWS = reflect(DirectionWS, normalize(NormalWS));
+float3 parallaxCorrection(float3 PositionWS, float3 CameraWS, float3 CubemapPositionWS, float3 NormalWS, float BoxMax, float BoxMin){
+	float3 DirectionWS = PositionWS - CameraWS;
+	float3 ReflDirectionWS = reflect(DirectionWS, NormalWS);
 
-	float3 FirstPlaneIntersect = (correctBoxMax - PositionWS) / ReflDirectionWS;
-	float3 SecondPlaneIntersect = (correctBoxMin - PositionWS) / ReflDirectionWS;
+	float3 FirstPlaneIntersect = (BoxMax - PositionWS) / ReflDirectionWS;
+	float3 SecondPlaneIntersect = (BoxMin - PositionWS) / ReflDirectionWS;
 
 	float3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
 
@@ -334,7 +331,7 @@ float3 parallaxCorrection(float3 PositionWS, float3 NormalWS){
 
 	float3 IntersectPositionWS = PositionWS + ReflDirectionWS * Distance;
 
-	ReflDirectionWS = IntersectPositionWS - CubemapWS;
+	ReflDirectionWS = IntersectPositionWS - CubemapPositionWS;
 
 	return ReflDirectionWS;
 }
@@ -416,21 +413,20 @@ PSOutput PS(in PSInput input)
 
         lighting += indirectDiffuse * diffuseAlbedo;
 
-		float3 reflectWS = parallaxCorrection(positionWS, normalWS);//
-		//float3 reflectWS = reflect(-viewWS, normalWS);
-        //float3 vtxReflectWS = reflect(-viewWS, vtxNormal);
+		float3 reflectWS = /*parallaxCorrection(positionWS, CameraWS, CubemapPositionWS, normalWS, MaxBox, MinBox);*/reflect(-viewWS, normalWS);
+        float3 vtxReflectWS = reflect(-viewWS, vtxNormal);
 
         uint width, height, numMips;
         SpecularCubemap.GetDimensions(0, width, height, numMips);
 
         const float SqrtRoughness = sqrt(roughness);
 
-        //// Compute the mip level, assuming the top level is a roughness of 0.01
+        // Compute the mip level, assuming the top level is a roughness of 0.01
         float mipLevel = saturate(SqrtRoughness - 0.01f) * (numMips - 1.0f);
 
-        //float gradientMipLevel = SpecularCubemap.CalculateLevelOfDetail(LinearSampler, vtxReflectWS);
-        //if(UseGradientMipLevel)
-        //    mipLevel = max(mipLevel, gradientMipLevel);
+        float gradientMipLevel = SpecularCubemap.CalculateLevelOfDetail(LinearSampler, vtxReflectWS);
+        if(UseGradientMipLevel)
+            mipLevel = max(mipLevel, gradientMipLevel);
 
         // Compute fresnel
         float viewAngle = saturate(dot(viewWS, normalWS));

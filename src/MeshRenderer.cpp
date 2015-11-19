@@ -240,12 +240,6 @@ void MeshRenderer::SetCubemapCapture(bool32 tf)
 	}
 }
 
-void MeshRenderer::SetParallaxCorrection(Float3 newPosition, Float3 newBoxMax, Float3 newBoxMin){
-	_cubemapPos = newPosition;
-	_boxMax = newBoxMax;
-	_boxMin = newBoxMin;
-}
-
 void MeshRenderer::ReMapMeshShaders()
 {
 	_meshVertexShadersMap.clear();
@@ -639,8 +633,7 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     context->PSSetSamplers(0, 3, sampStates);
 
 	// set PS constants
-    _meshPSConstants.Data.CameraPosWS = camera.Position();//!
-	_meshPSConstants.Data.CubemapWS = _cubemapPos;
+    _meshPSConstants.Data.CameraPosWS = camera.Position();
     _meshPSConstants.Data.OffsetScale = OffsetScale;
     _meshPSConstants.Data.PositiveExponent = PositiveExponent;
     _meshPSConstants.Data.NegativeExponent = NegativeExponent;
@@ -650,8 +643,6 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     _meshPSConstants.Data.RTSize.x = float(GlobalApp->DeviceManager().BackBufferWidth());
     _meshPSConstants.Data.RTSize.y = float(GlobalApp->DeviceManager().BackBufferHeight());
     _meshPSConstants.Data.JitterOffset = jitterOffset;
-	_meshPSConstants.Data.BoxMax = _boxMax;
-	_meshPSConstants.Data.BoxMin = _boxMin;
     _meshPSConstants.ApplyChanges(context);
     _meshPSConstants.SetPS(context, 0);
 

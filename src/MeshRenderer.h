@@ -58,7 +58,6 @@ public:
                          const Float4x4& world);
 
 	void SetCubemapCapture(bool32 tf);
-	void SetParallaxCorrection(Float3 newPosition, Float3 boxMax, Float3 boxMin);
 	void ReMapMeshShaders();
 	void SortSceneObjects(const Float4x4 &viewMatrix);
 
@@ -131,9 +130,6 @@ protected:
     ID3D11ShaderResourceViewPtr _specularLookupTexture;
 
 	bool32 _drawingCubemap;
-	Float3 _cubemapPos = Float3(0.0f, 0.0f, 0.0f);
-	Float3 _boxMax;
-	Float3 _boxMin;
 
     // Constant buffers
     struct MeshVSConstants
@@ -147,7 +143,6 @@ protected:
     struct MeshPSConstants
     {
         Float4Align Float3 CameraPosWS;
-		Float4Align Float3 CubemapWS;
 
         Float4Align Float4x4 ShadowMatrix;
         Float4Align float CascadeSplits[NumCascades];
@@ -166,9 +161,6 @@ protected:
 
         Float2 RTSize;
         Float2 JitterOffset;
-
-		Float3 BoxMax;
-		Float3 BoxMin;
     };
 
 	// struct 
