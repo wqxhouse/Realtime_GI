@@ -130,6 +130,7 @@ protected:
     ID3D11ShaderResourceViewPtr _specularLookupTexture;
 
 	bool32 _drawingCubemap;
+	bool32 _drawingGBuffer;
 
     // Constant buffers
     struct MeshVSConstants

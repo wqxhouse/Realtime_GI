@@ -119,6 +119,7 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 void Realtime_GI::LoadShaders(ID3D11DevicePtr device)
 {
 	// Load shaders
+	// TODO: add load shader caption
 	for (uint32 msaaMode = 0; msaaMode < uint32(MSAAModes::NumValues); ++msaaMode)
 	{
 		CompileOptions opts;
@@ -405,8 +406,6 @@ void Realtime_GI::Render(const Timer& timer)
 		// render cubemap every time scene has changed
 		RenderSceneCubemaps();
 	}
-
-	// _scenes[AppSettings::CurrentScene].sortSceneObjects(_camera.ViewMatrix());
 
     RenderScene();
 

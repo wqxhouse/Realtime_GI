@@ -133,14 +133,14 @@ void MeshRenderer::GenPSRecursive(ID3D11Device *device, int depth, bool32 *descS
 		for (int i = 0; i < numDescs; i++)
 		{
 			opts->Add(shaderDescs[i], descStates[i]);
-			printf("%s ", shaderDescs[i]);
-			printf("%d ", descStates[i]);
+			/*printf("%s ", shaderDescs[i]);
+			printf("%d ", descStates[i]);*/
 		}
 
-		printf("\n");
+		//printf("\n");
 
 		uint32 bits = boolArrToUint32(descStates, numDescs);
-		printf("Bits: %d\n", bits);
+		//printf("Bits: %d\n", bits);
 		PixelShaderPtr ptr = CompilePSFromFile(device, path, entryName, "ps_5_0", *opts);
 		out.insert(std::make_pair(bits, ptr));
 	}
@@ -157,13 +157,13 @@ void MeshRenderer::GenPSRecursive(ID3D11Device *device, int depth, bool32 *descS
 
 void MeshRenderer::LoadShaders()
 {
-	_totalShaderNum = (int)pow(2, 5) + (int)pow(2, 7) + 8;
+	_totalShaderNum = (int)pow(2, 5) + (int)pow(2, 8) + 8;
 
     CompileOptions opts;
 
 	// Mesh.hlsl
 	const char *vsDescs[] = { "UseNormalMapping_", "UseAlbedoMap_", "UseMetallicMap_", "UseRoughnessMap_", "UseEmissiveMap_" };
-	const char *psDescs[] = { "UseNormalMapping_", "UseAlbedoMap_", "UseMetallicMap_", "UseRoughnessMap_", "UseEmissiveMap_", "CreateCubemap_", "CentroidSampling_" };
+	const char *psDescs[] = { "UseNormalMapping_", "UseAlbedoMap_", "UseMetallicMap_", "UseRoughnessMap_", "UseEmissiveMap_", "CreateCubemap_", "CentroidSampling_", "IsGBuffer_" };
 	GenVSShaderPermutations(_device, L"Mesh.hlsl", "VS", vsDescs, _countof(vsDescs), _meshVertexShaders);
 	GenPSShaderPermutations(_device, L"Mesh.hlsl", "PS", psDescs, _countof(psDescs), _meshPixelShaders);
 
@@ -288,7 +288,7 @@ void MeshRenderer::GenMeshShaderMap(const Model *model)
 
 		// TODO: use AppSettings to automate the process - data driven
 		// decouple string dependency
-		bool32 arr[7]; // five maps + two modes
+		bool32 arr[8]; // five maps + two modes + if gen gbuffer
 		materialFlags[(uint64)MaterialFlag::HasNormalMap] ? arr[0] = true : arr[0] = false;
 		materialFlags[(uint64)MaterialFlag::HasAlbedoMap] ? arr[1] = true : arr[1] = false;
 		materialFlags[(uint64)MaterialFlag::HasRoughnessMap] ? arr[2] = true : arr[2] = false;
@@ -298,9 +298,10 @@ void MeshRenderer::GenMeshShaderMap(const Model *model)
 		// TODO: the following case somehow defeats the purpose of the design
 		_drawingCubemap ? arr[5] = true : arr[5] = false;
 		AppSettings::CentroidSampling ? arr[6] = true : arr[6] = false;
+		_drawingGBuffer ? arr[7] = true : arr[7] = false;
 
 		uint32 vsbits = boolArrToUint32(arr, 5);
-		uint32 psbits = boolArrToUint32(arr, 7);
+		uint32 psbits = boolArrToUint32(arr, 8);
 
 		VertexShaderPtr vs = _meshVertexShaders[vsbits];
 		PixelShaderPtr ps = _meshPixelShaders[psbits];
@@ -340,7 +341,8 @@ void MeshRenderer::GenAndCacheMeshInputLayout(const Model* model)
 void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
     this->_device = device;
-	this->_drawingCubemap = false;
+	_drawingCubemap = false;
+	_drawingGBuffer = false;
 
     _blendStates.Initialize(device);
     _rasterizerStates.Initialize(device);

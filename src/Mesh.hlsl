@@ -36,19 +36,19 @@ cbuffer VSConstants : register(b0)
 
 cbuffer PSConstants : register(b0)
 {
-    float3 CameraPosWS;
+	float3 CameraPosWS;
 	float4x4 ShadowMatrix;
 	float4 CascadeSplits;
-    float4 CascadeOffsets[NumCascades];
-    float4 CascadeScales[NumCascades];
-    float OffsetScale;
-    float PositiveExponent;
-    float NegativeExponent;
-    float LightBleedingReduction;
-    float4x4 Projection;
-    SH9Color EnvironmentSH;
-    float2 RTSize;
-    float2 JitterOffset;
+	float4 CascadeOffsets[NumCascades];
+	float4 CascadeScales[NumCascades];
+	float OffsetScale;
+	float PositiveExponent;
+	float NegativeExponent;
+	float LightBleedingReduction;
+	float4x4 Projection;
+	SH9Color EnvironmentSH;
+	float2 RTSize;
+	float2 JitterOffset;
 }
 
 //=================================================================================================
