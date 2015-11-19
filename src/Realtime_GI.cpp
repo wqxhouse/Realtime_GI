@@ -426,8 +426,8 @@ void Realtime_GI::Render(const Timer& timer)
     SetViewport(context, _deviceManager.BackBufferWidth(), _deviceManager.BackBufferHeight());
     RenderHUD();
 
-    ++_frameCount; 
-	_firstFrame = false;
+    if(++_frameCount == 2)
+		_firstFrame = false;
 }
 
 void Realtime_GI::RenderScene()

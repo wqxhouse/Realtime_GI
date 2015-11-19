@@ -168,7 +168,7 @@ namespace AppSettings
         RenderBackground.Initialize(tweakBar, "RenderBackground", "Scene Controls", "Render Background", "", true);
         Settings.AddSetting(&RenderBackground);
 
-        EnableShadows.Initialize(tweakBar, "EnableShadows", "Scene Controls", "Enable Shadows", "", true);
+        EnableShadows.Initialize(tweakBar, "EnableShadows", "Scene Controls", "Enable Shadows", "", false);
         Settings.AddSetting(&EnableShadows);
 
         EnableNormalMaps.Initialize(tweakBar, "EnableNormalMaps", "Scene Controls", "Enable Normal Maps", "", true);
