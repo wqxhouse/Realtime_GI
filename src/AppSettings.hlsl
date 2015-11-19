@@ -19,6 +19,7 @@ cbuffer AppSettings : register(b7)
     float HiFreqWeight;
     float SharpeningAmount;
     int CurrentScene;
+    int CurrentShadingTech;
     float3 LightDirection;
     float3 LightColor;
     bool EnableDirectLighting;
@@ -65,6 +66,9 @@ static const int JitterModes_Hammersly16 = 2;
 static const int Scenes_CornellBox = 0;
 static const int Scenes_Boxes = 1;
 static const int Scenes_Plane = 2;
+
+static const int ShadingTech_Forward = 0;
+static const int ShadingTech_Clustered_Deferred = 1;
 
 static const bool EnableAutoExposure = false;
 static const float KeyValue = 0.1150f;

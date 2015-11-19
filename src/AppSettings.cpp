@@ -40,6 +40,12 @@ static const char* ScenesLabels[3] =
     "Plane",
 };
 
+static const char* ShadingTechLabels[2] =
+{
+    "Forward",
+    "Clustered_Deferred",
+};
+
 namespace AppSettings
 {
     MSAAModesSetting MSAAMode;
@@ -63,6 +69,7 @@ namespace AppSettings
     FloatSetting HiFreqWeight;
     FloatSetting SharpeningAmount;
     ScenesSetting CurrentScene;
+    ShadingTechSetting CurrentShadingTech;
     DirectionSetting LightDirection;
     ColorSetting LightColor;
     BoolSetting EnableDirectLighting;
@@ -153,6 +160,9 @@ namespace AppSettings
 
         CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene Controls", "Current Scene", "", Scenes::CornellBox, 3, ScenesLabels);
         Settings.AddSetting(&CurrentScene);
+
+        CurrentShadingTech.Initialize(tweakBar, "CurrentShadingTech", "Scene Controls", "Current Shading Tech", "", ShadingTech::Forward, 2, ShadingTechLabels);
+        Settings.AddSetting(&CurrentShadingTech);
 
         LightDirection.Initialize(tweakBar, "LightDirection", "Scene Controls", "Light Direction", "The direction of the light", Float3(-0.7500f, 0.9770f, -0.4000f));
         Settings.AddSetting(&LightDirection);
@@ -251,6 +261,7 @@ namespace AppSettings
         CBuffer.Data.HiFreqWeight = HiFreqWeight;
         CBuffer.Data.SharpeningAmount = SharpeningAmount;
         CBuffer.Data.CurrentScene = CurrentScene;
+        CBuffer.Data.CurrentShadingTech = CurrentShadingTech;
         CBuffer.Data.LightDirection = LightDirection;
         CBuffer.Data.LightColor = LightColor;
         CBuffer.Data.EnableDirectLighting = EnableDirectLighting;

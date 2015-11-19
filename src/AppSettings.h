@@ -58,6 +58,16 @@ enum class Scenes
 
 typedef EnumSettingT<Scenes> ScenesSetting;
 
+enum class ShadingTech
+{
+    Forward = 0,
+    Clustered_Deferred = 1,
+
+    NumValues
+};
+
+typedef EnumSettingT<ShadingTech> ShadingTechSetting;
+
 namespace AppSettings
 {
     static const bool EnableAutoExposure = false;
@@ -85,6 +95,7 @@ namespace AppSettings
     extern FloatSetting HiFreqWeight;
     extern FloatSetting SharpeningAmount;
     extern ScenesSetting CurrentScene;
+    extern ShadingTechSetting CurrentShadingTech;
     extern DirectionSetting LightDirection;
     extern ColorSetting LightColor;
     extern BoolSetting EnableDirectLighting;
@@ -128,7 +139,8 @@ namespace AppSettings
         float HiFreqWeight;
         float SharpeningAmount;
         int32 CurrentScene;
-        Float4Align Float3 LightDirection;
+        int32 CurrentShadingTech;
+        Float3 LightDirection;
         Float4Align Float3 LightColor;
         bool32 EnableDirectLighting;
         bool32 EnableAmbientLighting;
