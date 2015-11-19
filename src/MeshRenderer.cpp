@@ -234,10 +234,7 @@ void MeshRenderer::CreateShadowMaps()
 void MeshRenderer::SetCubemapCapture(bool32 tf)
 {
 	_drawingCubemap = tf;
-	if (_drawingCubemap)
-	{
-		ReMapMeshShaders();
-	}
+	ReMapMeshShaders();
 }
 
 void MeshRenderer::ReMapMeshShaders()
