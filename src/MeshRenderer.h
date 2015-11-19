@@ -156,6 +156,7 @@ protected:
         float NegativeExponent;
         float LightBleedingReduction;
 
+		Float4Align Float4x4 View; // used in gbuffer branch
         Float4Align Float4x4 Projection;
 
         Float4Align ShaderSH9Color EnvironmentSH;

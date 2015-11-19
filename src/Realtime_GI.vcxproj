@@ -216,6 +216,7 @@
     <None Include="DepthReduction.hlsl" />
     <None Include="EVSM.hlsl" />
     <None Include="EVSMConvert.hlsl" />
+    <None Include="GBufferUtil.hlsli" />
     <None Include="Icon.ico" />
   </ItemGroup>
   <ItemGroup>

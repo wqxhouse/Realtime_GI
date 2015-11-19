@@ -644,6 +644,7 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     _meshPSConstants.Data.PositiveExponent = PositiveExponent;
     _meshPSConstants.Data.NegativeExponent = NegativeExponent;
     _meshPSConstants.Data.LightBleedingReduction = LightBleedingReduction;
+	_meshPSConstants.Data.View = Float4x4::Transpose(camera.ViewMatrix());
     _meshPSConstants.Data.Projection = Float4x4::Transpose(camera.ProjectionMatrix());
     _meshPSConstants.Data.EnvironmentSH = envMapSH;
     _meshPSConstants.Data.RTSize.x = float(GlobalApp->DeviceManager().BackBufferWidth());

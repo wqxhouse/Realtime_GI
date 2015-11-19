@@ -18,6 +18,10 @@
 
 #define UseMaps_ (UseNormalMapping_ || UseAlbedoMap_ || UseMetallicMap_ || UseRoughnessMap_ || UseEmissiveMap_)
 
+#if IsGBuffer_
+	#include "GBufferUtil.hlsli"
+#endif
+
 //=================================================================================================
 // Constants
 //=================================================================================================
@@ -45,6 +49,7 @@ cbuffer PSConstants : register(b0)
 	float PositiveExponent;
 	float NegativeExponent;
 	float LightBleedingReduction;
+	float4x4 View_; // used in gbuffer branch to calc view space normal
 	float4x4 Projection;
 	SH9Color EnvironmentSH;
 	float2 RTSize;
@@ -136,8 +141,12 @@ struct PSInput
 
 struct PSOutput
 {
-	#if CreateCubemap_
+	#if CreateCubemap_ && !IsGBuffer_
 		float4 Color                : SV_Target0;
+	#elif IsGBuffer_
+		float4 RT0					: SV_Target0;	// albedo (xyz) | sun shadow mask (w)
+		float4 RT1					: SV_Target1;	// roughness(x) | metallic(y) | emissive (z) | SSR? (w)
+		float4 RT2					: SV_Target2;	// spheremap_vs_normal (xy) | velocity (zw)
 	#else
 		float4 Color                : SV_Target0;
 		float2 Velocity             : SV_Target1;
@@ -381,58 +390,81 @@ PSOutput PS(in PSInput input)
 
     // Add in the primary directional light
     float shadowVisibility = EnableShadows ? ShadowVisibility(positionWS, input.DepthVS) : 1.0f;
-    float3 lighting = 0.0f;
-
-    if(EnableDirectLighting)
-        lighting += CalcLighting(normalWS, LightDirection, LightColor, diffuseAlbedo, specularColor,
-                                 roughness, positionWS);
-
-	// Add in the ambient
-    if(EnableAmbientLighting)
-    {
-        float3 indirectDiffuse = EvalSH9Cosine(normalWS, EnvironmentSH);
-
-        lighting += indirectDiffuse * diffuseAlbedo;
-
-        float3 reflectWS = reflect(-viewWS, normalWS);
-        float3 vtxReflectWS = reflect(-viewWS, vtxNormal);
-
-        uint width, height, numMips;
-        SpecularCubemap.GetDimensions(0, width, height, numMips);
-
-        const float SqrtRoughness = sqrt(roughness);
-
-        // Compute the mip level, assuming the top level is a roughness of 0.01
-        float mipLevel = saturate(SqrtRoughness - 0.01f) * (numMips - 1.0f);
-
-        float gradientMipLevel = SpecularCubemap.CalculateLevelOfDetail(LinearSampler, vtxReflectWS);
-        if(UseGradientMipLevel)
-            mipLevel = max(mipLevel, gradientMipLevel);
-
-        // Compute fresnel
-        float viewAngle = saturate(dot(viewWS, normalWS));
-        float2 AB = SpecularCubemapLookup.SampleLevel(LinearSampler, float2(viewAngle, SqrtRoughness), 0.0f);
-        float fresnel = metallic * AB.x + AB.y;
-        fresnel *= saturate(metallic * 100.0f);
-
-        lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;
-    }
-
-	
-	// Emissive term
-	lighting += emissiveColor;
-	lighting *= shadowVisibility;
 
 	PSOutput output;
 
-	output.Color = float4(lighting, 1.0f);
-	output.Color.xyz *= exp2(ExposureScale);
+	#if IsGBuffer_
+		output.RT0.rgb = diffuseAlbedo;
+		output.RT0.a   = shadowVisibility;
 
-	#if !CreateCubemap_
+		output.RT1.r   = roughness;
+		output.RT1.g   = metallic;
+		output.RT1.b   = EmissiveIntensity; // TODO: hook up emissive map later
+		output.RT1.a   = 0.0f;
+		// ouput.RT1.a = SSR?;
+
+		float3 normalVS = normalize(mul(normalWS, (float3x3)View_));
+		output.RT2.xy = EncodeSphereMap(normalVS);
+		
+		// Velocity
 		float2 prevPositionSS = (input.PrevPosition.xy / input.PrevPosition.z) * float2(0.5f, -0.5f) + 0.5f;
 		prevPositionSS *= RTSize;
-		output.Velocity = input.PositionSS.xy - prevPositionSS;
-		output.Velocity -= JitterOffset;
+		output.RT2.zw = input.PositionSS.xy - prevPositionSS;
+		output.RT2.zw -= JitterOffset;
+
+	#else // forward path
+		float3 lighting = 0.0f;
+
+		if(EnableDirectLighting)
+			lighting += CalcLighting(normalWS, LightDirection, LightColor, diffuseAlbedo, specularColor,
+									 roughness, positionWS);
+
+		// Add in the ambient
+		if(EnableAmbientLighting)
+		{
+			float3 indirectDiffuse = EvalSH9Cosine(normalWS, EnvironmentSH);
+
+			lighting += indirectDiffuse * diffuseAlbedo;
+
+			float3 reflectWS = reflect(-viewWS, normalWS);
+			float3 vtxReflectWS = reflect(-viewWS, vtxNormal);
+
+			uint width, height, numMips;
+			SpecularCubemap.GetDimensions(0, width, height, numMips);
+
+			const float SqrtRoughness = sqrt(roughness);
+
+			// Compute the mip level, assuming the top level is a roughness of 0.01
+			float mipLevel = saturate(SqrtRoughness - 0.01f) * (numMips - 1.0f);
+
+			float gradientMipLevel = SpecularCubemap.CalculateLevelOfDetail(LinearSampler, vtxReflectWS);
+			if(UseGradientMipLevel)
+				mipLevel = max(mipLevel, gradientMipLevel);
+
+			// Compute fresnel
+			float viewAngle = saturate(dot(viewWS, normalWS));
+			float2 AB = SpecularCubemapLookup.SampleLevel(LinearSampler, float2(viewAngle, SqrtRoughness), 0.0f);
+			float fresnel = metallic * AB.x + AB.y;
+			fresnel *= saturate(metallic * 100.0f);
+
+			lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;
+		}
+
+	
+		// Emissive term
+		lighting += emissiveColor;
+		lighting *= shadowVisibility;
+
+		output.Color = float4(lighting, 1.0f);
+		output.Color.xyz *= exp2(ExposureScale);
+
+		#if !CreateCubemap_
+			float2 prevPositionSS = (input.PrevPosition.xy / input.PrevPosition.z) * float2(0.5f, -0.5f) + 0.5f;
+			prevPositionSS *= RTSize;
+			output.Velocity = input.PositionSS.xy - prevPositionSS;
+			output.Velocity -= JitterOffset;
+		#endif
+
 	#endif
 
     return output;

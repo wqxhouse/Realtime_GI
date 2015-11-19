@@ -273,6 +273,9 @@
     <None Include="PostProcessing.hlsl">
       <Filter>Shader</Filter>
     </None>
+    <None Include="GBufferUtil.hlsli">
+      <Filter>Shader</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="SampleFramework11">
