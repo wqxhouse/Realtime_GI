@@ -44,6 +44,10 @@ void CreateCubemap::SetPosition(Float3 newPosition)
 	}
 }
 
+Float3 CreateCubemap::GetPosition()
+{
+	return position;
+}
 
 void CreateCubemap::Create(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
 	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox)
@@ -70,7 +74,10 @@ void CreateCubemap::Create(const DeviceManager &deviceManager, MeshRenderer *mes
 		deviceManager.ImmediateContext()->OMSetRenderTargets(1, renderTarget, DSView);
 		meshRenderer->RenderDepth(deviceManager.ImmediateContext(), cubemapCamera, sceneTransform, false);
 
+		meshRenderer->RenderShadowMap(deviceManager.ImmediateContext(), cubemapCamera, sceneTransform);
+
 		deviceManager.ImmediateContext()->OMSetRenderTargets(1, renderTarget, DSView);
+		//meshRenderer->SetParallaxCorrection(position, Float3(1.0f, 1.0f, 1.0f), Float3(-1.0f, -1.0f, -1.0f));
 		meshRenderer->Render(deviceManager.ImmediateContext(), cubemapCamera, sceneTransform, 
 			environmentMap, environmentMapSH, jitterOffset);
 

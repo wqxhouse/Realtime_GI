@@ -53,6 +53,12 @@ public class Settings
         Hammersly16,
     }
 
+    enum ParallaxCorrection
+    {
+        BoxMax,
+        BoxMin,
+    }
+
     public class AntiAliasing
     {
         MSAAModes MSAAMode = MSAAModes.MSAA4x;

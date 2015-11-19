@@ -75,9 +75,10 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	// TODO: put the following in json
 	static const wstring ModelPaths[uint64(Scenes::NumValues)] =
 	{
-		// L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\Converted\\sponza.obj",
+		 //L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\Converted\\sponza.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\Cerberus_by_Andrew_Maximov\\Cerberus_by_Andrew_Maximov\\testfbxascii.fbx",
 		L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
+		//L"..\\Content\\Models\\sphere\\sphere.obj",
 		// L"..\\Content\\Models\\CornellBox\\CornellBox_Max.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaNon_PBR\\Converted\\sponza.obj",
 		// L"..\\Content\\Models\\Powerplant\\Powerplant.sdkmesh",
@@ -94,7 +95,9 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	scene->Initialize(device);
 
 	Model *m = scene->addModel(ModelPaths[0]);
-	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 0, 0), Quaternion());
+	//m->GenerateBoxScene(device, Float3(9.0f, 9.0f, 9.0f), Float3(), Quaternion(), L"", L"");
+	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 2, -4), Quaternion());
+	//scene->addDynamicOpaquePlaneObject(20, Float3(0,0,0), Quaternion());
 	_numScenes++;
 
 	/// Scene 2 /////////////////////////////////////////////////////////////
@@ -146,6 +149,7 @@ void Realtime_GI::Initialize()
 
     // Camera setup
     _camera.SetPosition(Float3(0.0f, 2.5f, -10.0f));
+	//_camera.SetFieldOfView(90.0f / (Pi / 180.0f));
 
 	LoadScenes(device);
 
@@ -386,7 +390,7 @@ void Realtime_GI::RenderSceneCubemaps()
 	_meshRenderer.SetCubemapCapture(true);
 
 	// TODO: make a separate cubemap manager to set different locations
-	_cubemapGenerator.SetPosition(float3(0.0f, 0.0f, 0.0f));
+	_cubemapGenerator.SetPosition(float3(0.0f, 4.0f, 4.0f));//!
 	_cubemapGenerator.Create(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox);
 	_meshRenderer.SetCubemapCapture(false);
 }
@@ -460,6 +464,7 @@ void Realtime_GI::RenderScene()
     context->OMSetRenderTargets(2, renderTargets, _depthBuffer.DSView);
 
     // _meshRenderer.Render(context, _camera, _globalTransform, _envMap, _envMapSH, _jitterOffset);
+	_meshRenderer.SetParallaxCorrection(_cubemapGenerator.GetPosition(), Float3(1.0f, 1.0f, 1.0f), Float3(-1.0f, -1.0f, -1.0f));
 	_meshRenderer.Render(context, _camera, _globalTransform, cubemapRenderTarget.SRView, _envMapSH, _jitterOffset);
 
     renderTargets[0] = _colorTarget.RTView;
