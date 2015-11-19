@@ -77,6 +77,9 @@ protected:
     PixelShaderPtr _backgroundVelocityPS;
     Float4x4 _prevViewProjection;
 
+	VertexShaderPtr _clusteredDeferredVS;
+	PixelShaderPtr _clusteredDeferredPS;
+
     Float2 _jitterOffset;
     Float2 _prevJitter;
 
@@ -120,6 +123,7 @@ protected:
     void RenderHUD();
 
 	void RenderSceneGBuffer();
+	void RenderLightsDeferred();
 
 	void ApplyMomentum(float &prevVal, float &val, float deltaTime);
 

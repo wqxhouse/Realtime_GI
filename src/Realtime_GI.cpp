@@ -132,6 +132,8 @@ void Realtime_GI::LoadShaders(ID3D11DevicePtr device)
 	_backgroundVelocityVS = CompileVSFromFile(device, L"BackgroundVelocity.hlsl", "BackgroundVelocityVS");
 	_backgroundVelocityPS = CompilePSFromFile(device, L"BackgroundVelocity.hlsl", "BackgroundVelocityPS");
 
+	_clusteredDeferredVS = CompileVSFromFile(device, L"ClusteredDeferred.hlsl", "ClusteredDeferredVS");
+	_clusteredDeferredPS = CompilePSFromFile(device, L"ClusteredDeferred.hlsl", "ClusteredDeferredPS");
 }
 
 void Realtime_GI::Initialize()
@@ -439,6 +441,7 @@ void Realtime_GI::Render(const Timer& timer)
 	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
 	{
 		RenderSceneGBuffer();
+		RenderLightsDeferred();
 	}
 	else if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
 	{
@@ -503,6 +506,43 @@ void Realtime_GI::RenderSceneGBuffer()
 
 	renderTargets[0] = renderTargets[1] = renderTargets[2] = nullptr;
 	context->OMSetRenderTargets(3, renderTargets, nullptr);
+}
+
+void Realtime_GI::RenderLightsDeferred()
+{
+	PIXEvent event(L"Render Lights Deferred");
+
+	ID3D11DeviceContextPtr context = _deviceManager.ImmediateContext();
+
+	context->OMSetDepthStencilState(_depthStencilStates.DepthDisabled(), 0);
+	context->RSSetState(_rasterizerStates.NoCull());
+
+	ID3D11RenderTargetView* rtvs[1] = { _colorTarget.RTView };
+	context->OMSetRenderTargets(1, rtvs, _depthBuffer.DSView);
+
+	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	context->ClearRenderTargetView(_colorTarget.RTView, clearColor);
+
+	context->VSSetShader(_clusteredDeferredVS, nullptr, 0);
+	context->PSSetShader(_clusteredDeferredPS, nullptr, 0);
+	context->GSSetShader(nullptr, nullptr, 0);
+	context->HSSetShader(nullptr, nullptr, 0);
+	context->DSSetShader(nullptr, nullptr, 0);
+
+	ID3D11Buffer* vbs[1] = { nullptr };
+	UINT strides[1] = { 0 };
+	UINT offsets[1] = { 0 };
+	context->IASetVertexBuffers(0, 1, vbs, strides, offsets);
+	context->IASetInputLayout(nullptr);
+	context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R16_UINT, 0);
+	context->Draw(3, 0);
+
+	if (AppSettings::RenderBackground)
+		_skybox.RenderEnvironmentMap(context, _envMap, _camera.ViewMatrix(), _camera.ProjectionMatrix(),
+		Float3(std::exp2(AppSettings::ExposureScale)));
+
+	rtvs[0] = nullptr;
+	context->OMSetRenderTargets(1, rtvs, nullptr);
 }
 
 void Realtime_GI::RenderSceneForward()
