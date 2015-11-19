@@ -404,7 +404,7 @@ void Realtime_GI::Render(const Timer& timer)
 
     AppSettings::UpdateCBuffer(context);
 
-	if (_firstFrame || AppSettings::CurrentScene.Changed())
+	if (_firstFrame || AppSettings::CurrentScene.Changed() || AppSettings::EnableRealtimeCubemap)
 	{
 		// render cubemap every time scene has changed
 		RenderSceneCubemaps();

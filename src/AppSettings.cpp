@@ -70,6 +70,7 @@ namespace AppSettings
     BoolSetting RenderBackground;
     BoolSetting EnableShadows;
     BoolSetting EnableNormalMaps;
+    BoolSetting EnableRealtimeCubemap;
     FloatSetting NormalMapIntensity;
     FloatSetting DiffuseIntensity;
     FloatSetting Roughness;
@@ -174,6 +175,9 @@ namespace AppSettings
         EnableNormalMaps.Initialize(tweakBar, "EnableNormalMaps", "Scene Controls", "Enable Normal Maps", "", true);
         Settings.AddSetting(&EnableNormalMaps);
 
+        EnableRealtimeCubemap.Initialize(tweakBar, "EnableRealtimeCubemap", "Scene Controls", "Enable Realtime Cubemap", "", false);
+        Settings.AddSetting(&EnableRealtimeCubemap);
+
         NormalMapIntensity.Initialize(tweakBar, "NormalMapIntensity", "Scene Controls", "Normal Map Intensity", "", 1.0000f, 0.0000f, 1.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&NormalMapIntensity);
 
@@ -254,6 +258,7 @@ namespace AppSettings
         CBuffer.Data.RenderBackground = RenderBackground;
         CBuffer.Data.EnableShadows = EnableShadows;
         CBuffer.Data.EnableNormalMaps = EnableNormalMaps;
+        CBuffer.Data.EnableRealtimeCubemap = EnableRealtimeCubemap;
         CBuffer.Data.NormalMapIntensity = NormalMapIntensity;
         CBuffer.Data.DiffuseIntensity = DiffuseIntensity;
         CBuffer.Data.Roughness = Roughness;

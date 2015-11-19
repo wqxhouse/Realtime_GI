@@ -92,6 +92,7 @@ namespace AppSettings
     extern BoolSetting RenderBackground;
     extern BoolSetting EnableShadows;
     extern BoolSetting EnableNormalMaps;
+    extern BoolSetting EnableRealtimeCubemap;
     extern FloatSetting NormalMapIntensity;
     extern FloatSetting DiffuseIntensity;
     extern FloatSetting Roughness;
@@ -134,6 +135,7 @@ namespace AppSettings
         bool32 RenderBackground;
         bool32 EnableShadows;
         bool32 EnableNormalMaps;
+        bool32 EnableRealtimeCubemap;
         float NormalMapIntensity;
         float DiffuseIntensity;
         float Roughness;

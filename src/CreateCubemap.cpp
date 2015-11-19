@@ -55,7 +55,9 @@ void CreateCubemap::Create(const DeviceManager &deviceManager, MeshRenderer *mes
 	PIXEvent event(L"Render Cube Map");
 
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-	SetViewport(deviceManager.ImmediateContext(), CubemapWidth, CubemapHeight);
+	ID3D11DeviceContext *context = deviceManager.ImmediateContext();
+
+	SetViewport(context, CubemapWidth, CubemapHeight);
 
 	for (int cubeboxFaceIndex = 0; cubeboxFaceIndex < 6; cubeboxFaceIndex++)
 	{
@@ -67,28 +69,32 @@ void CreateCubemap::Create(const DeviceManager &deviceManager, MeshRenderer *mes
 
 		meshRenderer->SortSceneObjects(cubemapCamera.ViewMatrix());
 
-		deviceManager.ImmediateContext()->ClearRenderTargetView(RTView, clearColor);
-		deviceManager.ImmediateContext()->ClearDepthStencilView(DSView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+		context->ClearRenderTargetView(RTView, clearColor);
+		context->ClearDepthStencilView(DSView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 		ID3D11RenderTargetView *renderTarget[1] = { RTView };
-		deviceManager.ImmediateContext()->OMSetRenderTargets(1, renderTarget, DSView);
-		meshRenderer->RenderDepth(deviceManager.ImmediateContext(), cubemapCamera, sceneTransform, false);
+		context->OMSetRenderTargets(1, renderTarget, DSView);
+		meshRenderer->RenderDepth(context, cubemapCamera, sceneTransform, false);
 
-		meshRenderer->RenderShadowMap(deviceManager.ImmediateContext(), cubemapCamera, sceneTransform);
+		meshRenderer->ComputeShadowDepthBoundsCPU(cubemapCamera);
 
-		deviceManager.ImmediateContext()->OMSetRenderTargets(1, renderTarget, DSView);
+		// TODO: figure out how to reduce depth on a cubemap
+		// meshRenderer->ReduceDepth(context, cubemapDepthTarget, cubemapCamera);
+		meshRenderer->RenderShadowMap(context, cubemapCamera, sceneTransform);
+
 		//meshRenderer->SetParallaxCorrection(position, Float3(1.0f, 1.0f, 1.0f), Float3(-1.0f, -1.0f, -1.0f));
-		meshRenderer->Render(deviceManager.ImmediateContext(), cubemapCamera, sceneTransform, 
-			environmentMap, environmentMapSH, jitterOffset);
 
-		skybox->RenderEnvironmentMap(deviceManager.ImmediateContext(), environmentMap, cubemapCamera.ViewMatrix(),
+		context->OMSetRenderTargets(1, renderTarget, DSView);
+		meshRenderer->Render(context, cubemapCamera, sceneTransform, environmentMap, environmentMapSH, jitterOffset);
+
+		skybox->RenderEnvironmentMap(context, environmentMap, cubemapCamera.ViewMatrix(),
 			cubemapCamera.ProjectionMatrix(), Float3(std::exp2(AppSettings::ExposureScale)));
 		
 		renderTarget[0] = nullptr;
-		deviceManager.ImmediateContext()->OMSetRenderTargets(1, renderTarget, nullptr);
+		context->OMSetRenderTargets(1, renderTarget, nullptr);
 	}
 
-	SetViewport(deviceManager.ImmediateContext(), deviceManager.BackBufferWidth(), deviceManager.BackBufferHeight());
+	SetViewport(context, deviceManager.BackBufferWidth(), deviceManager.BackBufferHeight());
 }
 
 

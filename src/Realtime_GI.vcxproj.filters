@@ -353,5 +353,14 @@
     <Image Include="..\..\..\Users\wqxho_000\Downloads\Cerberus_by_Andrew_Maximov\Cerberus_by_Andrew_Maximov\Textures\Normal\Cerberus_N.dds">
       <Filter>Contents</Filter>
     </Image>
+    <Image Include="..\Content\EnvMaps\Ennis.dds">
+      <Filter>Misc</Filter>
+    </Image>
+    <Image Include="Debug\x64\t2.dds">
+      <Filter>Misc</Filter>
+    </Image>
+    <Image Include="Debug\x64\t1.dds">
+      <Filter>Misc</Filter>
+    </Image>
   </ItemGroup>
 </Project>

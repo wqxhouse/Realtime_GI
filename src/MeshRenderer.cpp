@@ -22,7 +22,7 @@
 #include "SharedConstants.h"
 
 // Constants - low shadow quality in debug mode to speed up
-#if _DEBUG
+#if _DEBUG 
 static const float ShadowNearClip = 1.0f;
 static const float FilterSize = 0.0f;
 static const uint32 SampleRadius = 0;
@@ -491,35 +491,39 @@ void MeshRenderer::ReduceDepth(ID3D11DeviceContext* context, DepthStencilBuffer&
 }
 
 // Computes shadow depth bounds on the CPU using the mesh vertex positions
-//void MeshRenderer::ComputeShadowDepthBounds(const Camera& camera)
-//{
-//    Float4x4 viewMatrix = camera.ViewMatrix();
-//    const float nearClip = camera.NearClip();
-//    const float farClip = camera.FarClip();
-//    const float clipDist = farClip - nearClip;
-//
-//    float minDepth = 1.0f;
-//    float maxDepth = 0.0f;
-//    const uint64 numMeshes = _model->Meshes().size();
-//    for(uint64 meshIdx = 0; meshIdx < numMeshes; ++meshIdx)
-//    {
-//        const Mesh& mesh = _model->Meshes()[meshIdx];
-//        const uint64 numVerts = mesh.NumVertices();
-//        const uint64 stride = mesh.VertexStride();
-//        const uint8* vertices = mesh.Vertices();
-//        for(uint64 i = 0; i < numVerts; ++i)
-//        {
-//            const Float3& position = *reinterpret_cast<const Float3*>(vertices);
-//            float viewSpaceZ = Float3::Transform(position, viewMatrix).z;
-//            float depth = Saturate((viewSpaceZ - nearClip) / clipDist);
-//            minDepth = std::min(minDepth, depth);
-//            maxDepth = std::max(maxDepth, depth);
-//            vertices += stride;
-//        }
-//    }
-//
-//    _shadowDepthBounds = Float2(minDepth, maxDepth);
-//}
+void MeshRenderer::ComputeShadowDepthBoundsCPU(const Camera& camera)
+{
+    Float4x4 viewMatrix = camera.ViewMatrix();
+    const float nearClip = camera.NearClip();
+    const float farClip = camera.FarClip();
+    const float clipDist = farClip - nearClip;
+
+    float minDepth = 1.0f;
+    float maxDepth = 0.0f;
+	for (int i = 0; i < _scene->getNumModels(); i++)
+	{
+		Model *model = _scene->getModel(i);
+		const uint64 numMeshes = model->Meshes().size();
+		for (uint64 meshIdx = 0; meshIdx < numMeshes; ++meshIdx)
+		{
+			const Mesh& mesh = model->Meshes()[meshIdx];
+			const uint64 numVerts = mesh.NumVertices();
+			const uint64 stride = mesh.VertexStride();
+			const uint8* vertices = mesh.Vertices();
+			for (uint64 i = 0; i < numVerts; ++i)
+			{
+				const Float3& position = *reinterpret_cast<const Float3*>(vertices);
+				float viewSpaceZ = Float3::Transform(position, viewMatrix).z;
+				float depth = Saturate((viewSpaceZ - nearClip) / clipDist);
+				minDepth = std::min(minDepth, depth);
+				maxDepth = std::max(maxDepth, depth);
+				vertices += stride;
+			}
+		}
+	}
+    
+    _shadowDepthBounds = Float2(minDepth, maxDepth);
+}
 
 // Convert to an EVSM map
 void MeshRenderer::ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx, Float3 cascadeScale)
