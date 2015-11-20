@@ -63,7 +63,8 @@ public:
 	void SortSceneObjects(const Float4x4 &viewMatrix);
 
 	inline RenderTarget2D *GetVSMRenderTargetPtr() { return &_varianceShadowMap; }
-	inline ID3D11SamplerStatePtr GetEVSMSamplerStatePtr() { return _evsmSampler; }
+	inline ID3D11SamplerStatePtr GetEVSMSamplerStatePtr() { return _evsmSampler; }	
+	inline ID3D11ShaderResourceViewPtr GetSpecularLookupTexturePtr() { return _specularLookupTexture; }
 
 
 	// Constant buffers

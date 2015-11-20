@@ -142,6 +142,8 @@ protected:
 	StructuredBuffer _pointLightBuffer;
 	StructuredBuffer _lightIndicesList;
 
+	SamplerStates _samplerStates;
+
     virtual void Initialize() override;
 	void LoadScenes(ID3D11DevicePtr device);
 	void LoadShaders(ID3D11DevicePtr device);

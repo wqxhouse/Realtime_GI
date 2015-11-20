@@ -139,6 +139,8 @@ void Realtime_GI::LoadShaders(ID3D11DevicePtr device)
 
 	_clusteredDeferredVS = CompileVSFromFile(device, L"ClusteredDeferred.hlsl", "ClusteredDeferredVS");
 	_clusteredDeferredPS = CompilePSFromFile(device, L"ClusteredDeferred.hlsl", "ClusteredDeferredPS");
+
+	_samplerStates.Initialize(device);
 }
 
 void Realtime_GI::Initialize()
@@ -633,19 +635,22 @@ void Realtime_GI::RenderLightsDeferred()
 		_depthBuffer.SRView,
 		_meshRenderer.GetVSMRenderTargetPtr()->SRView,
 		_pointLightBuffer.SRView,
+		_envMap,
+		_meshRenderer.GetSpecularLookupTexturePtr(),
 	};
 
-	ID3D11SamplerState* sampStates[1] = {
-		_meshRenderer.GetEVSMSamplerStatePtr()
+	ID3D11SamplerState* sampStates[2] = {
+		_meshRenderer.GetEVSMSamplerStatePtr(),
+		_samplerStates.LinearClamp(),
 	};
 
-	context->PSSetSamplers(0, 1, sampStates);
+	context->PSSetSamplers(0, 2, sampStates);
 
 	context->PSSetShaderResources(0, _countof(clusteredDeferredResources), clusteredDeferredResources);
 	context->DrawIndexed(6, 0, 0);
 
-	sampStates[0] = nullptr;
-	context->PSSetSamplers(0, 1, sampStates);
+	sampStates[0] = sampStates[1] = nullptr;
+	context->PSSetSamplers(0, 2, sampStates);
 
 	memset(clusteredDeferredResources, 0, sizeof(clusteredDeferredResources));
 	context->PSSetShaderResources(0, _countof(clusteredDeferredResources), clusteredDeferredResources);

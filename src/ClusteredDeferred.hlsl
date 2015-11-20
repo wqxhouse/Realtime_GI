@@ -40,7 +40,11 @@ Texture2D DepthMap : register(t3);
 Texture2DArray ShadowMap : register(t4);
 StructuredBuffer<PointLight> PointLights : register(t5);
 
+TextureCube<float3> SpecularCubemap : register(t6);
+Texture2D<float2> SpecularCubemapLookup : register(t7);
+
 SamplerState EVSMSampler : register(s0);
+SamplerState LinearSampler : register(s1);
 
 #include "Shadow.hlsli"
 
@@ -94,16 +98,51 @@ float4 ClusteredDeferredPS(in PSInput input) : SV_Target0
 
 	float3 lighting = float3(0.0f, 0.0f, 0.0f);
 
-	// Do Sun lighting
-	lighting += CalcDirectionalLight(surface.normalWS, LightDirection, LightColor, 
-		surface.diffuse, surface.metallic, surface.roughness, surface.posWS, CameraPosWS);
+	if(EnableDirectLighting)
+	{
+		// Do Sun lighting
+		lighting += CalcDirectionalLight(surface.normalWS, LightDirection, LightColor, 
+			surface.diffuse, surface.metallic, surface.roughness, surface.posWS, CameraPosWS);
 
-	float sunShadow = EnableShadows ? ShadowVisibility(surface.posWS, surface.depthVS) : 1.0f;
-	lighting *= sunShadow;
+		float sunShadow = EnableShadows ? ShadowVisibility(surface.posWS, surface.depthVS) : 1.0f;
+		lighting *= sunShadow;
 
-	// Point light
-	PointLight pl = PointLights[0];
-	lighting += CalcPointLight(surface, pl, CameraPosWS);
+		// Point light
+		PointLight pl = PointLights[0];
+		lighting += CalcPointLight(surface, pl, CameraPosWS);
+	}
+
+	if(EnableAmbientLighting)
+	{
+		float3 viewWS = normalize(CameraPosWS - surface.posWS); // TODO: this can be reused in several places
+		
+		float3 indirectDiffuse = EvalSH9Cosine(surface.normalWS, EnvironmentSH);
+
+		lighting += indirectDiffuse * surface.diffuse;
+
+		float3 reflectWS = reflect(-viewWS, surface.normalWS);
+
+		uint width, height, numMips;
+		SpecularCubemap.GetDimensions(0, width, height, numMips);
+
+		const float SqrtRoughness = sqrt(surface.roughness);
+
+		// Compute the mip level, assuming the top level is a roughness of 0.01
+		float mipLevel = saturate(SqrtRoughness - 0.01f) * (numMips - 1.0f);
+
+		//float gradientMipLevel = SpecularCubemap.CalculateLevelOfDetail(LinearSampler, vtxReflectWS);
+		//if(UseGradientMipLevel)
+		//	mipLevel = max(mipLevel, gradientMipLevel);
+
+		// Compute fresnel
+		float viewAngle = saturate(dot(viewWS, surface.normalWS));
+		float2 AB = SpecularCubemapLookup.SampleLevel(LinearSampler, float2(viewAngle, SqrtRoughness), 0.0f);
+		float fresnel = surface.metallic * AB.x + AB.y;
+		fresnel *= saturate(surface.metallic * 100.0f);
+
+		lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;
+	}
+
 
 	return float4(lighting, 1.0f);
 	// return float4(surface.depthVS, surface.depthVS, surface.depthVS, 1.0f);
