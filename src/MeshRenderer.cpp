@@ -719,7 +719,7 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 			for (uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
 			{
 				const MeshPart& part = mesh.MeshParts()[partIdx];
-				const MeshMaterial& material = model->Materials()[part.MaterialIdx];
+				const MeshMaterial& material = model->Materials()[part.MaterialIdx];//!!!
 
 				// Set the textures
 				ID3D11ShaderResourceView* psTextures[] =

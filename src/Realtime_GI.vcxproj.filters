@@ -363,4 +363,9 @@
       <Filter>Misc</Filter>
     </Image>
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="CubemapConvolution.hlsl">
+      <Filter>Shader</Filter>
+    </Text>
+  </ItemGroup>
 </Project>

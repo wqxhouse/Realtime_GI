@@ -77,8 +77,8 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	{
 		 //L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\Converted\\sponza.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\Cerberus_by_Andrew_Maximov\\Cerberus_by_Andrew_Maximov\\testfbxascii.fbx",
-		L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
-		//L"..\\Content\\Models\\sphere\\sphere.obj",
+		//L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
+		L"..\\Content\\Models\\sphere\\sphere.obj",
 		// L"..\\Content\\Models\\CornellBox\\CornellBox_Max.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaNon_PBR\\Converted\\sponza.obj",
 		// L"..\\Content\\Models\\Powerplant\\Powerplant.sdkmesh",
@@ -390,7 +390,7 @@ void Realtime_GI::RenderSceneCubemaps()
 	_meshRenderer.SetCubemapCapture(true);
 
 	// TODO: make a separate cubemap manager to set different locations
-	_cubemapGenerator.SetPosition(float3(0.0f, 4.0f, 4.0f));//!
+	_cubemapGenerator.SetPosition(float3(0.0f, 0.0f, 0.0f));//!
 	_cubemapGenerator.Create(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox);
 	_meshRenderer.SetCubemapCapture(false);
 }

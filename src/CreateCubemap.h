@@ -11,8 +11,12 @@
 #include <Graphics\\Camera.h>
 #include <Graphics\\Skybox.h>
 #include <Graphics\\GraphicsTypes.h>
+#include <Graphics\\Model.h>
+#include <Graphics\\ShaderCompilation.h>
 
 #include "MeshRenderer.h"
+
+#define SPHERE_FILE L"..\\Content\\Models\\sphere\\sphere.obj"
 
 using namespace SampleFramework11;
 
@@ -33,6 +37,9 @@ public:
 	const PerspectiveCamera &GetCubemapCamera();
 
 private:
+	void ConvoluteCubebox(const DeviceManager &deviceManager, MeshRenderer *meshRenderer);
+	void GenAndCacheConvoluteSphereInputLayout(const DeviceManager &deviceManager, const Model *model);
+
 	const uint32 CubemapWidth = 128;
 	const uint32 CubemapHeight = 128;
 
@@ -40,6 +47,9 @@ private:
 	RenderTarget2D cubemapTarget;
 	DepthStencilBuffer cubemapDepthTarget;
 	Float3 position;
+
+	VertexShaderPtr _convoluteVS;
+	PixelShaderPtr _convolutePS;
 
 	struct CameraStruct{
 		Float3 Eye;
