@@ -632,7 +632,16 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     // Set states
     float blendFactor[4] = {1, 1, 1, 1};
     context->OMSetBlendState(_blendStates.BlendDisabled(), blendFactor, 0xFFFFFFFF);
-    context->OMSetDepthStencilState(_depthStencilStates.DepthEnabled(), 0);
+
+	// TODO: this is super bad coupling... but we are out of time
+	if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
+	{
+		context->OMSetDepthStencilState(_depthStencilStates.DepthEnabled(), 0);
+	}
+	else if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
+	{
+		context->OMSetDepthStencilState(_depthStencilStates.DepthWriteEnabled(), 0);
+	}
     context->RSSetState(_rasterizerStates.BackFaceCull());
 
     ID3D11SamplerState* sampStates[3] = {

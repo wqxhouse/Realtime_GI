@@ -144,7 +144,7 @@ struct PSOutput
 	#if CreateCubemap_ && !IsGBuffer_
 		float4 Color                : SV_Target0;
 	#elif IsGBuffer_
-		float4 RT0					: SV_Target0;	// albedo (xyz) | sun shadow mask (w)
+		float4 RT0					: SV_Target0;	// albedo (xyz) 
 		float4 RT1					: SV_Target1;	// roughness(x) | metallic(y) | emissive (z) | SSR? (w)
 		float4 RT2					: SV_Target2;	// spheremap_vs_normal (xy) | velocity (zw)
 	#else
@@ -388,14 +388,12 @@ PSOutput PS(in PSInput input)
 
 	float3 specularColor = lerp(0.04, albedoMap.xyz, metallic);
 
-    // Add in the primary directional light
-    float shadowVisibility = EnableShadows ? ShadowVisibility(positionWS, input.DepthVS) : 1.0f;
-
 	PSOutput output;
 
 	#if IsGBuffer_ // Deferred path
 		output.RT0.rgb = diffuseAlbedo;
-		output.RT0.a   = shadowVisibility;
+		// output.RT0.a   = shadowVisibility;
+		output.RT0.a = 0;
 
 		output.RT1.r   = roughness;
 		output.RT1.g   = metallic;
@@ -413,6 +411,9 @@ PSOutput PS(in PSInput input)
 		output.RT2.xy -= JitterOffset;
 
 	#else // Forward path
+		// Add in the primary directional light
+		float shadowVisibility = EnableShadows ? ShadowVisibility(positionWS, input.DepthVS) : 1.0f;
+
 		float3 lighting = 0.0f;
 
 		if(EnableDirectLighting)

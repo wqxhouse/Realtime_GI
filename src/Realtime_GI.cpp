@@ -491,18 +491,18 @@ void Realtime_GI::RenderSceneGBuffer()
 	ID3D11RenderTargetView* renderTargets[3] = { nullptr, nullptr, nullptr };
 	context->OMSetRenderTargets(1, renderTargets, _depthBuffer.DSView);
 
-	// TODO: here calc on cpu as reduce depth requires the depth from the pre-z, 
-	// which is not needed in deferred pass (will lower shadow cascade quality...)
-	_meshRenderer.ComputeShadowDepthBoundsCPU(_camera);
-	_meshRenderer.RenderShadowMap(context, _camera, _globalTransform);
-
 	renderTargets[0] = _rt0Target.RTView;
 	renderTargets[1] = _rt1Target.RTView;
 	renderTargets[2] = _rt2Target.RTView;
 	context->OMSetRenderTargets(3, renderTargets, _depthBuffer.DSView);
 
 	// _meshRenderer.Render(context, _camera, _globalTransform, _envMap, _envMapSH, _jitterOffset);
+	// TODO: note that render is controlled by AppSettings::CurrentShadingTech, in deferred settings, it writes to depth buffer
 	_meshRenderer.Render(context, _camera, _globalTransform, cubemapRenderTarget.SRView, _envMapSH, _jitterOffset);
+
+	// sample the depth after gbuffer and depth is filled
+	_meshRenderer.ReduceDepth(context, _depthBuffer, _camera);
+	_meshRenderer.RenderShadowMap(context, _camera, _globalTransform);
 
 	renderTargets[0] = renderTargets[1] = renderTargets[2] = nullptr;
 	context->OMSetRenderTargets(3, renderTargets, nullptr);
@@ -607,7 +607,7 @@ void Realtime_GI::RenderBackgroundVelocity()
 	else if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
 	{
 		targetWidth = _rt2Target.Width;
-		targetWidth = _rt2Target.Height;
+		targetHeight = _rt2Target.Height;
 	}
 
 	SetViewport(context, targetWidth, targetHeight);
@@ -666,6 +666,13 @@ void Realtime_GI::RenderBackgroundVelocity()
 
     rtvs[0] = nullptr;
     context->OMSetRenderTargets(1, rtvs, nullptr);
+
+	// reset blend state
+	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
+	{
+		rtvs[0] = _velocityTarget.RTView;
+		context->OMSetBlendState(_blendStates.BlendDisabled(), blendFactor, 0xFFFFFFFF);
+	}
 }
 
 void Realtime_GI::RenderHUD()

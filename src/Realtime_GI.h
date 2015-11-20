@@ -53,7 +53,7 @@ protected:
     RenderTarget2D _velocityResolveTarget;
 
 	// Deferred - GBuffer
-	RenderTarget2D _rt0Target;  // albedo + shadow mask
+	RenderTarget2D _rt0Target;  // albedo 
 	RenderTarget2D _rt1Target;	// roughness/metallic/emissive
 	RenderTarget2D _rt2Target;  // compressed normal + velocity
 

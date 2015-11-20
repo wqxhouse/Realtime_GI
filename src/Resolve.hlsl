@@ -249,9 +249,9 @@ float4 ResolvePS(in float4 Position : SV_Position) : SV_Target0
 
     if(EnableTemporalAA)
     {
-        float3 currColor = output;
+		float3 currColor = output;
 
-        float2 velocity = VelocityTexture[pixelPos];
+		float2 velocity = VelocityTexture[pixelPos];
         float2 prevPixelPos = pixelPos - velocity;
         float2 prevUV = prevPixelPos / TextureSize;
 
