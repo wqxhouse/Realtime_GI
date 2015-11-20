@@ -19,6 +19,8 @@
 #include "MeshRenderer.h"
 
 #define SPHERE_FILE L"..\\Content\\Models\\sphere\\sphere.obj"
+#define CubemapWidth 128
+#define CubemapHeight 128
 
 using namespace SampleFramework11;
 
@@ -33,17 +35,18 @@ public:
 	void SetPosition(Float3 position);
 	Float3 GetPosition();
 	void GetTargetViews(RenderTarget2D &resCubemapTarget);
+	void GetPreFilterTargetViews(RenderTarget2D &prefilterTarget);
 	void Create(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
 		const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox);
+	void RenderPrefilterCubebox(const DeviceManager &deviceManager, const Float4x4 &sceneTransform, Skybox *skybox);
 
 	const PerspectiveCamera &GetCubemapCamera();
 
 private:
-	void RenderPrefilterCubebox(const DeviceManager &deviceManager, const Float4x4 &sceneTransform);
 	void GenAndCacheConvoluteSphereInputLayout(const DeviceManager &deviceManager, const Model *model);
 
-	const uint32 CubemapWidth = 128;
-	const uint32 CubemapHeight = 128;
+	/*const uint32 CubemapWidth = 128;
+	const uint32 CubemapHeight = 128;*/
 
 	PerspectiveCamera cubemapCamera;
 	RenderTarget2D cubemapTarget;
@@ -51,8 +54,17 @@ private:
 	RenderTarget2D prefilterCubemapTarget;
 	Float3 position;
 
+	ID3D11InputLayoutPtr inputLayout;
+
 	VertexShaderPtr _convoluteVS;
 	PixelShaderPtr _convolutePS;
+
+	BlendStates _blendStates;
+	DepthStencilStates _depthStencilStates;
+	RasterizerStates _rasterizerStates;
+
+	SamplerStates _samplerStates;
+	ID3D11SamplerStatePtr _evsmSampler;
 
 	struct CameraStruct{
 		Float3 Eye;
@@ -67,6 +79,8 @@ private:
 	{
 		Float4x4 world;
 	};
+
+	static const uint32 ShadowAnisotropy = 16;
 
 	ConstantBuffer<VSConstant> _VSConstant;
 };

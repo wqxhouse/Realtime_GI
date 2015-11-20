@@ -2,7 +2,7 @@
 
 cbuffer VSConstant : register(b0)
 {
-	float4x4 world;
+	float4x4 World;
 }
 
 TextureCube<float3> Cubemap : register(t0);
@@ -33,7 +33,7 @@ struct PSOutput
 VSOutput VS(in VSInput In)
 {
 	VSOutput Out;
-	Out.Normal = In.Normal;
+	Out.Normal = normalize(mul(In.Normal, (float3x3)World)).xyz;
 	Out.Position = float4 ( In.PositionOS, 1.0f);
 	return Out;
 }
@@ -67,10 +67,10 @@ float3 ImportanceSampleGGX(float2 Xi, float Roughness, float3 N)
 	H.z = CosTheta;
 
 	float3 UpVector = abs(N.z) < 0.999f ? float3(0, 0, 1) : float3 (1, 0, 0);
-		float3 TangentX = normalize(cross(UpVector, N));
-		float3 TangentY = cross(N, TangentX);
+	float3 TangentX = normalize(cross(UpVector, N));
+	float3 TangentY = cross(N, TangentX);
 
-		return TangentX * H.x + TangentY * H.y + N * H.z;
+	return TangentX * H.x + TangentY * H.y + N * H.z;
 }
 
 //=================================================================================================
@@ -95,7 +95,7 @@ float3 PrefilterEnvMap(float Roughness, float3 R){
 
 		if (NoL > 0)
 		{
-			PrefilteredColor += Cubemap.SampleLevel(LinearSampler, L, 0).rgb * NoL;
+			PrefilteredColor += Cubemap.SampleLevel(LinearSampler, L, i).rgb * NoL;
 			TotalWeight += NoL;
 		}
 	}
@@ -120,6 +120,7 @@ PSOutput PS(in PSInput input)
 	}
 
 	output.Color = color;
-
+	output.Color = float4(1, 0, 0, 1);
+	
 	return output;
 }
