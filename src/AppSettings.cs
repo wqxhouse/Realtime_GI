@@ -129,7 +129,7 @@ public class Settings
     public class SceneControls
     {
         Scenes CurrentScene = Scenes.CornellBox;
-        ShadingTech CurrentShadingTech = ShadingTech.Forward;
+        ShadingTech CurrentShadingTech = ShadingTech.Clustered_Deferred;
 
         [DisplayName("Light Direction")]
         [HelpText("The direction of the light")]

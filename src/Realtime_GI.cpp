@@ -215,7 +215,10 @@ void Realtime_GI::CreateRenderTargets()
     if(_resolveTarget.Width != width || _resolveTarget.Height != height)
     {
         _resolveTarget.Initialize(device, width, height, _colorTarget.Format);
-        _velocityResolveTarget.Initialize(device, width, height, _velocityTarget.Format);
+		if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
+		{
+			_velocityResolveTarget.Initialize(device, width, height, _velocityTarget.Format);
+		}
         _prevFrameTarget.Initialize(device, width, height, _colorTarget.Format);
     }
 }

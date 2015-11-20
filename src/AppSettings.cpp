@@ -161,7 +161,7 @@ namespace AppSettings
         CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene Controls", "Current Scene", "", Scenes::CornellBox, 3, ScenesLabels);
         Settings.AddSetting(&CurrentScene);
 
-        CurrentShadingTech.Initialize(tweakBar, "CurrentShadingTech", "Scene Controls", "Current Shading Tech", "", ShadingTech::Forward, 2, ShadingTechLabels);
+        CurrentShadingTech.Initialize(tweakBar, "CurrentShadingTech", "Scene Controls", "Current Shading Tech", "", ShadingTech::Clustered_Deferred, 2, ShadingTechLabels);
         Settings.AddSetting(&CurrentShadingTech);
 
         LightDirection.Initialize(tweakBar, "LightDirection", "Scene Controls", "Light Direction", "The direction of the light", Float3(-0.7500f, 0.9770f, -0.4000f));
