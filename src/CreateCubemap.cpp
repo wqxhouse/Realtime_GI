@@ -32,6 +32,7 @@ void CreateCubemap::Initialize(ID3D11Device *device, uint32 numMipLevels, uint32
 	_convoluteVS = CompileVSFromFile(device, L"PrefilterCubemap.hlsl", "VS", "vs_5_0");
 	_convolutePS = CompilePSFromFile(device, L"PrefilterCubemap.hlsl", "PS", "ps_5_0");
 
+	_VSConstant.Initialize(device);//Initialize original vertex constant variables
 }
 
 
@@ -77,13 +78,23 @@ void CreateCubemap::GenAndCacheConvoluteSphereInputLayout(const DeviceManager &d
 	}
 }
 
-void CreateCubemap::PrefilterCubebox(const DeviceManager &deviceManager, MeshRenderer *meshRenderer)
+void CreateCubemap::RenderPrefilterCubebox(const DeviceManager &deviceManager, const Float4x4 &sceneTransform)
 {
 	Model *cubemapSphere = new Model();
+
 	cubemapSphere->CreateWithAssimp(deviceManager.Device(), L"..\\Content\\Models\\sphere\\sphere.obj", false);
 
 	GenAndCacheConvoluteSphereInputLayout(deviceManager, cubemapSphere);
-	//delete cubemapSphere;
+
+	//Set Constant Variables
+	_VSConstant.Data.world = sceneTransform;
+
+	//Set ShaderResourse
+	ID3D11ShaderResourceView* cubemapResourse[] = { cubemapTarget.SRView };
+
+	deviceManager.ImmediateContext()->CSSetShaderResources(0, _countof(cubemapResourse), cubemapResourse);
+
+	delete cubemapSphere;
 }
 
 void CreateCubemap::Create(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
@@ -91,7 +102,6 @@ void CreateCubemap::Create(const DeviceManager &deviceManager, MeshRenderer *mes
 {
 	PIXEvent event(L"Render Cube Map");
 
-	PrefilterCubebox(deviceManager, meshRenderer);
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	ID3D11DeviceContext *context = deviceManager.ImmediateContext();
 
@@ -126,7 +136,8 @@ void CreateCubemap::Create(const DeviceManager &deviceManager, MeshRenderer *mes
 		skybox->RenderEnvironmentMap(context, environmentMap, cubemapCamera.ViewMatrix(),
 			cubemapCamera.ProjectionMatrix(), Float3(std::exp2(AppSettings::ExposureScale)));
 		
-
+		//Create pre-filiter cubebox from original cubebox.
+		RenderPrefilterCubebox(deviceManager, sceneTransform);
 
 		renderTarget[0] = nullptr;
 		context->OMSetRenderTargets(1, renderTarget, nullptr);

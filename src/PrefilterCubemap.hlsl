@@ -1,5 +1,10 @@
 #include <SH.hlsl>
 
+cbuffer VSConstant : register(b0)
+{
+	float4x4 world;
+}
+
 TextureCube<float3> Cubemap : register(t0);
 SamplerState LinearSampler : register(s0);
 

@@ -1,6 +1,7 @@
 /*
 	Author : bxs3514
 	Date   : 2015.11
+	Cubemap generator
 */
 
 #pragma once
@@ -8,6 +9,7 @@
 #include <App.h>
 #include <PCH.h>
 #include <Utility.h>
+#include <AppSettings.h>
 #include <Graphics\\Camera.h>
 #include <Graphics\\Skybox.h>
 #include <Graphics\\GraphicsTypes.h>
@@ -37,7 +39,7 @@ public:
 	const PerspectiveCamera &GetCubemapCamera();
 
 private:
-	void PrefilterCubebox(const DeviceManager &deviceManager, MeshRenderer *meshRenderer);
+	void RenderPrefilterCubebox(const DeviceManager &deviceManager, const Float4x4 &sceneTransform);
 	void GenAndCacheConvoluteSphereInputLayout(const DeviceManager &deviceManager, const Model *model);
 
 	const uint32 CubemapWidth = 128;
@@ -60,5 +62,12 @@ private:
 
 	static const CameraStruct DefaultCubemapCameraStruct[6];
 	static const Float3 DefaultPosition;
+
+	struct VSConstant
+	{
+		Float4x4 world;
+	};
+
+	ConstantBuffer<VSConstant> _VSConstant;
 };
 
