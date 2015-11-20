@@ -240,9 +240,7 @@
     <ClInclude Include="CreateCubemap.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="LightClusters.h" />
-    <ClInclude Include="ShadowMapSettings.h">
-      <Filter>Shader</Filter>
-    </ClInclude>
+    <ClInclude Include="ShadowMapSettings.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="AppSettings.hlsl">
