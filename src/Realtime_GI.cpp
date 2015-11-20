@@ -98,8 +98,9 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 
 	Model *m = scene->addModel(ModelPaths[0]);
 	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 0, 0), Quaternion());
-	scene->addPointLight();
-
+	PointLight *pl = scene->addPointLight();
+	pl->cRadius = 10.0f;
+	pl->cColor *= Float3(10, 10, 10);
 	_numScenes++;
 	/// Scene 2 /////////////////////////////////////////////////////////////
 	_scenes[_numScenes] = Scene();
@@ -812,13 +813,13 @@ void Realtime_GI::RenderHUD()
 void Realtime_GI::UploadLights()
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
-	_deviceManager.ImmediateContext()->Map(_lightIndicesList.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	_deviceManager.ImmediateContext()->Map(_pointLightBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	PointLight *pointLightGPUBufferPtr = static_cast<PointLight *>(mappedResource.pData);
 
 	Scene *curScene = &_scenes[AppSettings::CurrentScene];
 	PointLight *pointLightPtr = curScene->getPointLightPtr();
 	memcpy(pointLightGPUBufferPtr, pointLightPtr, sizeof(PointLight) * curScene->getNumPointLights());
-	_deviceManager.ImmediateContext()->Unmap(_lightIndicesList.Buffer, 0);
+	_deviceManager.ImmediateContext()->Unmap(_pointLightBuffer.Buffer, 0);
 }
 
 void Realtime_GI::AssignLightAndUploadClusters()

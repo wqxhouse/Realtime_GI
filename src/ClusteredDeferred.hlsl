@@ -101,6 +101,10 @@ float4 ClusteredDeferredPS(in PSInput input) : SV_Target0
 	float sunShadow = EnableShadows ? ShadowVisibility(surface.posWS, surface.depthVS) : 1.0f;
 	lighting *= sunShadow;
 
+	// Point light
+	PointLight pl = PointLights[0];
+	lighting += CalcPointLight(surface, pl, CameraPosWS);
+
 	return float4(lighting, 1.0f);
 	// return float4(surface.depthVS, surface.depthVS, surface.depthVS, 1.0f);
 }

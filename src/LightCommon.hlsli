@@ -9,6 +9,7 @@ struct PointLight
 	float3 posWS;
 	float radius;
 	float3 color;
+	float padding;
 };
 
 float PointLightAttenuation(float radius, float dist)
