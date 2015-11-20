@@ -53,12 +53,6 @@ public class Settings
         Hammersly16,
     }
 
-    enum ParallaxCorrection
-    {
-        BoxMax,
-        BoxMin,
-    }
-
     public class AntiAliasing
     {
         MSAAModes MSAAMode = MSAAModes.MSAA4x;
@@ -188,6 +182,60 @@ public class Settings
         [HelpText("Emissive parameter for the material")]
         float EmissiveIntensity = 0.00f;
 
+        [DisplayName("ProbeX")]
+        [MinValue(-100.0f)]
+        [MaxValue(100.0f)]
+        [StepSize(0.1f)]
+        float ProbeX = 0.0f;
+
+        [DisplayName("ProbeY")]
+        [MinValue(-100.0f)]
+        [MaxValue(100.0f)]
+        [StepSize(0.1f)]
+        float ProbeY = 0.0f;
+
+        [DisplayName("ProbeZ")]
+        [MinValue(-100.0f)]
+        [MaxValue(100.0f)]
+        [StepSize(0.1f)]
+        float ProbeZ = 0.0f;
+
+        [DisplayName("BoxMaxX")]
+        [MinValue(-100.0f)]
+        [MaxValue(100.0f)]
+        [StepSize(0.1f)]
+        float BoxMaxX = 1.0f;
+
+        [DisplayName("BoxMaxY")]
+        [MinValue(-100.0f)]
+        [MaxValue(100.0f)]
+        [StepSize(0.1f)]
+        float BoxMaxY = 1.0f;
+
+        [DisplayName("BoxMaxZ")]
+        [MinValue(-100.0f)]
+        [MaxValue(100.0f)]
+        [StepSize(0.1f)]
+        float BoxMaxZ = 1.0f;
+
+        [DisplayName("BoxMinX")]
+        [MinValue(-100.0f)]
+        [MaxValue(100.0f)]
+        [StepSize(0.1f)]
+        float BoxMinX = -1.0f;
+
+        [DisplayName("BoxMinY")]
+        [MinValue(-100.0f)]
+        [MaxValue(100.0f)]
+        [StepSize(0.1f)]
+        float BoxMinY = -1.0f;
+
+        [DisplayName("BoxMinZ")]
+        [MinValue(-100.0f)]
+        [MaxValue(100.0f)]
+        [StepSize(0.1f)]
+        float BoxMinZ = -1.0f;
+
         // Orientation SceneOrientation = new Orientation(0.41f, -0.55f, -0.29f, 0.67f);
         Orientation SceneOrientation = new Orientation(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -201,6 +249,7 @@ public class Settings
         [MinValue(-16.0f)]
         [MaxValue(16.0f)]
         float ExposureScale = 0.0f;
+
     }
 
     public class PostProcessing

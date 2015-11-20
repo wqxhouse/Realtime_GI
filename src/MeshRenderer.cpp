@@ -240,10 +240,10 @@ void MeshRenderer::SetCubemapCapture(bool32 tf)
 	}
 }
 
-void MeshRenderer::SetParallaxCorrection(Float3 newPosition, Float3 newBoxMax, Float3 newBoxMin){
-	_cubemapPos = newPosition;
-	_boxMax = newBoxMax;
-	_boxMin = newBoxMin;
+void MeshRenderer::SetParallaxCorrection(Float3 newProbePosWS, Float3 newMaxbox, Float3 newMinbox){
+	probePosWS = newProbePosWS;
+	maxbox = newMaxbox;
+	minbox = newMinbox;
 }
 
 void MeshRenderer::ReMapMeshShaders()
@@ -348,8 +348,10 @@ void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context
     this->_device = device;
 	this->_drawingCubemap = false;
 
-    _blendStates.Initialize(device);
+	_blendStates.Initialize(device);
+	_rasterizerStates.Wireframe();
     _rasterizerStates.Initialize(device);
+
     _depthStencilStates.Initialize(device);
     _samplerStates.Initialize(device);
 
@@ -643,8 +645,8 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     context->PSSetSamplers(0, 3, sampStates);
 
 	// set PS constants
-    _meshPSConstants.Data.CameraPosWS = camera.Position();//!
-	_meshPSConstants.Data.CubemapWS = _cubemapPos;
+    _meshPSConstants.Data.CameraPosWS = camera.Position();
+	_meshPSConstants.Data.ProbePosWS = probePosWS;
     _meshPSConstants.Data.OffsetScale = OffsetScale;
     _meshPSConstants.Data.PositiveExponent = PositiveExponent;
     _meshPSConstants.Data.NegativeExponent = NegativeExponent;
@@ -654,10 +656,10 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     _meshPSConstants.Data.RTSize.x = float(GlobalApp->DeviceManager().BackBufferWidth());
     _meshPSConstants.Data.RTSize.y = float(GlobalApp->DeviceManager().BackBufferHeight());
     _meshPSConstants.Data.JitterOffset = jitterOffset;
-	_meshPSConstants.Data.BoxMax = _boxMax;
-	_meshPSConstants.Data.BoxMin = _boxMin;
     _meshPSConstants.ApplyChanges(context);
     _meshPSConstants.SetPS(context, 0);
+	_meshPSConstants.Data.MaxBox = maxbox;
+	_meshPSConstants.Data.MinBox = minbox;
 
     // Set shaders
     context->DSSetShader(nullptr, nullptr, 0);
