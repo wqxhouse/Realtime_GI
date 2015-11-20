@@ -29,8 +29,8 @@ void CreateCubemap::Initialize(ID3D11Device *device, uint32 numMipLevels, uint32
 	cubemapDepthTarget.Initialize(device, CubemapWidth, CubemapHeight, DXGI_FORMAT_D32_FLOAT, numMipLevels, 1,
 		0, 6, TRUE);
 
-	_convoluteVS = CompileVSFromFile(device, L"CubemapConvolution.hlsl", "main", "vs_5_0");
-	_convolutePS = CompilePSFromFile(device, L"CubemapConvolution.hlsl", "psmain", "ps_5_0");
+	_convoluteVS = CompileVSFromFile(device, L"PrefilterCubemap.hlsl", "VS", "vs_5_0");
+	_convolutePS = CompilePSFromFile(device, L"PrefilterCubemap.hlsl", "PS", "ps_5_0");
 
 }
 
@@ -74,23 +74,10 @@ void CreateCubemap::GenAndCacheConvoluteSphereInputLayout(const DeviceManager &d
 		DXCall(deviceManager.Device()->CreateInputLayout(mesh.InputElements(), mesh.NumInputElements(),
 			_convoluteVS->ByteCode->GetBufferPointer(), _convoluteVS->ByteCode->GetBufferSize(), &inputLayout));
 
-		/*if (_meshInputLayouts.find(&mesh) == _meshInputLayouts.end())
-		{
-			DXCall(deviceManager.Device()->CreateInputLayout(mesh.InputElements(), mesh.NumInputElements(),
-				vs->ByteCode->GetBufferPointer(), vs->ByteCode->GetBufferSize(), &inputLayout));
-			_meshInputLayouts.insert(std::make_pair(&mesh, inputLayout));
-		}*/
-
-		/*if (_meshDepthInputLayouts.find(&mesh) == _meshDepthInputLayouts.end())
-		{
-			DXCall(_device->CreateInputLayout(mesh.InputElements(), mesh.NumInputElements(),
-				_meshDepthVS->ByteCode->GetBufferPointer(), _meshDepthVS->ByteCode->GetBufferSize(), &inputLayout));
-			_meshDepthInputLayouts.insert(std::make_pair(&mesh, inputLayout));
-		}*/
 	}
 }
 
-void CreateCubemap::ConvoluteCubebox(const DeviceManager &deviceManager, MeshRenderer *meshRenderer)
+void CreateCubemap::PrefilterCubebox(const DeviceManager &deviceManager, MeshRenderer *meshRenderer)
 {
 	Model *cubemapSphere = new Model();
 	cubemapSphere->CreateWithAssimp(deviceManager.Device(), L"..\\Content\\Models\\sphere\\sphere.obj", false);
@@ -104,7 +91,7 @@ void CreateCubemap::Create(const DeviceManager &deviceManager, MeshRenderer *mes
 {
 	PIXEvent event(L"Render Cube Map");
 
-	ConvoluteCubebox(deviceManager, meshRenderer);
+	PrefilterCubebox(deviceManager, meshRenderer);
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	ID3D11DeviceContext *context = deviceManager.ImmediateContext();
 
@@ -133,14 +120,14 @@ void CreateCubemap::Create(const DeviceManager &deviceManager, MeshRenderer *mes
 		// meshRenderer->ReduceDepth(context, cubemapDepthTarget, cubemapCamera);
 		meshRenderer->RenderShadowMap(context, cubemapCamera, sceneTransform);
 
-		//meshRenderer->SetParallaxCorrection(position, Float3(1.0f, 1.0f, 1.0f), Float3(-1.0f, -1.0f, -1.0f));
-
 		context->OMSetRenderTargets(1, renderTarget, DSView);
 		meshRenderer->Render(context, cubemapCamera, sceneTransform, environmentMap, environmentMapSH, jitterOffset);
 
 		skybox->RenderEnvironmentMap(context, environmentMap, cubemapCamera.ViewMatrix(),
 			cubemapCamera.ProjectionMatrix(), Float3(std::exp2(AppSettings::ExposureScale)));
 		
+
+
 		renderTarget[0] = nullptr;
 		context->OMSetRenderTargets(1, renderTarget, nullptr);
 	}

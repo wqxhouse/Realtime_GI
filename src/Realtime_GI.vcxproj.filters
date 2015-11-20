@@ -364,7 +364,7 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="CubemapConvolution.hlsl">
+    <Text Include="PrefilterCubemap.hlsl">
       <Filter>Shader</Filter>
     </Text>
   </ItemGroup>

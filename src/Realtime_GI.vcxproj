@@ -258,7 +258,7 @@
     <Image Include="Debug\x64\t2.dds" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="CubemapConvolution.hlsl" />
+    <Text Include="PrefilterCubemap.hlsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

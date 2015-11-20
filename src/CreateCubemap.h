@@ -37,7 +37,7 @@ public:
 	const PerspectiveCamera &GetCubemapCamera();
 
 private:
-	void ConvoluteCubebox(const DeviceManager &deviceManager, MeshRenderer *meshRenderer);
+	void PrefilterCubebox(const DeviceManager &deviceManager, MeshRenderer *meshRenderer);
 	void GenAndCacheConvoluteSphereInputLayout(const DeviceManager &deviceManager, const Model *model);
 
 	const uint32 CubemapWidth = 128;
@@ -46,6 +46,7 @@ private:
 	PerspectiveCamera cubemapCamera;
 	RenderTarget2D cubemapTarget;
 	DepthStencilBuffer cubemapDepthTarget;
+	RenderTarget2D prefilterCubemapTarget;
 	Float3 position;
 
 	VertexShaderPtr _convoluteVS;
