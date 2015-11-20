@@ -20,33 +20,8 @@
 
 #include "AppSettings.h"
 #include "SharedConstants.h"
+#include "ShadowMapSettings.h"
 
-// Constants - low shadow quality in debug mode to speed up
-#if _DEBUG 
-static const float ShadowNearClip = 1.0f;
-static const float FilterSize = 0.0f;
-static const uint32 SampleRadius = 0;
-static const float OffsetScale = 0.0f;
-static const float LightBleedingReduction = 0.10f;
-static const float PositiveExponent = 40.0f;
-static const float NegativeExponent = 8.0f;
-static const uint32 ShadowMapSize = 512;
-static const uint32 ShadowMSAASamples = 1;
-static const uint32 ShadowAnisotropy = 16;
-static const bool EnableShadowMips = false;	
-#else 
-static const float ShadowNearClip = 1.0f;
-static const float FilterSize = 7.0f;
-static const uint32 SampleRadius = 3;
-static const float OffsetScale = 0.0f;
-static const float LightBleedingReduction = 0.10f;
-static const float PositiveExponent = 40.0f;
-static const float NegativeExponent = 8.0f;
-static const uint32 ShadowMapSize = 1024;
-static const uint32 ShadowMSAASamples = 4;
-static const uint32 ShadowAnisotropy = 16;
-static const bool EnableShadowMips = true;
-#endif
 
 // Renders a text string indicating the current progress for compiling shaders
 static bool32 RenderShaderProgress(uint32 currShader, uint32 numShaders)
@@ -472,6 +447,8 @@ void MeshRenderer::ReduceDepth(ID3D11DeviceContext* context, DepthStencilBuffer&
     ID3D11Texture2D* lastTarget = _depthReductionTargets[_depthReductionTargets.size() - 1].Texture;
     context->CopyResource(_reductionStagingTextures[_currFrame % ReadbackLatency].Texture, lastTarget);
 
+	context->CSSetShader(nullptr, nullptr, 0);
+
     ++_currFrame;
 
     if(_currFrame >= ReadbackLatency)
@@ -653,19 +630,23 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     context->PSSetSamplers(0, 3, sampStates);
 
 	// set PS constants
-    _meshPSConstants.Data.CameraPosWS = camera.Position();
-    _meshPSConstants.Data.OffsetScale = OffsetScale;
-    _meshPSConstants.Data.PositiveExponent = PositiveExponent;
-    _meshPSConstants.Data.NegativeExponent = NegativeExponent;
-    _meshPSConstants.Data.LightBleedingReduction = LightBleedingReduction;
-	_meshPSConstants.Data.View = Float4x4::Transpose(camera.ViewMatrix());
-    _meshPSConstants.Data.Projection = Float4x4::Transpose(camera.ProjectionMatrix());
-    _meshPSConstants.Data.EnvironmentSH = envMapSH;
-    _meshPSConstants.Data.RTSize.x = float(GlobalApp->DeviceManager().BackBufferWidth());
-    _meshPSConstants.Data.RTSize.y = float(GlobalApp->DeviceManager().BackBufferHeight());
-    _meshPSConstants.Data.JitterOffset = jitterOffset;
-    _meshPSConstants.ApplyChanges(context);
-    _meshPSConstants.SetPS(context, 0);
+	// TODO: make deferred a unique structure
+	//if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
+	{
+		_meshPSConstants.Data.CameraPosWS = camera.Position();
+		_meshPSConstants.Data.OffsetScale = OffsetScale;
+		_meshPSConstants.Data.PositiveExponent = PositiveExponent;
+		_meshPSConstants.Data.NegativeExponent = NegativeExponent;
+		_meshPSConstants.Data.LightBleedingReduction = LightBleedingReduction;
+		_meshPSConstants.Data.View = Float4x4::Transpose(camera.ViewMatrix());
+		_meshPSConstants.Data.Projection = Float4x4::Transpose(camera.ProjectionMatrix());
+		_meshPSConstants.Data.EnvironmentSH = envMapSH;
+		_meshPSConstants.Data.RTSize.x = float(GlobalApp->DeviceManager().BackBufferWidth());
+		_meshPSConstants.Data.RTSize.y = float(GlobalApp->DeviceManager().BackBufferHeight());
+		_meshPSConstants.Data.JitterOffset = jitterOffset;
+		_meshPSConstants.ApplyChanges(context);
+		_meshPSConstants.SetPS(context, 0);
+	}
 
     // Set shaders
     context->DSSetShader(nullptr, nullptr, 0);
@@ -676,6 +657,7 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getStaticOpaqueObjectsPtr(), _scene->getNumStaticOpaqueObjects());
 	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getDynamicOpaqueObjectsPtr(), _scene->getNumDynmamicOpaueObjects());
 
+	// TODO: refactor
     ID3D11ShaderResourceView* nullSRVs[8] = { nullptr };
     context->PSSetShaderResources(0, 8, nullSRVs);
 }
@@ -730,6 +712,7 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 				const MeshMaterial& material = model->Materials()[part.MaterialIdx];
 
 				// Set the textures
+				// TODO : strip out unnecessary cases for unique
 				ID3D11ShaderResourceView* psTextures[] =
 				{
 					material.DiffuseMap,

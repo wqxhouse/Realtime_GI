@@ -3,22 +3,104 @@
 //=================================================================================================
 #include "SharedConstants.h"
 #include "AppSettings.hlsl"
+#include "LightCommon.hlsli"
+#include <SH.hlsl>
 
-float4 ClusteredDeferredVS(in uint VertexID : SV_VertexID) : SV_Position
+static const uint NumCascades = 4;
+
+////////////////////////////////////////////////////////////
+// Resources
+////////////////////////////////////////////////////////////
+cbuffer ClusteredDeferredConstants : register(b0)
 {
-    float4 output = 0.0f;
+	float4x4 ShadowMatrix;
+	float4 CascadeSplits;
+	float4 CascadeOffsets[NumCascades];
+	float4 CascadeScales[NumCascades];
+	float OffsetScale;
+	float PositiveExponent;
+	float NegativeExponent;
+	float LightBleedingReduction;
+	float4x4 ProjectionToWorld;
+	float4x4 ViewToWorld;
+	SH9Color EnvironmentSH;
 
-    if(VertexID == 0)
-        output = float4(-1.0f, 1.0f, 1.0f, 1.0f);
-    else if(VertexID == 1)
-        output = float4(3.0f, 1.0f, 1.0f, 1.0f);
-    else
-        output = float4(-1.0f, -3.0f, 1.0f, 1.0f);
-
-    return output;
+	float3 CameraPosWS;
+	float NearPlane;
+	float3 CameraZAxisWS;
+	float FarPlane;
+	float ProjTermA;
+	float ProjTermB;
 }
 
-float4 ClusteredDeferredPS(in float4 PositionSS : SV_Position) : SV_Target0
+Texture2D RT0 : register(t0);
+Texture2D RT1 : register(t1);
+Texture2D RT2 : register(t2);
+Texture2D DepthMap : register(t3);
+Texture2DArray ShadowMap : register(t4);
+StructuredBuffer<PointLight> PointLights : register(t5);
+
+SamplerState EVSMSampler : register(s0);
+
+#include "Shadow.hlsli"
+
+/////////////////////////////////////////////////////////////
+// Input / Output
+/////////////////////////////////////////////////////////////
+struct VSInput
 {
-    return float4(0.0, 0.3, 0.7, 1.0);
+    float4 PositionCS 		    : POSITION;
+};
+
+struct VSOutput
+{
+    float4 PositionCS 		    : SV_Position;
+	float3 ViewRay				: VIEWRAY;
+};
+
+struct PSInput
+{
+    float4 PositionSS 		    : SV_Position;
+	float3 ViewRay				: VIEWRAY;
+};
+
+/////////////////////////////////////////////////////////////
+// Shader
+/////////////////////////////////////////////////////////////
+VSOutput ClusteredDeferredVS(in VSInput input)
+{
+	VSOutput output;
+    output.PositionCS = input.PositionCS;
+
+	float4 quadWPos = mul(input.PositionCS, ProjectionToWorld);
+	quadWPos /= quadWPos.w;
+	output.ViewRay = quadWPos.xyz - CameraPosWS;
+
+	return output;
+}
+
+float4 ClusteredDeferredPS(in PSInput input) : SV_Target0
+{
+	uint4 fragCoord = uint4(input.PositionSS);
+
+	float4 rt0 = RT0.Load(uint3(fragCoord.xy, 0));
+	float4 rt1 = RT1.Load(uint3(fragCoord.xy, 0));
+	float4 rt2 = RT2.Load(uint3(fragCoord.xy, 0));
+	float ndcZ = DepthMap.Load(uint3(fragCoord.xy, 0)).x;
+	
+	Surface surface = GetSurfaceFromGBuffer(
+		rt0, rt1, rt2, ndcZ, input.ViewRay, ViewToWorld, 
+		CameraPosWS, CameraZAxisWS, ProjTermA, ProjTermB);
+
+	float3 lighting = float3(0.0f, 0.0f, 0.0f);
+
+	// Do Sun lighting
+	lighting += CalcDirectionalLight(surface.normalWS, LightDirection, LightColor, 
+		surface.diffuse, surface.metallic, surface.roughness, surface.posWS, CameraPosWS);
+
+	float sunShadow = EnableShadows ? ShadowVisibility(surface.posWS, surface.depthVS) : 1.0f;
+	lighting *= sunShadow;
+
+	return float4(lighting, 1.0f);
+	// return float4(surface.depthVS, surface.depthVS, surface.depthVS, 1.0f);
 }

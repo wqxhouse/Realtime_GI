@@ -22,6 +22,8 @@ Scene::Scene()
 	_numPrevWVPs = 0;
 
 	_sceneScale = 1;
+	_numLights = 0;
+	_numPointLights = 0;
 }
 
 Scene::~Scene()
@@ -204,4 +206,18 @@ void Scene::sortSceneObjects(const Float4x4 &viewMatrix)
 	std::sort(_dynamicOpaqueObjects, _dynamicOpaqueObjects + _numDynamicObjects, opqCmp);
 	
 	// TODO: transparent
+}
+
+PointLight *Scene::addPointLight()
+{
+	if (_numLights > MAX_SCENE_LIGHTS) return NULL;
+	_pointLights[_numPointLights] = PointLight();
+	_pointLights[_numPointLights].cColor = Float3(0.1f, 0.3f, 0.7f);
+	_pointLights[_numPointLights].cPos = Float3();
+	_pointLights[_numPointLights].cRadius = 1.0f;
+
+	_numPointLights++;
+	_numLights++;
+
+	return &_pointLights[_numPointLights - 1];
 }

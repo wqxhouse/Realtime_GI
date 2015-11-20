@@ -19,7 +19,7 @@
 #define UseMaps_ (UseNormalMapping_ || UseAlbedoMap_ || UseMetallicMap_ || UseRoughnessMap_ || UseEmissiveMap_)
 
 #if IsGBuffer_
-	#include "GBufferUtil.hlsli"
+	#include "Surface.hlsli"
 #endif
 
 //=================================================================================================

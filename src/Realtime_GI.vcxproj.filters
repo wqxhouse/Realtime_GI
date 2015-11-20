@@ -238,6 +238,11 @@
       <Filter>Misc</Filter>
     </ClInclude>
     <ClInclude Include="CreateCubemap.h" />
+    <ClInclude Include="Light.h" />
+    <ClInclude Include="LightClusters.h" />
+    <ClInclude Include="ShadowMapSettings.h">
+      <Filter>Shader</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="AppSettings.hlsl">
@@ -273,10 +278,19 @@
     <None Include="PostProcessing.hlsl">
       <Filter>Shader</Filter>
     </None>
-    <None Include="GBufferUtil.hlsli">
+    <None Include="ClusteredDeferred.hlsl">
       <Filter>Shader</Filter>
     </None>
-    <None Include="ClusteredDeferred.hlsl">
+    <None Include="LightCommon.hlsli">
+      <Filter>Shader</Filter>
+    </None>
+    <None Include="BRDF.hlsli">
+      <Filter>Shader</Filter>
+    </None>
+    <None Include="Shadow.hlsli">
+      <Filter>Shader</Filter>
+    </None>
+    <None Include="Surface.hlsli">
       <Filter>Shader</Filter>
     </None>
   </ItemGroup>

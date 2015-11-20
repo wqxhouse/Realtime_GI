@@ -4,6 +4,8 @@
 #include <Graphics\\Model.h>
 #include <SF11_Math.h>
 
+#include "Light.h"
+
 using namespace SampleFramework11;
 
 struct SceneObject
@@ -85,6 +87,18 @@ public:
 	{
 		return _sceneOrientation;
 	}
+
+	// Lights
+	PointLight *addPointLight();
+	inline PointLight *getPointLightPtr() { return _pointLights; }
+	inline int getNumPointLights() { return _numPointLights; }
+
+	// Caution: too large will stack overflow
+	static const int MAX_STATIC_OBJECTS = 32;
+	static const int MAX_DYNAMIC_OBJECTS = 128;
+	static const int MAX_MODELS = 64;
+	static const int MAX_OBJECT_MATRICES = MAX_STATIC_OBJECTS + MAX_DYNAMIC_OBJECTS;
+	static const int MAX_SCENE_LIGHTS = 1024;
 	
 private:
 
@@ -99,21 +113,19 @@ private:
 	int _numDynamicObjects;
 	int _numObjectBases;
 	int _numPrevWVPs;
-
+	int _numLights;
+	int _numPointLights;
 
 	Float4x4 createBase(float scale, const Float3 &pos, const Quaternion &rot);
-
-	// Caution: too large will stack overflow
-	static const int MAX_STATIC_OBJECTS = 32;
-	static const int MAX_DYNAMIC_OBJECTS = 128;
-	static const int MAX_MODELS = 64;
-	static const int MAX_OBJECT_MATRICES = MAX_STATIC_OBJECTS + MAX_DYNAMIC_OBJECTS;
 
 	SceneObject _staticOpaqueObjects[MAX_STATIC_OBJECTS];
 	SceneObject _dynamicOpaqueObjects[MAX_DYNAMIC_OBJECTS];
 	Float4x4 _objectBases[MAX_OBJECT_MATRICES];
 	Float4x4 _prevWVPs[MAX_OBJECT_MATRICES];
 
+	PointLight _pointLights[MAX_SCENE_LIGHTS];
+
+	// TODO: justify the usefulness of object id
 	static int _highestSceneObjId;
 	static int _numTotalModelsShared;
 	static Model _models[MAX_MODELS];

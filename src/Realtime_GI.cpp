@@ -27,6 +27,9 @@
 #include <Graphics\\Textures.h>
 #include <Graphics\\Sampling.h>
 
+#include "Light.h"
+#include "ShadowMapSettings.h"
+
 using namespace SampleFramework11;
 using std::wstring;
 
@@ -95,8 +98,9 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 
 	Model *m = scene->addModel(ModelPaths[0]);
 	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 0, 0), Quaternion());
-	_numScenes++;
+	scene->addPointLight();
 
+	_numScenes++;
 	/// Scene 2 /////////////////////////////////////////////////////////////
 	_scenes[_numScenes] = Scene();
 	scene = &_scenes[_numScenes];
@@ -166,10 +170,13 @@ void Realtime_GI::Initialize()
    
     _resolveConstants.Initialize(device);
     _backgroundVelocityConstants.Initialize(device);
+	_deferredPassConstants.Initialize(device);
 
     // Init the post processor
     _postProcessor.Initialize(device);
 
+	CreateLightBuffers();
+	CreateQuadBuffers();
 }
 
 // Creates all required render targets
@@ -210,6 +217,55 @@ void Realtime_GI::CreateRenderTargets()
         _velocityResolveTarget.Initialize(device, width, height, _velocityTarget.Format);
         _prevFrameTarget.Initialize(device, width, height, _colorTarget.Format);
     }
+}
+
+void Realtime_GI::CreateQuadBuffers()
+{
+	ID3D11Device *device = _deviceManager.Device();
+	// Create the input layout
+	D3D11_INPUT_ELEMENT_DESC layout[] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	};
+
+	DXCall(device->CreateInputLayout(layout, 1, _clusteredDeferredVS->ByteCode->GetBufferPointer(),
+		_clusteredDeferredVS->ByteCode->GetBufferSize(), &_quadInputLayout));
+
+	// Create and initialize the vertex and index buffers
+	XMFLOAT4 verts[4] =
+	{
+		XMFLOAT4(1, 1, 1, 1),
+		XMFLOAT4(1, -1, 1, 1),
+		XMFLOAT4(-1, -1, 1, 1),
+		XMFLOAT4(-1, 1, 1, 1),
+	};
+
+	D3D11_BUFFER_DESC desc;
+	desc.Usage = D3D11_USAGE_IMMUTABLE;
+	desc.ByteWidth = sizeof(verts);
+	desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	desc.CPUAccessFlags = 0;
+	desc.MiscFlags = 0;
+	D3D11_SUBRESOURCE_DATA initData;
+	initData.pSysMem = verts;
+	initData.SysMemPitch = 0;
+	initData.SysMemSlicePitch = 0;
+	DXCall(device->CreateBuffer(&desc, &initData, &_quadVB));
+
+	unsigned short indices[6] = { 0, 1, 2, 2, 3, 0 };
+
+	desc.Usage = D3D11_USAGE_IMMUTABLE;
+	desc.ByteWidth = sizeof(indices);
+	desc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	desc.CPUAccessFlags = 0;
+	initData.pSysMem = indices;
+	DXCall(device->CreateBuffer(&desc, &initData, &_quadIB));
+}
+
+void Realtime_GI::CreateLightBuffers()
+{
+	_pointLightBuffer.Initialize(_deviceManager.Device(), sizeof(PointLight), Scene::MAX_SCENE_LIGHTS, true);
+	_lightIndicesList.Initialize(_deviceManager.Device(), sizeof(uint32), Scene::MAX_SCENE_LIGHTS, true);
 }
 
 void Realtime_GI::ApplyMomentum(float &prevVal, float &val, float deltaTime)
@@ -441,6 +497,8 @@ void Realtime_GI::Render(const Timer& timer)
 	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
 	{
 		RenderSceneGBuffer();
+		UploadLights();
+		AssignLightAndUploadClusters();
 		RenderLightsDeferred();
 	}
 	else if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
@@ -514,11 +572,21 @@ void Realtime_GI::RenderLightsDeferred()
 
 	ID3D11DeviceContextPtr context = _deviceManager.ImmediateContext();
 
-	context->OMSetDepthStencilState(_depthStencilStates.DepthDisabled(), 0);
+	context->IASetInputLayout(_quadInputLayout);
+
+	// Set the vertex buffer
+	uint32 stride = sizeof(XMFLOAT4);
+	uint32 offset = 0;
+	ID3D11Buffer* vertexBuffers[1] = { _quadVB.GetInterfacePtr() };
+	context->IASetVertexBuffers(0, 1, vertexBuffers, &stride, &offset);
+	context->IASetIndexBuffer(_quadIB, DXGI_FORMAT_R16_UINT, 0);
+	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	// context->OMSetDepthStencilState(_depthStencilStates.DepthDisabled(), 0);
 	context->RSSetState(_rasterizerStates.NoCull());
 
 	ID3D11RenderTargetView* rtvs[1] = { _colorTarget.RTView };
-	context->OMSetRenderTargets(1, rtvs, _depthBuffer.DSView);
+	context->OMSetRenderTargets(1, rtvs, 0);
 
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	context->ClearRenderTargetView(_colorTarget.RTView, clearColor);
@@ -529,14 +597,59 @@ void Realtime_GI::RenderLightsDeferred()
 	context->HSSetShader(nullptr, nullptr, 0);
 	context->DSSetShader(nullptr, nullptr, 0);
 
-	ID3D11Buffer* vbs[1] = { nullptr };
-	UINT strides[1] = { 0 };
-	UINT offsets[1] = { 0 };
-	context->IASetVertexBuffers(0, 1, vbs, strides, offsets);
-	context->IASetInputLayout(nullptr);
-	context->IASetIndexBuffer(nullptr, DXGI_FORMAT_R16_UINT, 0);
-	context->Draw(3, 0);
+	// Update constant buffer
+	// TODO : this is a huge hack... refactor later
+	ConstantBuffer<MeshRenderer::MeshPSConstants> *meshPSConstant = _meshRenderer.getMeshPSConstantsPtr();
+	memcpy(&_deferredPassConstants.Data, ((char *)&meshPSConstant->Data) + sizeof(Float4), offsetof(DeferredPassConstants, OffsetScale));
+	
+	_deferredPassConstants.Data.CameraPosWS = _camera.Position();
+	_deferredPassConstants.Data.OffsetScale = OffsetScale;
+	_deferredPassConstants.Data.PositiveExponent = PositiveExponent;
+	_deferredPassConstants.Data.NegativeExponent = NegativeExponent;
+	_deferredPassConstants.Data.LightBleedingReduction = LightBleedingReduction;
+	_deferredPassConstants.Data.ProjectionToWorld = Float4x4::Transpose(Float4x4::Invert(_camera.ViewProjectionMatrix()));
+	_deferredPassConstants.Data.ViewToWorld = Float4x4::Transpose(_camera.WorldMatrix());
+	_deferredPassConstants.Data.EnvironmentSH = _envMapSH;
 
+	_deferredPassConstants.Data.NearPlane = NearClip;
+	_deferredPassConstants.Data.CameraZAxisWS = _camera.WorldMatrix().Forward();
+	_deferredPassConstants.Data.FarPlane = FarClip;
+	_deferredPassConstants.Data.ProjTermA = FarClip / (FarClip - NearClip);
+	_deferredPassConstants.Data.ProjTermB = (-FarClip * NearClip) / (FarClip - NearClip);
+	_deferredPassConstants.ApplyChanges(context);
+	_deferredPassConstants.SetVS(context, 0);
+	_deferredPassConstants.SetPS(context, 0);
+
+	// Bind shader resources
+	ID3D11ShaderResourceView* clusteredDeferredResources[] =
+	{
+		_rt0Target.SRView,
+		_rt1Target.SRView,
+		_rt2Target.SRView,
+		_depthBuffer.SRView,
+		_meshRenderer.GetVSMRenderTargetPtr()->SRView,
+		_pointLightBuffer.SRView,
+	};
+
+	ID3D11SamplerState* sampStates[1] = {
+		_meshRenderer.GetEVSMSamplerStatePtr()
+	};
+
+	context->PSSetSamplers(0, 1, sampStates);
+
+	context->PSSetShaderResources(0, _countof(clusteredDeferredResources), clusteredDeferredResources);
+	context->DrawIndexed(6, 0, 0);
+
+	sampStates[0] = nullptr;
+	context->PSSetSamplers(0, 1, sampStates);
+
+	memset(clusteredDeferredResources, 0, sizeof(clusteredDeferredResources));
+	context->PSSetShaderResources(0, _countof(clusteredDeferredResources), clusteredDeferredResources);
+	context->VSSetShader(nullptr, nullptr, 0);
+	context->PSSetShader(nullptr, nullptr, 0);
+
+	// Skybox
+	context->OMSetRenderTargets(1, rtvs, _depthBuffer.DSView);
 	if (AppSettings::RenderBackground)
 		_skybox.RenderEnvironmentMap(context, _envMap, _camera.ViewMatrix(), _camera.ProjectionMatrix(),
 		Float3(std::exp2(AppSettings::ExposureScale)));
@@ -694,6 +807,23 @@ void Realtime_GI::RenderHUD()
     Profiler::GlobalProfiler.EndFrame(_spriteRenderer, _font);
 
     _spriteRenderer.End();
+}
+
+void Realtime_GI::UploadLights()
+{
+	D3D11_MAPPED_SUBRESOURCE mappedResource;
+	_deviceManager.ImmediateContext()->Map(_lightIndicesList.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	PointLight *pointLightGPUBufferPtr = static_cast<PointLight *>(mappedResource.pData);
+
+	Scene *curScene = &_scenes[AppSettings::CurrentScene];
+	PointLight *pointLightPtr = curScene->getPointLightPtr();
+	memcpy(pointLightGPUBufferPtr, pointLightPtr, sizeof(PointLight) * curScene->getNumPointLights());
+	_deviceManager.ImmediateContext()->Unmap(_lightIndicesList.Buffer, 0);
+}
+
+void Realtime_GI::AssignLightAndUploadClusters()
+{
+
 }
 
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
