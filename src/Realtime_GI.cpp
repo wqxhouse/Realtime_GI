@@ -832,7 +832,7 @@ void Realtime_GI::RenderHUD()
     _spriteRenderer.RenderText(_font, vsyncText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));
 
 	BBox sceneBoundingBox = _scenes[AppSettings::CurrentScene].getSceneBoundingBox();
-	std::wstring sceneBoundDebugText =
+	/*std::wstring sceneBoundDebugText =
 		L"Scene Bound Max: "
 		+ std::to_wstring(sceneBoundingBox.Max.x) + L"  "
 		+ std::to_wstring(sceneBoundingBox.Max.y) + L"  "
@@ -842,8 +842,8 @@ void Realtime_GI::RenderHUD()
 		+ std::to_wstring(sceneBoundingBox.Min.y) + L"  "
 		+ std::to_wstring(sceneBoundingBox.Min.z);
 
-	transform._42 += 25.0f;
-	_spriteRenderer.RenderText(_font, sceneBoundDebugText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));
+		transform._42 += 25.0f;
+		_spriteRenderer.RenderText(_font, sceneBoundDebugText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));*/
 
     Profiler::GlobalProfiler.EndFrame(_spriteRenderer, _font);
 

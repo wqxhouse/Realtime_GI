@@ -27,6 +27,9 @@ Scene::Scene()
 	_numPointLights = 0;
 	_sceneBoundGenerated = false;
 
+	_sceneWSAABB_staticObj.Max = XMFLOAT3(0, 0, 0);
+	_sceneWSAABB_staticObj.Min = XMFLOAT3(0, 0, 0);
+
 	_updateFunc = NULL;
 }
 

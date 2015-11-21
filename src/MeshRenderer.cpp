@@ -606,6 +606,8 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 {
     PIXEvent event(L"Mesh Rendering");
 
+	
+
     // Set states
     float blendFactor[4] = {1, 1, 1, 1};
     context->OMSetBlendState(_blendStates.BlendDisabled(), blendFactor, 0xFFFFFFFF);
@@ -1007,4 +1009,30 @@ void MeshRenderer::RenderShadowMap(ID3D11DeviceContext* context, const Camera& c
             renderTargets[i]->Release();
     if(depthStencil != NULL)
         depthStencil->Release();
+}
+
+void MeshRenderer::DoFrustumTests(const Camera& camera, bool ignoreNearZ, MeshData& mesh)
+{
+	mesh.FrustumTests.clear();
+	mesh.NumSuccessfulTests = 0;
+
+	Frustum frustum;
+	ComputeFrustum(camera.ViewProjectionMatrix().ToSIMD(), frustum);
+
+	for (uint32 i = 0; i < mesh.BoundingSpheres.size(); ++i)
+	{
+		const BSphere& sphere = mesh.BoundingSpheres[i];
+		uint32 test = TestFrustumSphere(frustum, sphere, ignoreNearZ);
+		mesh.FrustumTests.push_back(test);
+		mesh.NumSuccessfulTests += test;
+	}
+}
+
+void MeshRenderer::DoSceneFrustumTests(const Camera &camera)
+{
+	for (uint64 i = 0; i < _scene->getNumStaticOpaqueObjects(); i++)
+	{
+		SceneObject *obj = &_scene->getStaticOpaqueObjectsPtr()[i];
+		
+	}
 }

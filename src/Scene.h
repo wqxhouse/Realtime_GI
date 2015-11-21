@@ -12,7 +12,6 @@ using namespace SampleFramework11;
 
 struct MeshData
 {
-	// Model* Model;
 	std::vector<BSphere> BoundingSpheres;
 	std::vector<BBox> BoundingBoxes;
 	std::vector<uint32> FrustumTests;
@@ -21,7 +20,6 @@ struct MeshData
 	MeshData() : NumSuccessfulTests(0) {}
 	// Model(NULL), NumSuccessfulTests(0) {}
 };
-
 
 struct SceneObject
 {
@@ -154,11 +152,11 @@ private:
 	SceneObject _dynamicOpaqueObjects[MAX_DYNAMIC_OBJECTS];
 
 	BBox _staticOpaqueObjectsBBoxes[MAX_STATIC_OBJECTS];
-	BBox _dynamicOpaqueObjectsBBoxes[MAX_STATIC_OBJECTS];
+	BBox _dynamicOpaqueObjectsBBoxes[MAX_DYNAMIC_OBJECTS];
 	
 	// Mainly used for frustum culling
 	BSphere _staticOpaqueObjectsBSpheres[MAX_STATIC_OBJECTS];
-	BSphere _dynamicOpaqueObjectsBSpheres[MAX_STATIC_OBJECTS];
+	BSphere _dynamicOpaqueObjectsBSpheres[MAX_DYNAMIC_OBJECTS];
 
 	BBox _sceneWSAABB_staticObj;
 

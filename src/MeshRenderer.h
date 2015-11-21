@@ -125,6 +125,10 @@ protected:
     void GenAndCacheMeshInputLayout(const Model* model);
 	void GenMeshShaderMap(const Model *model);
 
+	// Performs frustum/sphere intersection tests for all MeshPart's
+	void DoFrustumTests(const Camera& camera, bool ignoreNearZ, MeshData& mesh);
+	void DoSceneFrustumTests(const Camera &camera);
+
 
     ID3D11DevicePtr _device;
 
