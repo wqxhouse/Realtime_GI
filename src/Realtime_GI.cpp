@@ -95,7 +95,7 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	scene->Initialize(device);
 
 	Model *m = scene->addModel(ModelPaths[0]);
-	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 0, 0), Quaternion());
+	scene->addStaticOpaqueObject(m, 1.0f, Float3(0, 3, 0), Quaternion());
 	//scene->addDynamicOpaqueBoxObject(AppSettings::BoxMaxX - AppSettings::BoxMinX, 
 		//float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ), Quaternion());
 	_numScenes++;
@@ -393,7 +393,7 @@ void Realtime_GI::RenderSceneCubemaps()
 	//_cubemapGenerator.SetPosition(float3(0.5f, 0.5f, 0.5f));//!
 	_cubemapGenerator.SetPosition(float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ));
 	_cubemapGenerator.Create(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox);
-	//_cubemapGenerator.RenderPrefilterCubebox(_deviceManager, _globalTransform, &_skybox);
+	_cubemapGenerator.RenderPrefilterCubebox(_deviceManager, &_meshRenderer, _globalTransform, _envMapSH, _jitterOffset, &_skybox);
 	_meshRenderer.SetCubemapCapture(false);
 }
 
@@ -445,9 +445,11 @@ void Realtime_GI::RenderScene()
 
     SetViewport(context, _colorTarget.Width, _colorTarget.Height);
 
-	_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
+	/*_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
+	context->GenerateMips(cubemapRenderTarget.SRView);*/
+
+	_cubemapGenerator.GetPreFilterTargetViews(cubemapRenderTarget);
 	context->GenerateMips(cubemapRenderTarget.SRView);
-	//_cubemapGenerator.GetPreFilterTargetViews(cubemapRenderTarget);
 
     float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
     context->ClearRenderTargetView(_colorTarget.RTView, clearColor);

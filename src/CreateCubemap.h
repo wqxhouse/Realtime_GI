@@ -38,7 +38,8 @@ public:
 	void GetPreFilterTargetViews(RenderTarget2D &prefilterTarget);
 	void Create(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
 		const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox);
-	void RenderPrefilterCubebox(const DeviceManager &deviceManager, const Float4x4 &sceneTransform, Skybox *skybox);
+	void RenderPrefilterCubebox(const DeviceManager &deviceManager, MeshRenderer *meshRenderer,
+		const Float4x4 &sceneTransform,	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox);
 
 	const PerspectiveCamera &GetCubemapCamera();
 
@@ -52,6 +53,7 @@ private:
 	RenderTarget2D cubemapTarget;
 	DepthStencilBuffer cubemapDepthTarget;
 	RenderTarget2D prefilterCubemapTarget;
+	DepthStencilBuffer prefilterDepthTarget;
 	Float3 position;
 
 	ID3D11InputLayoutPtr inputLayout;
@@ -78,6 +80,8 @@ private:
 	struct VSConstant
 	{
 		Float4x4 world;
+		Float4Align Float4x4 View;
+		Float4Align Float4x4 WorldViewProjection;
 	};
 
 	static const uint32 ShadowAnisotropy = 16;

@@ -169,7 +169,7 @@ namespace AppSettings
         LightColor.Initialize(tweakBar, "LightColor", "Scene Controls", "Light Color", "The color of the light", Float3(20.0000f, 16.0000f, 10.0000f), true, 0.0000f, 20.0000f, 0.1000f, ColorUnit::None);
         Settings.AddSetting(&LightColor);
 
-        EnableDirectLighting.Initialize(tweakBar, "EnableDirectLighting", "Scene Controls", "Enable Direct Lighting", "Enables direct lighting", true);
+        EnableDirectLighting.Initialize(tweakBar, "EnableDirectLighting", "Scene Controls", "Enable Direct Lighting", "Enables direct lighting", false);
         Settings.AddSetting(&EnableDirectLighting);
 
         EnableAmbientLighting.Initialize(tweakBar, "EnableAmbientLighting", "Scene Controls", "Enable Ambient Lighting", "Enables ambient lighting from the environment", true);
@@ -178,7 +178,7 @@ namespace AppSettings
         RenderBackground.Initialize(tweakBar, "RenderBackground", "Scene Controls", "Render Background", "", true);
         Settings.AddSetting(&RenderBackground);
 
-        EnableShadows.Initialize(tweakBar, "EnableShadows", "Scene Controls", "Enable Shadows", "", true);
+        EnableShadows.Initialize(tweakBar, "EnableShadows", "Scene Controls", "Enable Shadows", "", false);
         Settings.AddSetting(&EnableShadows);
 
         EnableNormalMaps.Initialize(tweakBar, "EnableNormalMaps", "Scene Controls", "Enable Normal Maps", "", true);
@@ -196,7 +196,7 @@ namespace AppSettings
         Roughness.Initialize(tweakBar, "Roughness", "Scene Controls", "Roughness", "Specular roughness parameter for the material", 0.1000f, 0.0010f, 1.0000f, 0.0010f, ConversionMode::Square, 1.0000f);
         Settings.AddSetting(&Roughness);
 
-        SpecularIntensity.Initialize(tweakBar, "SpecularIntensity", "Scene Controls", "Specular Intensity", "Specular intensity parameter for the material", 0.0500f, 0.0000f, 1.0000f, 0.0010f, ConversionMode::None, 1.0000f);
+        SpecularIntensity.Initialize(tweakBar, "SpecularIntensity", "Scene Controls", "Specular Intensity", "Specular intensity parameter for the material", 1, 0.0000f, 1.0000f, 0.0010f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&SpecularIntensity);
 
         EmissiveIntensity.Initialize(tweakBar, "EmissiveIntensity", "Scene Controls", "Emissive Intensity", "Emissive parameter for the material", 0.0000f, 0.0000f, 1.0000f, 0.0010f, ConversionMode::None, 1.0000f);

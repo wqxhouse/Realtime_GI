@@ -30,6 +30,8 @@ void CreateCubemap::Initialize(ID3D11Device *device, uint32 numMipLevels, uint32
 		0, 6, TRUE);
 	prefilterCubemapTarget.Initialize(device, CubemapWidth, CubemapHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, 8,
 		1, 0, TRUE, FALSE, 6, TRUE);
+	prefilterDepthTarget.Initialize(device, CubemapWidth, CubemapHeight, DXGI_FORMAT_D32_FLOAT, true, 1,
+		0, 6, TRUE);
 
 	_convoluteVS = CompileVSFromFile(device, L"PrefilterCubemap.hlsl", "VS", "vs_5_0");
 	_convolutePS = CompilePSFromFile(device, L"PrefilterCubemap.hlsl", "PS", "ps_5_0");
@@ -85,8 +87,8 @@ void CreateCubemap::GenAndCacheConvoluteSphereInputLayout(const DeviceManager &d
 	}
 }
 
-void CreateCubemap::RenderPrefilterCubebox(const DeviceManager &deviceManager, 
-	const Float4x4 &sceneTransform, Skybox *skybox)
+void CreateCubemap::RenderPrefilterCubebox(const DeviceManager &deviceManager, MeshRenderer *meshRenderer,
+	const Float4x4 &sceneTransform, const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox)
 {
 	PIXEvent event(L"Prefilter Cubebox");
 	ID3D11DeviceContext *context = deviceManager.ImmediateContext();
@@ -107,6 +109,10 @@ void CreateCubemap::RenderPrefilterCubebox(const DeviceManager &deviceManager,
 	SetViewport(context, CubemapWidth, CubemapHeight);
 	for (int cubeboxFaceIndex = 0; cubeboxFaceIndex < 6; cubeboxFaceIndex++)
 	{
+		cubemapCamera.SetLookAt(CubemapCameraStruct[cubeboxFaceIndex].Eye,
+			CubemapCameraStruct[cubeboxFaceIndex].LookAt,
+			CubemapCameraStruct[cubeboxFaceIndex].Up);
+
 		ID3D11RenderTargetView *renderTarget[1] = { prefilterCubemapTarget.RTVArraySlices.at(cubeboxFaceIndex) };
 		context->OMSetRenderTargets(1, renderTarget, nullptr);
 
@@ -118,12 +124,24 @@ void CreateCubemap::RenderPrefilterCubebox(const DeviceManager &deviceManager,
 
 		context->PSSetSamplers(0, 3, sampStates);
 
+		// Set shaders
+		context->DSSetShader(nullptr, nullptr, 0);
+		context->HSSetShader(nullptr, nullptr, 0);
+		context->GSSetShader(nullptr, nullptr, 0);
+
 		//Set Constant Variables
 		_VSConstant.Data.world = sceneTransform;
+		_VSConstant.Data.View = meshRenderer->_meshVSConstants.Data.View;
+		_VSConstant.Data.WorldViewProjection = meshRenderer->_meshVSConstants.Data.WorldViewProjection;
+		_VSConstant.ApplyChanges(context);
+		_VSConstant.SetVS(context, 0);
 
 		for (uint64 meshIdx = 0; meshIdx < cubemapSphere->Meshes().size(); ++meshIdx)
 		{
 			const Mesh& mesh = cubemapSphere->Meshes()[meshIdx];
+
+			context->VSSetShader(_convoluteVS, nullptr, 0);
+			context->PSSetShader(_convolutePS, nullptr, 0);
 
 			ID3D11Buffer *vertexBuffers[1] = { mesh.VertexBuffer() };
 			UINT vertexStrides[1] = { mesh.VertexStride() };
@@ -140,15 +158,14 @@ void CreateCubemap::RenderPrefilterCubebox(const DeviceManager &deviceManager,
 				const MeshMaterial& material = cubemapSphere->Materials()[part.MaterialIdx];
 
 				//Set ShaderResourse
-				ID3D11ShaderResourceView* cubemapResourse[1];
-				cubemapResourse[0] = NULL;
-				cubemapResourse[0] = cubemapTarget.SRView;
+				ID3D11ShaderResourceView* cubemapResourse[1] = { cubemapTarget.SRView };
 
 				context->PSSetShaderResources(0, _countof(cubemapResourse), cubemapResourse);
 				context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
 			}
 		}
-		/*skybox->RenderEnvironmentMap(context, cubemapTarget.SRView, cubemapCamera.ViewMatrix(),
+		/*meshRenderer->Render(context, cubemapCamera, sceneTransform, cubemapTarget.SRView, environmentMapSH, jitterOffset);
+		skybox->RenderEnvironmentMap(context, cubemapTarget.SRView, cubemapCamera.ViewMatrix(),
 			cubemapCamera.ProjectionMatrix(), Float3(std::exp2(AppSettings::ExposureScale)));*/
 	}
 
@@ -171,6 +188,9 @@ void CreateCubemap::Create(const DeviceManager &deviceManager, MeshRenderer *mes
 	{
 		ID3D11RenderTargetViewPtr RTView = cubemapTarget.RTVArraySlices.at(cubeboxFaceIndex);
 		ID3D11DepthStencilViewPtr DSView = cubemapDepthTarget.ArraySlices.at(cubeboxFaceIndex);
+		/*ID3D11RenderTargetViewPtr PreRTView = prefilterCubemapTarget.RTVArraySlices.at(cubeboxFaceIndex);
+		ID3D11DepthStencilViewPtr PreDSView = prefilterDepthTarget.ArraySlices.at(cubeboxFaceIndex);*/
+
 		cubemapCamera.SetLookAt(CubemapCameraStruct[cubeboxFaceIndex].Eye,
 			CubemapCameraStruct[cubeboxFaceIndex].LookAt,
 			CubemapCameraStruct[cubeboxFaceIndex].Up);
@@ -191,10 +211,17 @@ void CreateCubemap::Create(const DeviceManager &deviceManager, MeshRenderer *mes
 		meshRenderer->RenderShadowMap(context, cubemapCamera, sceneTransform);
 
 		context->OMSetRenderTargets(1, renderTarget, DSView);
-		meshRenderer->Render(context, cubemapCamera, sceneTransform, environmentMap, environmentMapSH, jitterOffset);
+		//meshRenderer->Render(context, cubemapCamera, sceneTransform, environmentMap, environmentMapSH, jitterOffset);
 
 		skybox->RenderEnvironmentMap(context, environmentMap, cubemapCamera.ViewMatrix(),
 			cubemapCamera.ProjectionMatrix(), Float3(std::exp2(AppSettings::ExposureScale)));
+
+		/*renderTarget[0] = PreRTView;
+		context->OMSetRenderTargets(1, renderTarget, PreDSView);
+		meshRenderer->Render(context, cubemapCamera, sceneTransform, cubemapTarget.SRView, environmentMapSH, jitterOffset);
+
+		skybox->RenderEnvironmentMap(context, cubemapTarget.SRView, cubemapCamera.ViewMatrix(),
+			cubemapCamera.ProjectionMatrix(), Float3(std::exp2(AppSettings::ExposureScale)));*/
 
 		renderTarget[0] = nullptr;
 		context->OMSetRenderTargets(1, renderTarget, nullptr);

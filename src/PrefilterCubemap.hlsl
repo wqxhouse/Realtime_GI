@@ -3,6 +3,8 @@
 cbuffer VSConstant : register(b0)
 {
 	float4x4 World;
+	float4x4 View;
+	float4x4 WorldViewProjection;
 }
 
 TextureCube<float3> Cubemap : register(t0);
@@ -16,27 +18,32 @@ struct VSInput
 
 struct VSOutput
 {
+	float3 Normal		:	NORMALWS;
 	float4 Position		:	SV_POSITION;
 
-	float3 Normal		:	NORMAL;
 	//float3 PositionWS	:	POSITIONWS;
 };
 
 struct PSInput
 {
-	float3 Normal	:	NORMAL;
+	float3 Normal	:	NORMALWS;
 };
 
 struct PSOutput
 {
-	float4 Color	:	SV_Target0;
+	float4 Color;
 };
 
 VSOutput VS(in VSInput In)
 {
 	VSOutput Out;
-	Out.Normal = normalize(mul(In.NormalOS, (float3x3)World)).xyz;
-	Out.Position = float4 ( In.PositionOS, 1.0f);
+
+	// Calc the world-space position
+	//Out.PositionWS = mul(float4(In.PositionOS, 1.0f), World).xyz;
+
+	Out.Normal = In.NormalOS;//normalize(mul(In.NormalOS, (float3x3)World)).xyz;
+	Out.Position = float4(In.PositionOS, 1.0f);//mul(float4(In.PositionOS, 1.0f), WorldViewProjection);
+
 	return Out;
 }
 
@@ -82,7 +89,7 @@ float3 PrefilterEnvMap(float Roughness, float3 R){
 	float3 N = R;
 	float3 V = R;
 
-	float3 PrefilteredColor = 0;
+	float3 PrefilteredColor = float3(0, 0, 0);
 
 	const uint NumSamples = 1024;
 	float TotalWeight = 0;
@@ -106,7 +113,7 @@ float3 PrefilterEnvMap(float Roughness, float3 R){
 }
 
 
-PSOutput PS(in PSInput input)
+PSOutput PS(in PSInput input)	:	SV_TARGET0
 {
 	PSOutput output;
 	float4 color;
@@ -116,13 +123,13 @@ PSOutput PS(in PSInput input)
 
 	for (uint mipLevel = 0; mipLevel < numMips; ++mipLevel)
 	{
-		//Calcualte Roughness of every mip level
+		//Calculate Roughness of every mip level
 		float roughness = pow(mipLevel / (numMips - 1.0f) + 0.01f, 2);
 		color = float4(PrefilterEnvMap(roughness, input.Normal), 1.0f);
 	}
 
 	output.Color = color;
-	output.Color = float4(1, 0, 0, 1);
+	//output.Color = float4(1, 0, 0, 1);
 	
 	return output;
 }

@@ -131,6 +131,7 @@ protected:
     ID3D11ShaderResourceViewPtr _specularLookupTexture;
 
 	bool32 _drawingCubemap;
+	bool32 _convoluteCubemap;
 
 	Float3 probePosWS;
 	Float3 maxbox;
@@ -190,6 +191,7 @@ protected:
         uint32 NumSamples;
     };
 
+	public:
     ConstantBuffer<MeshVSConstants> _meshVSConstants;
     ConstantBuffer<MeshPSConstants> _meshPSConstants;
 	//ConstantBuffer<MeshPSConstants> 

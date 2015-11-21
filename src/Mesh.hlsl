@@ -502,7 +502,7 @@ PSOutput PS(in PSInput input)
         float fresnel = metallic * AB.x + AB.y;
         fresnel *= saturate(metallic * 100.0f);
 	
-		#if CreateCubemap_
+		#if ConvoluteCube_
 			lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel * PrefilterEnvMap(roughness, reflectWS);
 		#else
 			lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;
@@ -524,6 +524,10 @@ PSOutput PS(in PSInput input)
 		prevPositionSS *= RTSize;
 		output.Velocity = input.PositionSS.xy - prevPositionSS;
 		output.Velocity -= JitterOffset;
+	#endif
+
+	#if ConvoluteCube_
+		output.Color = float4(1, 0, 0, 1);
 	#endif
 
     return output;
