@@ -197,6 +197,11 @@ void Realtime_GI::CreateRenderTargets()
 		_colorTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, NumSamples, Quality);
 		_depthBuffer.Initialize(device, width, height, DXGI_FORMAT_D32_FLOAT, true, NumSamples, Quality);
 		_velocityTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16_FLOAT, true, NumSamples, Quality);
+
+		if (_velocityResolveTarget.RTView == nullptr)
+		{
+			_velocityResolveTarget.Initialize(device, width, height, _velocityTarget.Format);
+		}
 	}
 	else if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
 	{
