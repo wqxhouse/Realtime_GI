@@ -24,6 +24,7 @@
 
 using namespace SampleFramework11;
 
+
 struct BakeData;
 class MeshRenderer
 {

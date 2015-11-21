@@ -94,7 +94,7 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	/// Scene 1 /////////////////////////////////////////////////////////////
 	_scenes[_numScenes] = Scene();
 	scene = &_scenes[_numScenes];
-	scene->Initialize(device);
+	scene->Initialize(device, _deviceManager.ImmediateContext());
 
 	Model *m = scene->addModel(ModelPaths[0]);
 	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 0, 0), Quaternion());
@@ -105,7 +105,7 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	/// Scene 2 /////////////////////////////////////////////////////////////
 	_scenes[_numScenes] = Scene();
 	scene = &_scenes[_numScenes];
-	scene->Initialize(device);
+	scene->Initialize(device, _deviceManager.ImmediateContext());
 
 	scene->addDynamicOpaqueBoxObject(1.0f, Float3(-1.0f, 0.0f, 0.0f), Quaternion(0.0f, 1.0f, 0.0f, 0.3f));
 	scene->addDynamicOpaqueBoxObject(1.5f, Float3(0.0f, 0.0f, 0.0f), Quaternion(-0.7f, 1.0f, 0.0f, 0.3f));
@@ -115,7 +115,7 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	/// Scene 3 /////////////////////////////////////////////////////////////
 	_scenes[_numScenes] = Scene();
 	scene = &_scenes[_numScenes];
-	scene->Initialize(device);
+	scene->Initialize(device, _deviceManager.ImmediateContext());
 
 	scene->addDynamicOpaquePlaneObject(10.0f, Float3(0.0f, 0.0f, 0.0f), Quaternion(0.0f, 0.0f, 0.0f, 1.0f));
 	_numScenes++;
@@ -289,6 +289,8 @@ void Realtime_GI::Update(const Timer& timer)
 {
     AppSettings::UpdateUI();
 
+	_scenes[AppSettings::CurrentScene].Update(timer);
+
     MouseState mouseState = MouseState::GetMouseState(_window);
     KeyboardState kbState = KeyboardState::GetKeyboardState(_window);
 
@@ -396,6 +398,8 @@ void Realtime_GI::Update(const Timer& timer)
 	_globalTransform = orientation.ToFloat4x4() *
 		Float4x4::ScaleMatrix(_scenes[AppSettings::CurrentScene].getSceneScale()) *
 		Float4x4::TranslationMatrix(_scenes[AppSettings::CurrentScene].getSceneTranslation());
+
+
 }
 
 void Realtime_GI::RenderAA()
@@ -812,6 +816,20 @@ void Realtime_GI::RenderHUD()
     wstring vsyncText(L"VSYNC (V): ");
     vsyncText += _deviceManager.VSYNCEnabled() ? L"Enabled" : L"Disabled";
     _spriteRenderer.RenderText(_font, vsyncText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));
+
+	BBox sceneBoundingBox = _scenes[AppSettings::CurrentScene].getSceneBoundingBox();
+	std::wstring sceneBoundDebugText =
+		L"Scene Bound Max: "
+		+ std::to_wstring(sceneBoundingBox.Max.x) + L"  "
+		+ std::to_wstring(sceneBoundingBox.Max.y) + L"  "
+		+ std::to_wstring(sceneBoundingBox.Max.z) + L"  "
+		+ L"\nScene Bound Min: "
+		+ std::to_wstring(sceneBoundingBox.Min.x) + L"  "
+		+ std::to_wstring(sceneBoundingBox.Min.y) + L"  "
+		+ std::to_wstring(sceneBoundingBox.Min.z);
+
+	transform._42 += 25.0f;
+	_spriteRenderer.RenderText(_font, sceneBoundDebugText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));
 
     Profiler::GlobalProfiler.EndFrame(_spriteRenderer, _font);
 
