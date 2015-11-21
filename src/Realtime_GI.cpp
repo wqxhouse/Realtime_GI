@@ -471,11 +471,20 @@ void Realtime_GI::RenderAA()
 void Realtime_GI::RenderSceneCubemaps()
 {
 	_meshRenderer.SetCubemapCapture(true);
+	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
+	{
+		_meshRenderer.SetDrawGBuffer(false);
+	}
 
 	// TODO: make a separate cubemap manager to set different locations
 	_cubemapGenerator.SetPosition(float3(0.0f, 0.0f, 0.0f));
 	_cubemapGenerator.Create(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox);
 	_meshRenderer.SetCubemapCapture(false);
+
+	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
+	{
+		_meshRenderer.SetDrawGBuffer(true);
+	}
 }
 
 void Realtime_GI::Render(const Timer& timer)
