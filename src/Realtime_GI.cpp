@@ -197,6 +197,11 @@ void Realtime_GI::CreateRenderTargets()
 		_colorTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, NumSamples, Quality);
 		_depthBuffer.Initialize(device, width, height, DXGI_FORMAT_D32_FLOAT, true, NumSamples, Quality);
 		_velocityTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16_FLOAT, true, NumSamples, Quality);
+
+		if (_velocityResolveTarget.RTView == nullptr)
+		{
+			_velocityResolveTarget.Initialize(device, width, height, _velocityTarget.Format);
+		}
 	}
 	else if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
 	{
@@ -475,11 +480,20 @@ void Realtime_GI::RenderAA()
 void Realtime_GI::RenderSceneCubemaps()
 {
 	_meshRenderer.SetCubemapCapture(true);
+	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
+	{
+		_meshRenderer.SetDrawGBuffer(false);
+	}
 
 	// TODO: make a separate cubemap manager to set different locations
 	_cubemapGenerator.SetPosition(float3(0.0f, 0.0f, 0.0f));
 	_cubemapGenerator.Create(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox);
 	_meshRenderer.SetCubemapCapture(false);
+
+	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
+	{
+		_meshRenderer.SetDrawGBuffer(true);
+	}
 }
 
 void Realtime_GI::Render(const Timer& timer)
