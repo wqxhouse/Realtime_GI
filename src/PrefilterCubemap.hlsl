@@ -11,13 +11,15 @@ SamplerState LinearSampler : register(s0);
 struct VSInput
 {
 	float3 PositionOS	:	POSITION;
-	float3 Normal		:	NORMAL;
+	float3 NormalOS		:	NORMAL;
 };
 
 struct VSOutput
 {
-	float4 Position	:	SV_POSITION;
-	float3 Normal	:	NORMAL;
+	float4 Position		:	SV_POSITION;
+
+	float3 Normal		:	NORMAL;
+	//float3 PositionWS	:	POSITIONWS;
 };
 
 struct PSInput
@@ -33,7 +35,7 @@ struct PSOutput
 VSOutput VS(in VSInput In)
 {
 	VSOutput Out;
-	Out.Normal = normalize(mul(In.Normal, (float3x3)World)).xyz;
+	Out.Normal = normalize(mul(In.NormalOS, (float3x3)World)).xyz;
 	Out.Position = float4 ( In.PositionOS, 1.0f);
 	return Out;
 }

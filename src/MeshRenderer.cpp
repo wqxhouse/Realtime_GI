@@ -659,7 +659,7 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     _meshPSConstants.ApplyChanges(context);
     _meshPSConstants.SetPS(context, 0);
 	_meshPSConstants.Data.MaxBox = maxbox;
-	_meshPSConstants.Data.MinBox = minbox;
+	_meshPSConstants.Data.MinBox = minbox; 
 
     // Set shaders
     context->DSSetShader(nullptr, nullptr, 0);
