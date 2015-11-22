@@ -6,7 +6,7 @@ int Scene::_numTotalModelsShared = 0;
 Model *Scene::_boxModel = nullptr;
 Model *Scene::_planeModel = nullptr;
 Model Scene::_models[Scene::MAX_MODELS];
-MeshData Scene::_modelsData[Scene::MAX_MODELS];
+ModelPartsBound Scene::_modelsData[Scene::MAX_MODELS];
 //SceneObject Scene::_staticOpaqueObjects[Scene::MAX_STATIC_OBJECTS];
 //SceneObject Scene::_dynamicOpaqueObjects[Scene::MAX_DYNAMIC_OBJECTS];
 //Float4x4 Scene::_objectBases[Scene::MAX_OBJECT_MATRICES];
@@ -69,7 +69,7 @@ Model *Scene::addBoxModel()
 	if (!_boxModel)
 	{
 		_models[_numTotalModelsShared++].GenerateBoxScene(_device);
-		MeshData & data = (_modelsData[_numTotalModelsShared - 1] = MeshData());
+		ModelPartsBound & data = (_modelsData[_numTotalModelsShared - 1] = ModelPartsBound());
 		ComputeModelBounds(_device, _context, &_models[_numTotalModelsShared - 1], data.BoundingSpheres, data.BoundingBoxes);
 		_boxModel = &_models[_numTotalModelsShared - 1];
 	}
@@ -81,7 +81,7 @@ Model *Scene::addPlaneModel()
 	if (!_planeModel)
 	{
 		_models[_numTotalModelsShared++].GeneratePlaneScene(_device, 1.0, Float3(), Quaternion(), L"", L"Bricks_NML.dds");
-		MeshData & data = (_modelsData[_numTotalModelsShared - 1] = MeshData());
+		ModelPartsBound & data = (_modelsData[_numTotalModelsShared - 1] = ModelPartsBound());
 		ComputeModelBounds(_device, _context, &_models[_numTotalModelsShared - 1], data.BoundingSpheres, data.BoundingBoxes);
 		_planeModel = &_models[_numTotalModelsShared - 1];
 	}
@@ -106,21 +106,21 @@ Model *Scene::addModel(const std::wstring &modelPath)
 	if (ext == L"meshdata")
 	{
 		_models[_numTotalModelsShared].CreateFromMeshData(_device, fullPath.c_str());
-		MeshData & data = (_modelsData[_numTotalModelsShared] = MeshData());
+		ModelPartsBound & data = (_modelsData[_numTotalModelsShared] = ModelPartsBound());
 		ComputeModelBounds(_device, _context, &_models[_numTotalModelsShared], data.BoundingSpheres, data.BoundingBoxes);
 		_numTotalModelsShared++;
 	}
 	else if (ext == L"sdkmesh")
 	{
 		_models[_numTotalModelsShared].CreateFromSDKMeshFile(_device, fullPath.c_str());
-		MeshData & data = (_modelsData[_numTotalModelsShared] = MeshData());
+		ModelPartsBound & data = (_modelsData[_numTotalModelsShared] = ModelPartsBound());
 		ComputeModelBounds(_device, _context, &_models[_numTotalModelsShared], data.BoundingSpheres, data.BoundingBoxes);
 		_numTotalModelsShared++;
 	}
 	else
 	{
 		_models[_numTotalModelsShared].CreateWithAssimp(_device, fullPath.c_str());
-		MeshData & data = (_modelsData[_numTotalModelsShared] = MeshData());
+		ModelPartsBound & data = (_modelsData[_numTotalModelsShared] = ModelPartsBound());
 		ComputeModelBounds(_device, _context, &_models[_numTotalModelsShared], data.BoundingSpheres, data.BoundingBoxes);
 		_numTotalModelsShared++;
 	}
@@ -129,6 +129,56 @@ Model *Scene::addModel(const std::wstring &modelPath)
 	_modelCache.insert(std::make_pair(fullPath, &_models[_numTotalModelsShared - 1]));
 
 	return &_models[_numTotalModelsShared - 1];
+}
+
+void Scene::genSceneObjectBounds(uint64 objTypeflag, uint64 sceneObjIndex, uint64 modelIndex)
+{
+	bool isstatic = (objTypeflag & STATIC_OBJ) > 0;
+	bool isopaque = (objTypeflag & OPAQUE_OBJ) > 0;
+	SceneObject *sceneObj = nullptr;
+	SceneObjectBound *sceneObjBound = nullptr;
+	ModelPartsBound *sceneModelPartsBound = nullptr;
+	BBox *sceneObjBBox = nullptr;
+	BSphere *sceneObjBSphere = nullptr;
+
+	if (isstatic)
+	{
+		if (isopaque)
+		{
+			sceneObj = &_staticOpaqueObjects[sceneObjIndex];
+			sceneObjBound = &_sceneStaticOpaqueObjectBounds[sceneObjIndex];
+			sceneObjBBox = &_staticOpaqueObjectsBBoxes[sceneObjIndex];
+			sceneObjBSphere = &_staticOpaqueObjectsBSpheres[sceneObjIndex];
+			sceneModelPartsBound = &_sceneStaticOpaqueObjectModelPartsBounds[sceneObjIndex];
+		}
+	}
+	else
+	{	
+		if (isopaque)
+		{
+			sceneObj = &_dynamicOpaqueObjects[sceneObjIndex];
+			sceneObjBound = &_sceneDynamicOpaqueObjectBounds[sceneObjIndex];
+			sceneObjBBox = &_dynamicOpaqueObjectsBBoxes[sceneObjIndex];
+			sceneObjBSphere = &_dynamicOpaqueObjectsBSpheres[sceneObjIndex];
+			sceneModelPartsBound = &_sceneDynamicOpaqueObjectModelPartsBounds[sceneObjIndex];
+		}
+	}
+
+	// TODO: cache merge bounds of the same model
+	BBox bbox = MergeBoundingBoxes(_modelsData[modelIndex].BoundingBoxes);
+	BSphere bsphere = MergeBoundingSpheres(_modelsData[modelIndex].BoundingSpheres);
+	*sceneObjBBox = GetTransformedBBox(bbox, *sceneObj->base);
+	*sceneObjBSphere = GetTransformedBSphere(bsphere, *sceneObj->base);
+
+	memcpy(sceneModelPartsBound, &_modelsData[modelIndex], sizeof(ModelPartsBound));
+
+	sceneObjBound->bbox = sceneObjBBox;
+	sceneObjBound->bsphere = sceneObjBSphere;
+	sceneObjBound->modelPartsBound = sceneModelPartsBound;
+	sceneObjBound->frustumTest = false;
+	sceneObjBound->originalModelPartsBound = &_modelsData[modelIndex];
+
+	transformSceneObjectModelPartsBounds(sceneObj);
 }
 
 SceneObject *Scene::addDynamicOpaqueBoxObject(float scale, const Float3 &pos, const Quaternion &rot)
@@ -144,19 +194,16 @@ SceneObject *Scene::addDynamicOpaqueBoxObject(float scale, const Float3 &pos, co
 
 	_objectBases[_numObjectBases] = createBase(scale, pos, rot);
 	_prevWVPs[_numPrevWVPs] = _objectBases[_numObjectBases];
+	_sceneStaticOpaqueObjectBounds[_numStaticOpaqueObjects] = SceneObjectBound();
 
 	SceneObject &obj = _dynamicOpaqueObjects[_numDynamicOpaqueObjects];
 	obj.base = &_objectBases[_numObjectBases];
 	obj.model = _boxModel;
-	obj.modelData = &_modelsData[modelIndex];
+	obj.bound = &_sceneDynamicOpaqueObjectBounds[_numDynamicOpaqueObjects];
 	obj.prevWVP = &_prevWVPs[_numPrevWVPs];
 	obj.id = _highestSceneObjId++;
 
-	// TODO: cache merge bounds of the same model
-	BBox bbox = MergeBoundingBoxes(obj.modelData->BoundingBoxes);
-	BSphere bsphere = MergeBoundingSpheres(obj.modelData->BoundingSpheres);
-	_dynamicOpaqueObjectsBBoxes[_numDynamicOpaqueObjects] = GetTransformedBBox(bbox, *obj.base);
-	_dynamicOpaqueObjectsBSpheres[_numDynamicOpaqueObjects] = GetTransformedBSphere(bsphere, *obj.base);
+	genSceneObjectBounds(DYNAMIC_OBJ | OPAQUE_OBJ, _numDynamicOpaqueObjects, modelIndex);
 
 	_numObjectBases++;
 	_numPrevWVPs++;
@@ -178,19 +225,17 @@ SceneObject *Scene::addDynamicOpaquePlaneObject(float scale, const Float3 &pos, 
 
 	_objectBases[_numObjectBases] = createBase(scale, pos, rot);
 	_prevWVPs[_numPrevWVPs] = _objectBases[_numObjectBases];
+	_sceneStaticOpaqueObjectBounds[_numStaticOpaqueObjects] = SceneObjectBound();
 
 	SceneObject &obj = _dynamicOpaqueObjects[_numDynamicOpaqueObjects];
 	obj.base = &_objectBases[_numObjectBases];
 	obj.model = _planeModel;
-	obj.modelData = &_modelsData[modelIndex];
+	obj.bound = &_sceneDynamicOpaqueObjectBounds[_numDynamicOpaqueObjects];
 	obj.prevWVP = &_prevWVPs[_numPrevWVPs];
 	obj.id = _highestSceneObjId++;
 
-	// TODO: cache merge bounds of the same model
-	BBox bbox = MergeBoundingBoxes(obj.modelData->BoundingBoxes);
-	BSphere bsphere = MergeBoundingSpheres(obj.modelData->BoundingSpheres);
-	_dynamicOpaqueObjectsBBoxes[_numDynamicOpaqueObjects] = GetTransformedBBox(bbox, *obj.base);
-	_dynamicOpaqueObjectsBSpheres[_numDynamicOpaqueObjects] = GetTransformedBSphere(bsphere, *obj.base);
+	
+	genSceneObjectBounds(DYNAMIC_OBJ | OPAQUE_OBJ, _numDynamicOpaqueObjects, modelIndex);
 
 	_numObjectBases++;
 	_numPrevWVPs++;
@@ -212,19 +257,16 @@ SceneObject *Scene::addStaticOpaqueObject(Model *model, float scale, const Float
 
 	_objectBases[_numObjectBases] = createBase(scale, pos, rot);
 	_prevWVPs[_numPrevWVPs] = _objectBases[_numObjectBases];
+	_sceneStaticOpaqueObjectBounds[_numStaticOpaqueObjects] = SceneObjectBound();
 
 	SceneObject &obj = _staticOpaqueObjects[_numStaticOpaqueObjects];
 	obj.base = &_objectBases[_numObjectBases];
 	obj.model = model;
-	obj.modelData = &_modelsData[modelIndex];
+	obj.bound = &_sceneStaticOpaqueObjectBounds[_numStaticOpaqueObjects];
 	obj.prevWVP = &_prevWVPs[_numPrevWVPs];
 	obj.id = _highestSceneObjId++;
 
-	// TODO: cache merge bounds of the same model
-	BBox bbox = MergeBoundingBoxes(obj.modelData->BoundingBoxes);
-	BSphere bsphere = MergeBoundingSpheres(obj.modelData->BoundingSpheres);
-	_staticOpaqueObjectsBBoxes[_numStaticOpaqueObjects] = GetTransformedBBox(bbox, *obj.base);
-	_staticOpaqueObjectsBSpheres[_numStaticOpaqueObjects] = GetTransformedBSphere(bsphere, *obj.base);
+	genSceneObjectBounds(STATIC_OBJ | OPAQUE_OBJ, _numStaticOpaqueObjects, modelIndex);
 
 	_numObjectBases++;
 	_numPrevWVPs++;
@@ -246,19 +288,16 @@ SceneObject *Scene::addDynamicOpaqueObject(Model *model, float scale, const Floa
 
 	_objectBases[_numObjectBases] = createBase(scale, pos, rot);
 	_prevWVPs[_numPrevWVPs] = _objectBases[_numObjectBases];
+	_sceneStaticOpaqueObjectBounds[_numStaticOpaqueObjects] = SceneObjectBound();
 
 	SceneObject &obj = _dynamicOpaqueObjects[_numDynamicOpaqueObjects];
 	obj.base = &_objectBases[_numObjectBases];
 	obj.model = model;
-	obj.modelData = &_modelsData[modelIndex];
+	obj.bound = &_sceneDynamicOpaqueObjectBounds[_numDynamicOpaqueObjects];
 	obj.prevWVP = &_prevWVPs[_numPrevWVPs];
 	obj.id = _highestSceneObjId++;
 
-	// TODO: cache merge bounds of the same model
-	BBox bbox = MergeBoundingBoxes(obj.modelData->BoundingBoxes);
-	BSphere bsphere = MergeBoundingSpheres(obj.modelData->BoundingSpheres);
-	_dynamicOpaqueObjectsBBoxes[_numDynamicOpaqueObjects] = GetTransformedBBox(bbox, *obj.base);
-	_dynamicOpaqueObjectsBSpheres[_numDynamicOpaqueObjects] = GetTransformedBSphere(bsphere, *obj.base);
+	genSceneObjectBounds(DYNAMIC_OBJ | OPAQUE_OBJ, _numDynamicOpaqueObjects, modelIndex);
 
 	_numObjectBases++;
 	_numPrevWVPs++;
@@ -320,6 +359,8 @@ void Scene::updateDynamicSceneObjectBounds()
 
 		_dynamicOpaqueObjectsBBoxes[_numDynamicOpaqueObjects] = GetTransformedBBox(*bbox, *obj->base);
 		_dynamicOpaqueObjectsBSpheres[_numDynamicOpaqueObjects] = GetTransformedBSphere(*bsphere, *obj->base);
+
+		transformSceneObjectModelPartsBounds(obj);
 	}
 }
 
@@ -341,3 +382,22 @@ BBox Scene::getSceneBoundingBox()
 	return _sceneWSAABB_staticObj;
 }
 
+void Scene::transformSceneObjectModelPartsBounds(SceneObject *obj)
+{
+	Float4x4 &transform = *obj->base;
+	ModelPartsBound *partsBound = obj->bound->originalModelPartsBound;
+	ModelPartsBound *dstPartsBound = obj->bound->modelPartsBound;
+
+	for (size_t i = 0; i < partsBound->BoundingSpheres.size(); i++)
+	{
+		BBox &orig_bbox = partsBound->BoundingBoxes[i];
+		BSphere &orig_bsphere = partsBound->BoundingSpheres[i];
+
+		BBox &dst_bbox = dstPartsBound->BoundingBoxes[i];
+		BSphere &dst_bsphere = dstPartsBound->BoundingSpheres[i];
+
+		dst_bbox = GetTransformedBBox(orig_bbox, transform);
+		dst_bsphere = GetTransformedBSphere(orig_bsphere, transform);
+	}
+	
+}

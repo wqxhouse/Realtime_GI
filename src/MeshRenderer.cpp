@@ -606,7 +606,7 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 {
     PIXEvent event(L"Mesh Rendering");
 
-	
+	DoSceneObjectsFrustumTests(camera, false);
 
     // Set states
     float blendFactor[4] = {1, 1, 1, 1};
@@ -670,6 +670,13 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 {
 	for (uint64 objIndex = 0; objIndex < numSceneObjs; objIndex++)
 	{
+		// Frustum culling on scene object bound
+		if (!sceneObjectsArr[objIndex].bound->frustumTest)
+		{
+			continue;
+		}
+
+		ModelPartsBound *partsBound = sceneObjectsArr[objIndex].bound->modelPartsBound;
 		Float4x4 worldMat = *sceneObjectsArr[objIndex].base * world;
 		Model *model = sceneObjectsArr[objIndex].model;
 
@@ -688,6 +695,14 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 		for (uint64 meshIdx = 0; meshIdx < model->Meshes().size(); ++meshIdx)
 		{
 			const Mesh& mesh = model->Meshes()[meshIdx];
+
+			if (partsBound->BoundingSpheres.size() == 1) // which means the mesh has only one part - which is the assimp-type mesh
+			{
+				if (!partsBound->FrustumTests[0])
+				{
+					continue;
+				}
+			}
 
 			// Set per mesh shaders
 			// TODO: sort by view depth
@@ -710,25 +725,29 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 			// Draw all parts
 			for (uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
 			{
-				const MeshPart& part = mesh.MeshParts()[partIdx];
-				const MeshMaterial& material = model->Materials()[part.MaterialIdx];
-
-				// Set the textures
-				// TODO : strip out unnecessary cases for unique
-				ID3D11ShaderResourceView* psTextures[] =
+				// Frustum culling on parts
+				if (partsBound->FrustumTests[partCount++])
 				{
-					material.DiffuseMap,
-					material.NormalMap,
-					_varianceShadowMap.SRView,
-					envMap,
-					_specularLookupTexture,
-					material.RoughnessMap, 
-					material.MetallicMap, 
-					material.EmissiveMap
-				};
+					const MeshPart& part = mesh.MeshParts()[partIdx];
+					const MeshMaterial& material = model->Materials()[part.MaterialIdx];
 
-				context->PSSetShaderResources(0, _countof(psTextures), psTextures);
-				context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
+					// Set the textures
+					// TODO : strip out unnecessary cases for unique
+					ID3D11ShaderResourceView* psTextures[] =
+					{
+						material.DiffuseMap,
+						material.NormalMap,
+						_varianceShadowMap.SRView,
+						envMap,
+						_specularLookupTexture,
+						material.RoughnessMap, 
+						material.MetallicMap, 
+						material.EmissiveMap
+					};
+
+					context->PSSetShaderResources(0, _countof(psTextures), psTextures);
+					context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
+				}
 			}
 		}
 	}
@@ -739,6 +758,8 @@ void MeshRenderer::RenderDepth(ID3D11DeviceContext* context, const Camera& camer
     const Float4x4& world, bool shadowRendering)
 {
     PIXEvent event(L"Mesh Depth Rendering");
+
+	DoSceneObjectsFrustumTests(camera, shadowRendering);
 
     // Set states
     float blendFactor[4] = {1, 1, 1, 1};
@@ -767,6 +788,13 @@ void MeshRenderer::RenderDepthSceneObjects(ID3D11DeviceContext* context, const F
 {
 	for (uint64 objIndex = 0; objIndex < numSceneObjs; objIndex++)
 	{
+		// Frustum culling on scene object bound
+		if (!sceneObjectsArr[objIndex].bound->frustumTest)
+		{
+			continue;
+		}
+
+		ModelPartsBound *partsBound = sceneObjectsArr[objIndex].bound->modelPartsBound;
 		Float4x4 worldMat = *sceneObjectsArr[objIndex].base * world;
 		Model *model = sceneObjectsArr[objIndex].model;
 
@@ -796,8 +824,12 @@ void MeshRenderer::RenderDepthSceneObjects(ID3D11DeviceContext* context, const F
 			// Draw all parts
 			for (uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
 			{
-				const MeshPart& part = mesh.MeshParts()[partIdx];
-				context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
+				// Frustum culling on parts
+				if (partsBound->FrustumTests[partCount++])
+				{
+					const MeshPart& part = mesh.MeshParts()[partIdx];
+					context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
+				}
 			}
 		}
 	}
@@ -1011,13 +1043,10 @@ void MeshRenderer::RenderShadowMap(ID3D11DeviceContext* context, const Camera& c
         depthStencil->Release();
 }
 
-void MeshRenderer::DoFrustumTests(const Camera& camera, bool ignoreNearZ, MeshData& mesh)
+void MeshRenderer::DoSceneObjectModelPartsFrustumTests(const Frustum &frustum, const Camera& camera, bool ignoreNearZ, ModelPartsBound& mesh)
 {
 	mesh.FrustumTests.clear();
 	mesh.NumSuccessfulTests = 0;
-
-	Frustum frustum;
-	ComputeFrustum(camera.ViewProjectionMatrix().ToSIMD(), frustum);
 
 	for (uint32 i = 0; i < mesh.BoundingSpheres.size(); ++i)
 	{
@@ -1028,11 +1057,32 @@ void MeshRenderer::DoFrustumTests(const Camera& camera, bool ignoreNearZ, MeshDa
 	}
 }
 
-void MeshRenderer::DoSceneFrustumTests(const Camera &camera)
+void MeshRenderer::DoSceneObjectFrustumTest(SceneObject *obj, const Camera &camera, bool ignoreNearZ)
+{
+	Frustum frustum;
+	ComputeFrustum(camera.ViewProjectionMatrix().ToSIMD(), frustum);
+
+	uint32 test = TestFrustumSphere(frustum, *obj->bound->bsphere, ignoreNearZ);
+	obj->bound->frustumTest = test > 0;
+	
+	// early out - do not transform if the scene obj bounding box is not in view
+	if (test)
+	{
+		DoSceneObjectModelPartsFrustumTests(frustum, camera, ignoreNearZ, *obj->bound->modelPartsBound);
+	}
+}
+
+void MeshRenderer::DoSceneObjectsFrustumTests(const Camera &camera, bool ignoreNearZ)
 {
 	for (uint64 i = 0; i < _scene->getNumStaticOpaqueObjects(); i++)
 	{
 		SceneObject *obj = &_scene->getStaticOpaqueObjectsPtr()[i];
-		
+		DoSceneObjectFrustumTest(obj, camera, ignoreNearZ);
+	}
+
+	for (uint64 i = 0; i < _scene->getNumDynmamicOpaueObjects(); i++)
+	{
+		SceneObject *obj = &_scene->getDynamicOpaqueObjectsPtr()[i];
+		DoSceneObjectFrustumTest(obj, camera, ignoreNearZ);
 	}
 }

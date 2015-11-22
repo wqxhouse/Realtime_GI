@@ -10,15 +10,23 @@
 
 using namespace SampleFramework11;
 
-struct MeshData
+struct ModelPartsBound
 {
 	std::vector<BSphere> BoundingSpheres;
 	std::vector<BBox> BoundingBoxes;
 	std::vector<uint32> FrustumTests;
 	uint32 NumSuccessfulTests;
 
-	MeshData() : NumSuccessfulTests(0) {}
-	// Model(NULL), NumSuccessfulTests(0) {}
+	ModelPartsBound() : NumSuccessfulTests(0) {}
+};
+
+struct SceneObjectBound
+{
+	ModelPartsBound *modelPartsBound;
+	ModelPartsBound *originalModelPartsBound;
+	BBox *bbox;
+	BSphere *bsphere;
+	bool32 frustumTest;
 };
 
 struct SceneObject
@@ -26,7 +34,7 @@ struct SceneObject
 	Float4x4 *base;
 	Float4x4 *prevWVP; // this is hack... 
 	Model *model;
-	MeshData *modelData;
+	SceneObjectBound *bound;
 	int id;
 };
 
@@ -96,15 +104,12 @@ public:
 	// inline MeshData *getModelData(uint64 index) { return &_modelsData[_modelIndices[index]]; }
 
 	inline Float3 getSceneTranslation() { return _sceneTranslation; }
-	inline float getSceneScale() { return _sceneScale;  }
+	inline float getSceneScale() { return _sceneScale; }
+	inline Quaternion getSceneOrientation() { return _sceneOrientation; }
 
 	inline SceneObject *getStaticOpaqueObjectsPtr() { return _staticOpaqueObjects; }
 	inline SceneObject *getDynamicOpaqueObjectsPtr() { return _dynamicOpaqueObjects; }
 
-	inline Quaternion getSceneOrientation()
-	{
-		return _sceneOrientation;
-	}
 
 	// Lights
 	PointLight *addPointLight();
@@ -120,22 +125,34 @@ public:
 	static const int MAX_MODELS = 64;
 	static const int MAX_OBJECT_MATRICES = MAX_STATIC_OBJECTS + MAX_DYNAMIC_OBJECTS;
 	static const int MAX_SCENE_LIGHTS = 1024;
+
+	enum SceneObjectFlag
+	{
+		STATIC_OBJ = 1,
+		DYNAMIC_OBJ = 2, 
+		OPAQUE_OBJ = 4,
+		TRANSPARAENT_OBJ = 8
+	};
+
 	
 private:
-
-	Float4x4 createBase(float scale, const Float3 &pos, const Quaternion &rot);
+	void genSceneObjectBounds(uint64 objTypeflag, uint64 sceneObjIndex, uint64 modelIndex);
 	void genStaticSceneWSAABB();
 	void updateDynamicSceneObjectBounds();
+	void transformSceneObjectModelPartsBounds(SceneObject *obj);
+
+	Float4x4 createBase(float scale, const Float3 &pos, const Quaternion &rot);
 	uint64 getModelIndex(Model *model);
 
 	ID3D11Device *_device;
 	ID3D11DeviceContext *_context;
 
 	std::vector<int> _modelIndices;
+
 	Quaternion _sceneOrientation;
 	Float3 _sceneTranslation;
-
 	float _sceneScale;
+
 	int _numStaticOpaqueObjects;
 	int _numDynamicOpaqueObjects;
 	int _numObjectBases;
@@ -145,7 +162,7 @@ private:
 
 	bool _sceneBoundGenerated;
 
-	// TODO: refector so that a controlled set of scene api is exposed
+	// TODO: refactor so that a controlled set of scene api is exposed
 	void(*_updateFunc)(Scene *scene, const Timer &timer);
 
 	SceneObject _staticOpaqueObjects[MAX_STATIC_OBJECTS];
@@ -158,6 +175,11 @@ private:
 	BSphere _staticOpaqueObjectsBSpheres[MAX_STATIC_OBJECTS];
 	BSphere _dynamicOpaqueObjectsBSpheres[MAX_DYNAMIC_OBJECTS];
 
+	ModelPartsBound _sceneStaticOpaqueObjectModelPartsBounds[MAX_STATIC_OBJECTS];
+	ModelPartsBound _sceneDynamicOpaqueObjectModelPartsBounds[MAX_DYNAMIC_OBJECTS];
+	SceneObjectBound _sceneStaticOpaqueObjectBounds[MAX_STATIC_OBJECTS];
+	SceneObjectBound _sceneDynamicOpaqueObjectBounds[MAX_DYNAMIC_OBJECTS];
+
 	BBox _sceneWSAABB_staticObj;
 
 	Float4x4 _objectBases[MAX_OBJECT_MATRICES];
@@ -165,12 +187,14 @@ private:
 
 	PointLight _pointLights[MAX_SCENE_LIGHTS];
 
+private:
+
 	// TODO: justify the usefulness of object id
 	static int _highestSceneObjId;
 	static int _numTotalModelsShared;
 
 	static Model _models[MAX_MODELS];
-	static MeshData _modelsData[MAX_MODELS];
+	static ModelPartsBound _modelsData[MAX_MODELS];
 
 	static Model *_boxModel;
 	static Model *_planeModel;

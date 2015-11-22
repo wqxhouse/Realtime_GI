@@ -126,8 +126,9 @@ protected:
 	void GenMeshShaderMap(const Model *model);
 
 	// Performs frustum/sphere intersection tests for all MeshPart's
-	void DoFrustumTests(const Camera& camera, bool ignoreNearZ, MeshData& mesh);
-	void DoSceneFrustumTests(const Camera &camera);
+	void DoSceneObjectModelPartsFrustumTests(const Frustum &frustum, const Camera& camera, bool ignoreNearZ, ModelPartsBound& mesh);
+	void DoSceneObjectFrustumTest(SceneObject *obj, const Camera &camera, bool ignoreNearZ);
+	void DoSceneObjectsFrustumTests(const Camera &camera, bool ignoreNearZ);
 
 
     ID3D11DevicePtr _device;

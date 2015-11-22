@@ -19,7 +19,11 @@ BSphere GetTransformedBSphere(const BSphere &bsphere, const Float4x4 &transform)
 
 	BSphere out;
 	out.Center = *(XMFLOAT3 *)&center;
-	out.Radius = bsphere.Radius;
+
+	// TODO: assume uniform scaling
+	float scale_x = sqrt(transform._11 * transform._11 + transform._12 * transform._12 + transform._13 * transform._13);
+
+	out.Radius = bsphere.Radius * scale_x;
 	return out;
 }
 
