@@ -108,7 +108,7 @@ protected:
     void CreateRenderTargets();
 
     void RenderScene();
-	void RenderSceneCubemaps();
+	void RenderSceneCubemaps(ID3D11DeviceContext *context);
     void RenderBackgroundVelocity();
     void RenderAA();
     void RenderHUD();

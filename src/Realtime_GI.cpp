@@ -77,13 +77,13 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	{
 		// L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\Converted\\sponza.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\Cerberus_by_Andrew_Maximov\\Cerberus_by_Andrew_Maximov\\testfbxascii.fbx",
-		//L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
+		L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
 		// L"..\\Content\\Models\\CornellBox\\CornellBox_Max.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaNon_PBR\\Converted\\sponza.obj",
 		// L"..\\Content\\Models\\Powerplant\\Powerplant.sdkmesh",
 		// L"..\\Content\\Models\\RoboHand\\RoboHand.meshdata",
 		// L"",
-		L"..\\Content\\Models\\sphere\\sphere.obj",
+		//L"..\\Content\\Models\\sphere\\sphere.obj",
 	};
 
 	Scene *scene = nullptr;
@@ -95,7 +95,7 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	scene->Initialize(device);
 
 	Model *m = scene->addModel(ModelPaths[0]);
-	scene->addStaticOpaqueObject(m, 1.0f, Float3(0, 3, 0), Quaternion());
+	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 0, 0), Quaternion());
 	//scene->addDynamicOpaqueBoxObject(AppSettings::BoxMaxX - AppSettings::BoxMinX, 
 		//float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ), Quaternion());
 	_numScenes++;
@@ -384,8 +384,9 @@ void Realtime_GI::RenderAA()
     context->CopyResource(_prevFrameTarget.Texture, _resolveTarget.Texture);
 }
 
-void Realtime_GI::RenderSceneCubemaps()
+void Realtime_GI::RenderSceneCubemaps(ID3D11DeviceContext *context)
 {
+	RenderTarget2D cubemapRenderTarget;
 	_meshRenderer.SetCubemapCapture(true);
 
 	// TODO: make a separate cubemap manager to set different locations
@@ -393,7 +394,13 @@ void Realtime_GI::RenderSceneCubemaps()
 	//_cubemapGenerator.SetPosition(float3(0.5f, 0.5f, 0.5f));//!
 	_cubemapGenerator.SetPosition(float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ));
 	_cubemapGenerator.Create(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox);
-	_cubemapGenerator.RenderPrefilterCubebox(_deviceManager, &_meshRenderer, _globalTransform, _envMapSH, _jitterOffset, &_skybox);
+	_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
+	context->GenerateMips(cubemapRenderTarget.SRView);
+
+	_cubemapGenerator.GetPreFilterTargetViews(cubemapRenderTarget);
+	_cubemapGenerator.RenderPrefilterCubebox(_deviceManager, _globalTransform);
+	context->GenerateMips(cubemapRenderTarget.SRView);
+
 	_meshRenderer.SetCubemapCapture(false);
 }
 
@@ -409,7 +416,7 @@ void Realtime_GI::Render(const Timer& timer)
 	if (_firstFrame || AppSettings::CurrentScene.Changed() || AppSettings::EnableRealtimeCubemap)
 	{
 		// render cubemap every time scene has changed
-		RenderSceneCubemaps();
+		RenderSceneCubemaps(context);
 	}
 
 	// _scenes[AppSettings::CurrentScene].sortSceneObjects(_camera.ViewMatrix());
@@ -445,11 +452,9 @@ void Realtime_GI::RenderScene()
 
     SetViewport(context, _colorTarget.Width, _colorTarget.Height);
 
-	/*_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
-	context->GenerateMips(cubemapRenderTarget.SRView);*/
+	//_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
 
 	_cubemapGenerator.GetPreFilterTargetViews(cubemapRenderTarget);
-	context->GenerateMips(cubemapRenderTarget.SRView);
 
     float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
     context->ClearRenderTargetView(_colorTarget.RTView, clearColor);

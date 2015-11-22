@@ -476,9 +476,9 @@ PSOutput PS(in PSInput input)
 	// Add in the ambient
     if(EnableAmbientLighting)
     {
-        float3 indirectDiffuse = EvalSH9Cosine(normalWS, EnvironmentSH);
+        /*float3 indirectDiffuse = EvalSH9Cosine(normalWS, EnvironmentSH);
 
-        lighting += indirectDiffuse * diffuseAlbedo;
+        lighting += indirectDiffuse * diffuseAlbedo;*/
 
 		//float3 reflectWS = parallaxCorrection(positionWS, normalize(normalWS));
 		float3 reflectWS = reflect(-viewWS, normalWS);
@@ -502,11 +502,11 @@ PSOutput PS(in PSInput input)
         float fresnel = metallic * AB.x + AB.y;
         fresnel *= saturate(metallic * 100.0f);
 	
-		#if ConvoluteCube_
+		/*#if ConvoluteCube_
 			lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel * PrefilterEnvMap(roughness, reflectWS);
-		#else
-			lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;
-		#endif
+		#else*/
+		lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;
+		//#endif
     }
 
 	
@@ -524,10 +524,6 @@ PSOutput PS(in PSInput input)
 		prevPositionSS *= RTSize;
 		output.Velocity = input.PositionSS.xy - prevPositionSS;
 		output.Velocity -= JitterOffset;
-	#endif
-
-	#if ConvoluteCube_
-		output.Color = float4(1, 0, 0, 1);
 	#endif
 
     return output;

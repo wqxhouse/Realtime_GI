@@ -191,7 +191,6 @@ protected:
         uint32 NumSamples;
     };
 
-	public:
     ConstantBuffer<MeshVSConstants> _meshVSConstants;
     ConstantBuffer<MeshPSConstants> _meshPSConstants;
 	//ConstantBuffer<MeshPSConstants> 

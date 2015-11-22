@@ -38,18 +38,16 @@ public:
 	void GetPreFilterTargetViews(RenderTarget2D &prefilterTarget);
 	void Create(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
 		const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox);
-	void RenderPrefilterCubebox(const DeviceManager &deviceManager, MeshRenderer *meshRenderer,
-		const Float4x4 &sceneTransform,	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox);
+	void RenderPrefilterCubebox(const DeviceManager &deviceManager, const Float4x4 &sceneTransform);
 
 	const PerspectiveCamera &GetCubemapCamera();
 
 private:
 	void GenAndCacheConvoluteSphereInputLayout(const DeviceManager &deviceManager, const Model *model);
-
-	/*const uint32 CubemapWidth = 128;
-	const uint32 CubemapHeight = 128;*/
+	void GenFilterShader(ID3D11Device *device);
 
 	PerspectiveCamera cubemapCamera;
+	PerspectiveCamera filterCamera;
 	RenderTarget2D cubemapTarget;
 	DepthStencilBuffer cubemapDepthTarget;
 	RenderTarget2D prefilterCubemapTarget;
@@ -59,7 +57,7 @@ private:
 	ID3D11InputLayoutPtr inputLayout;
 
 	VertexShaderPtr _convoluteVS;
-	PixelShaderPtr _convolutePS;
+	PixelShaderPtr _convolutePS[6];
 
 	BlendStates _blendStates;
 	DepthStencilStates _depthStencilStates;
@@ -67,6 +65,8 @@ private:
 
 	SamplerStates _samplerStates;
 	ID3D11SamplerStatePtr _evsmSampler;
+
+	CompileOptions opts;
 
 	struct CameraStruct{
 		Float3 Eye;
@@ -84,8 +84,15 @@ private:
 		Float4Align Float4x4 WorldViewProjection;
 	};
 
+	struct PSConstant
+	{
+		Float4 CameraPos;
+		uint32 MipLevel;
+	};
+
 	static const uint32 ShadowAnisotropy = 16;
 
-	ConstantBuffer<VSConstant> _VSConstant;
+	ConstantBuffer<VSConstant> _VSConstants;
+	ConstantBuffer<PSConstant> _PSConstants;
 };
 

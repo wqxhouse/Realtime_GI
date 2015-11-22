@@ -18,7 +18,8 @@ const CreateCubemap::CameraStruct CreateCubemap::DefaultCubemapCameraStruct[6] =
 };
 
 CreateCubemap::CreateCubemap(const float NearClip, const float FarClip) 
-	: cubemapCamera(1.0f, 90.0f * (Pi / 180), NearClip, FarClip)
+	: cubemapCamera(1.0f, 90.0f * (Pi / 180), NearClip, FarClip),
+	filterCamera(1.0f, 90.0f * (Pi / 180), NearClip, FarClip)
 {
 }
 
@@ -33,10 +34,11 @@ void CreateCubemap::Initialize(ID3D11Device *device, uint32 numMipLevels, uint32
 	prefilterDepthTarget.Initialize(device, CubemapWidth, CubemapHeight, DXGI_FORMAT_D32_FLOAT, true, 1,
 		0, 6, TRUE);
 
-	_convoluteVS = CompileVSFromFile(device, L"PrefilterCubemap.hlsl", "VS", "vs_5_0");
-	_convolutePS = CompilePSFromFile(device, L"PrefilterCubemap.hlsl", "PS", "ps_5_0");
+	GenFilterShader(device);
+	//_convolutePS = CompilePSFromFile(device, L"PrefilterCubemap.hlsl", "PS", "ps_5_0");
 
-	_VSConstant.Initialize(device);//Initialize original vertex constant variables
+	_VSConstants.Initialize(device);//Initialize original vertex constant variables
+	_PSConstants.Initialize(device);
 	_blendStates.Initialize(device);
 	_rasterizerStates.Wireframe();
 	_rasterizerStates.Initialize(device);
@@ -48,6 +50,18 @@ void CreateCubemap::Initialize(ID3D11Device *device, uint32 numMipLevels, uint32
 	D3D11_SAMPLER_DESC sampDesc = SamplerStates::AnisotropicDesc();
 	sampDesc.MaxAnisotropy = ShadowAnisotropy;
 	DXCall(device->CreateSamplerState(&sampDesc, &_evsmSampler));
+}
+
+void CreateCubemap::GenFilterShader(ID3D11Device *device)
+{
+	_convoluteVS = CompileVSFromFile(device, L"PrefilterCubemap.hlsl", "VS", "vs_5_0");
+	opts.Reset();
+
+	for (uint32 filterFaceIndex = 0; filterFaceIndex < 6; ++filterFaceIndex){
+		opts.Add("FilterFaceIndex_", filterFaceIndex);
+		_convolutePS[filterFaceIndex] = CompilePSFromFile(device, L"PrefilterCubemap.hlsl", "PS", "ps_5_0", opts);
+	}
+
 }
 
 
@@ -87,18 +101,14 @@ void CreateCubemap::GenAndCacheConvoluteSphereInputLayout(const DeviceManager &d
 	}
 }
 
-void CreateCubemap::RenderPrefilterCubebox(const DeviceManager &deviceManager, MeshRenderer *meshRenderer,
-	const Float4x4 &sceneTransform, const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox)
+void CreateCubemap::RenderPrefilterCubebox(const DeviceManager &deviceManager, const Float4x4 &sceneTransform)
 {
 	PIXEvent event(L"Prefilter Cubebox");
 	ID3D11DeviceContext *context = deviceManager.ImmediateContext();
 
-	// Set states
-	float blendFactor[4] = { 1, 1, 1, 1 };
-	context->OMSetBlendState(_blendStates.BlendDisabled(), blendFactor, 0xFFFFFFFF);
-	context->OMSetDepthStencilState(_depthStencilStates.DepthEnabled(), 0);
-	context->RSSetState(_rasterizerStates.BackFaceCull());
+	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
+	
 	Model *cubemapSphere = new Model(); 
 
 	cubemapSphere->CreateWithAssimp(deviceManager.Device(), L"..\\Content\\Models\\sphere\\sphere.obj", false);
@@ -107,66 +117,87 @@ void CreateCubemap::RenderPrefilterCubebox(const DeviceManager &deviceManager, M
 
 
 	SetViewport(context, CubemapWidth, CubemapHeight);
+
 	for (int cubeboxFaceIndex = 0; cubeboxFaceIndex < 6; cubeboxFaceIndex++)
 	{
-		cubemapCamera.SetLookAt(CubemapCameraStruct[cubeboxFaceIndex].Eye,
-			CubemapCameraStruct[cubeboxFaceIndex].LookAt,
-			CubemapCameraStruct[cubeboxFaceIndex].Up);
+		filterCamera.SetLookAt(DefaultCubemapCameraStruct[cubeboxFaceIndex].Eye,
+			DefaultCubemapCameraStruct[cubeboxFaceIndex].LookAt,
+			DefaultCubemapCameraStruct[cubeboxFaceIndex].Up);
 
-		ID3D11RenderTargetView *renderTarget[1] = { prefilterCubemapTarget.RTVArraySlices.at(cubeboxFaceIndex) };
-		context->OMSetRenderTargets(1, renderTarget, nullptr);
+		ID3D11RenderTargetViewPtr RTView = prefilterCubemapTarget.RTVArraySlices.at(cubeboxFaceIndex);
+		ID3D11DepthStencilViewPtr DSView = prefilterDepthTarget.ArraySlices.at(cubeboxFaceIndex);
 
-		ID3D11SamplerState* sampStates[3] = {
-			_samplerStates.Anisotropic(),
-			_evsmSampler,
-			_samplerStates.LinearClamp(),
-		};
+		context->ClearRenderTargetView(RTView, clearColor);
+		context->ClearDepthStencilView(DSView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
-		context->PSSetSamplers(0, 3, sampStates);
+		ID3D11RenderTargetView *renderTarget[1] = { RTView };
+		context->OMSetRenderTargets(1, renderTarget, DSView);
 
-		// Set shaders
-		context->DSSetShader(nullptr, nullptr, 0);
-		context->HSSetShader(nullptr, nullptr, 0);
-		context->GSSetShader(nullptr, nullptr, 0);
+		//Start Render
+		//for (int mipLevel = 0; mipLevel < 8; ++mipLevel){
+			_PSConstants.Data.MipLevel = 0;
+			_PSConstants.Data.CameraPos = filterCamera.Position();
 
-		//Set Constant Variables
-		_VSConstant.Data.world = sceneTransform;
-		_VSConstant.Data.View = meshRenderer->_meshVSConstants.Data.View;
-		_VSConstant.Data.WorldViewProjection = meshRenderer->_meshVSConstants.Data.WorldViewProjection;
-		_VSConstant.ApplyChanges(context);
-		_VSConstant.SetVS(context, 0);
+			// Set states
+			float blendFactor[4] = { 1, 1, 1, 1 };
+			context->OMSetBlendState(_blendStates.BlendDisabled(), blendFactor, 0xFFFFFFFF);
+			context->OMSetDepthStencilState(_depthStencilStates.DepthEnabled(), 0);
+			context->RSSetState(_rasterizerStates.NoCull());
+			//context->RSSetState(_rasterizerStates.BackFaceCull());
 
-		for (uint64 meshIdx = 0; meshIdx < cubemapSphere->Meshes().size(); ++meshIdx)
-		{
-			const Mesh& mesh = cubemapSphere->Meshes()[meshIdx];
+			ID3D11SamplerState* sampStates[3] = {
+				_samplerStates.Anisotropic(),
+				_evsmSampler,
+				_samplerStates.LinearClamp(),
+			};
 
-			context->VSSetShader(_convoluteVS, nullptr, 0);
-			context->PSSetShader(_convolutePS, nullptr, 0);
+			context->PSSetSamplers(0, 3, sampStates);
 
-			ID3D11Buffer *vertexBuffers[1] = { mesh.VertexBuffer() };
-			UINT vertexStrides[1] = { mesh.VertexStride() };
-			UINT offsets[1] = { 0 };
-			context->IASetVertexBuffers(0, 1, vertexBuffers, vertexStrides, offsets);
-			context->IASetIndexBuffer(mesh.IndexBuffer(), mesh.IndexBufferFormat(), 0);
-			context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			// Set shaders
+			context->DSSetShader(nullptr, nullptr, 0);
+			context->HSSetShader(nullptr, nullptr, 0);
+			context->GSSetShader(nullptr, nullptr, 0);
 
-			context->IASetInputLayout(inputLayout);
+			//Set Constant Variables
+			_VSConstants.Data.world = sceneTransform;
+			_VSConstants.Data.View = Float4x4::Transpose(filterCamera.ViewMatrix());
+			_VSConstants.Data.WorldViewProjection = Float4x4::Transpose(sceneTransform * filterCamera.ProjectionMatrix());//meshRenderer->_meshVSConstants.Data.WorldViewProjection;
+			_VSConstants.ApplyChanges(context);
+			_VSConstants.SetVS(context, 0);
 
-			for (uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
+			for (uint64 meshIdx = 0; meshIdx < cubemapSphere->Meshes().size(); ++meshIdx)
 			{
-				const MeshPart& part = mesh.MeshParts()[partIdx];
-				const MeshMaterial& material = cubemapSphere->Materials()[part.MaterialIdx];
+				const Mesh& mesh = cubemapSphere->Meshes()[meshIdx];
 
-				//Set ShaderResourse
-				ID3D11ShaderResourceView* cubemapResourse[1] = { cubemapTarget.SRView };
+				context->VSSetShader(_convoluteVS, nullptr, 0);
+				context->PSSetShader(_convolutePS[cubeboxFaceIndex], nullptr, 0);
 
-				context->PSSetShaderResources(0, _countof(cubemapResourse), cubemapResourse);
-				context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
+				ID3D11Buffer *vertexBuffers[1] = { mesh.VertexBuffer() };
+				UINT vertexStrides[1] = { mesh.VertexStride() };
+				UINT offsets[1] = { 0 };
+				context->IASetVertexBuffers(0, 1, vertexBuffers, vertexStrides, offsets);
+				context->IASetIndexBuffer(mesh.IndexBuffer(), mesh.IndexBufferFormat(), 0);
+				context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+				context->IASetInputLayout(inputLayout);
+
+				for (uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
+				{
+					const MeshPart& part = mesh.MeshParts()[partIdx];
+					const MeshMaterial& material = cubemapSphere->Materials()[part.MaterialIdx];
+
+					//Set ShaderResourse
+					ID3D11ShaderResourceView* cubemapResourse[1] = { cubemapTarget.SRView };
+
+					context->PSSetShaderResources(0, _countof(cubemapResourse), cubemapResourse);
+					context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
+				}
 			}
-		}
-		/*meshRenderer->Render(context, cubemapCamera, sceneTransform, cubemapTarget.SRView, environmentMapSH, jitterOffset);
-		skybox->RenderEnvironmentMap(context, cubemapTarget.SRView, cubemapCamera.ViewMatrix(),
-			cubemapCamera.ProjectionMatrix(), Float3(std::exp2(AppSettings::ExposureScale)));*/
+			/*meshRenderer->Render(context, filterCamera, sceneTransform, cubemapTarget.SRView, environmentMapSH, jitterOffset);
+			skybox->RenderEnvironmentMap(context, cubemapTarget.SRView, filterCamera.ViewMatrix(),
+				filterCamera.ProjectionMatrix(), Float3(std::exp2(AppSettings::ExposureScale)));*/
+
+		//}
 	}
 
 	SetViewport(context, deviceManager.BackBufferWidth(), deviceManager.BackBufferHeight());
@@ -211,7 +242,7 @@ void CreateCubemap::Create(const DeviceManager &deviceManager, MeshRenderer *mes
 		meshRenderer->RenderShadowMap(context, cubemapCamera, sceneTransform);
 
 		context->OMSetRenderTargets(1, renderTarget, DSView);
-		//meshRenderer->Render(context, cubemapCamera, sceneTransform, environmentMap, environmentMapSH, jitterOffset);
+		meshRenderer->Render(context, cubemapCamera, sceneTransform, environmentMap, environmentMapSH, jitterOffset);
 
 		skybox->RenderEnvironmentMap(context, environmentMap, cubemapCamera.ViewMatrix(),
 			cubemapCamera.ProjectionMatrix(), Float3(std::exp2(AppSettings::ExposureScale)));
