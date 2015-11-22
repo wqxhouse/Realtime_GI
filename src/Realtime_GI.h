@@ -27,6 +27,7 @@
 #include "Scene.h"
 
 #include "CreateCubemap.h"
+#include "DebugRenderer.h"
 
 using namespace SampleFramework11;
 
@@ -51,6 +52,12 @@ protected:
     RenderTarget2D _prevFrameTarget;
     RenderTarget2D _velocityTarget;
     RenderTarget2D _velocityResolveTarget;
+
+	// Deferred - GBuffer
+	RenderTarget2D _rt0Target;  // albedo 
+	RenderTarget2D _rt1Target;	// roughness/metallic/emissive
+	RenderTarget2D _rt2Target;  // compressed normal + velocity
+
     uint64 _frameCount = 0;
 	bool32 _firstFrame = 1;
 
@@ -71,8 +78,16 @@ protected:
     PixelShaderPtr _backgroundVelocityPS;
     Float4x4 _prevViewProjection;
 
+	VertexShaderPtr _clusteredDeferredVS;
+	PixelShaderPtr _clusteredDeferredPS;
+
     Float2 _jitterOffset;
     Float2 _prevJitter;
+
+	// Full screen quad
+	ID3D11BufferPtr _quadVB;
+	ID3D11BufferPtr _quadIB;
+	ID3D11InputLayoutPtr _quadInputLayout;
 
 	// Camera momentum
 	float _prevForward;
@@ -93,8 +108,42 @@ protected:
         Float2 JitterOffset;
     };
 
+	static const int NumCascades = 4;
+	struct DeferredPassConstants
+	{
+		Float4Align Float4x4 ShadowMatrix;
+		Float4Align float CascadeSplits[NumCascades];
+		Float4Align Float4 CascadeOffsets[NumCascades];
+		Float4Align Float4 CascadeScales[NumCascades];
+
+		float OffsetScale;
+		float PositiveExponent;
+		float NegativeExponent;
+		float LightBleedingReduction;
+
+		Float4Align Float4x4 ProjectionToWorld;
+		Float4Align Float4x4 ViewToWorld;
+		Float4Align ShaderSH9Color EnvironmentSH;
+
+		Float3 CameraPosWS;
+		float NearPlane;
+		Float3 CameraZAxisWS;
+		float FarPlane;
+		float ProjTermA;
+		float ProjTermB;
+
+		Float2 padding;
+	};
+
+
     ConstantBuffer<ResolveConstants> _resolveConstants;
     ConstantBuffer<BackgroundVelocityConstants> _backgroundVelocityConstants;
+	ConstantBuffer<DeferredPassConstants> _deferredPassConstants;
+
+	StructuredBuffer _pointLightBuffer;
+	StructuredBuffer _lightIndicesList;
+
+	SamplerStates _samplerStates;
 
     virtual void Initialize() override;
 	void LoadScenes(ID3D11DevicePtr device);
@@ -106,17 +155,30 @@ protected:
     virtual void AfterReset() override;
 
     void CreateRenderTargets();
+	void CreateLightBuffers();
+	void CreateQuadBuffers();
+
 
     void RenderScene();
 	void RenderSceneCubemaps(ID3D11DeviceContext *context);
+    void RenderSceneForward();
+	void RenderSceneCubemaps();
     void RenderBackgroundVelocity();
     void RenderAA();
     void RenderHUD();
+
+	void RenderSceneGBuffer();
+	void RenderLightsDeferred();
+
+	void UploadLights();
+	void AssignLightAndUploadClusters();
 
 	void ApplyMomentum(float &prevVal, float &val, float deltaTime);
 
 	//Create Cubemap
 	CreateCubemap _cubemapGenerator;
+	DebugRenderer _debugRenderer;
+
 public:
 
     Realtime_GI();

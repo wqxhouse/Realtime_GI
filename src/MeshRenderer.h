@@ -24,6 +24,7 @@
 
 using namespace SampleFramework11;
 
+
 struct BakeData;
 class MeshRenderer
 {
@@ -58,10 +59,57 @@ public:
                          const Float4x4& world);
 
 	void SetCubemapCapture(bool32 tf);
+
 	void MeshRenderer::SetParallaxCorrection(Float3 newProbePosWS, Float3 newMaxBox, Float3 newMinBox);
+
+	void SetDrawGBuffer(bool32 tf);
+
 	void ReMapMeshShaders();
 	void SortSceneObjects(const Float4x4 &viewMatrix);
 
+	inline RenderTarget2D *GetVSMRenderTargetPtr() { return &_varianceShadowMap; }
+	inline ID3D11SamplerStatePtr GetEVSMSamplerStatePtr() { return _evsmSampler; }	
+	inline ID3D11ShaderResourceViewPtr GetSpecularLookupTexturePtr() { return _specularLookupTexture; }
+
+
+	// Constant buffers
+	struct MeshVSConstants
+	{
+		Float4Align Float4x4 World;
+		Float4Align Float4x4 View;
+		Float4Align Float4x4 WorldViewProjection;
+		Float4Align Float4x4 PrevWorldViewProjection;
+	};
+
+	struct MeshPSConstants
+	{
+		Float4Align Float3 CameraPosWS;
+		Float4Align Float3 ProbePosWS;
+		Float4Align Float4x4 ShadowMatrix;
+		Float4Align float CascadeSplits[NumCascades];
+
+		Float4Align Float4 CascadeOffsets[NumCascades];
+		Float4Align Float4 CascadeScales[NumCascades];
+
+		float OffsetScale;
+		float PositiveExponent;
+		float NegativeExponent;
+		float LightBleedingReduction;
+
+		Float4Align Float4x4 View; // used in gbuffer branch
+		Float4Align Float4x4 Projection;
+
+		Float4Align ShaderSH9Color EnvironmentSH;
+
+		Float2 RTSize;
+		Float2 JitterOffset;
+
+		Float3 MaxBox;
+		Float3 MinBox;
+	};
+
+	inline ConstantBuffer<MeshPSConstants> *getMeshPSConstantsPtr() { return &_meshPSConstants; }
+	
 protected:
 
     void LoadShaders();
@@ -83,6 +131,11 @@ protected:
 
     void GenAndCacheMeshInputLayout(const Model* model);
 	void GenMeshShaderMap(const Model *model);
+
+	// Performs frustum/sphere intersection tests for all MeshPart's
+	void DoSceneObjectModelPartsFrustumTests(const Frustum &frustum, const Camera& camera, bool ignoreNearZ, ModelPartsBound& mesh);
+	void DoSceneObjectFrustumTest(SceneObject *obj, const Camera &camera, bool ignoreNearZ);
+	void DoSceneObjectsFrustumTests(const Camera &camera, bool ignoreNearZ);
 
 
     ID3D11DevicePtr _device;
@@ -131,47 +184,12 @@ protected:
     ID3D11ShaderResourceViewPtr _specularLookupTexture;
 
 	bool32 _drawingCubemap;
-	bool32 _convoluteCubemap;
 
 	Float3 probePosWS;
 	Float3 maxbox;
 	Float3 minbox;
 
-    // Constant buffers
-    struct MeshVSConstants
-    {
-        Float4Align Float4x4 World;
-        Float4Align Float4x4 View;
-        Float4Align Float4x4 WorldViewProjection;
-        Float4Align Float4x4 PrevWorldViewProjection;
-    };
-
-    struct MeshPSConstants
-    {
-        Float4Align Float3 CameraPosWS;
-		Float4Align Float3 ProbePosWS;
-
-        Float4Align Float4x4 ShadowMatrix;
-        Float4Align float CascadeSplits[NumCascades];
-
-        Float4Align Float4 CascadeOffsets[NumCascades];
-        Float4Align Float4 CascadeScales[NumCascades];
-
-        float OffsetScale;
-        float PositiveExponent;
-        float NegativeExponent;
-        float LightBleedingReduction;
-
-        Float4Align Float4x4 Projection;
-
-        Float4Align ShaderSH9Color EnvironmentSH;
-
-        Float2 RTSize;
-        Float2 JitterOffset;
-
-		Float3 MaxBox;
-		Float3 MinBox;
-    };
+	bool32 _drawingGBuffer;
 
     struct EVSMConstants
     {
@@ -193,7 +211,6 @@ protected:
 
     ConstantBuffer<MeshVSConstants> _meshVSConstants;
     ConstantBuffer<MeshPSConstants> _meshPSConstants;
-	//ConstantBuffer<MeshPSConstants> 
     ConstantBuffer<EVSMConstants> _evsmConstants;
 	ConstantBuffer<ReductionConstants> _reductionConstants;
 };

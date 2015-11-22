@@ -146,7 +146,7 @@ struct StructuredBuffer
 
     StructuredBuffer();
 
-    void Initialize(ID3D11Device* device, uint32 stride, uint32 numElements, bool32 useAsUAV = false,
+    void Initialize(ID3D11Device* device, uint32 stride, uint32 numElements, bool32 dynamic = false, bool32 useAsUAV = false,
                     bool32 appendConsume = false, bool32 hiddenCounter = false, const void* initData = nullptr);
 
     void WriteToFile(const wchar* path, ID3D11Device* device, ID3D11DeviceContext* context);
