@@ -151,6 +151,8 @@ public class Settings
 
         bool RenderBackground = true;
 
+        bool RenderSceneObjectBBox = false;
+
         bool EnableShadows = true;
 
         bool EnableNormalMaps = true;

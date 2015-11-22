@@ -177,6 +177,7 @@ void Realtime_GI::Initialize()
 
     // Init the post processor
     _postProcessor.Initialize(device);
+	_debugRenderer.Initialize(&_deviceManager, _deviceManager.Device(), _deviceManager.ImmediateContext(), &_camera);
 
 	CreateLightBuffers();
 	CreateQuadBuffers();
@@ -405,6 +406,23 @@ void Realtime_GI::Update(const Timer& timer)
 		Float4x4::TranslationMatrix(_scenes[AppSettings::CurrentScene].getSceneTranslation());
 
 
+	if (AppSettings::RenderSceneObjectBBox)
+	{
+		for (int i = 0; i < _scenes[AppSettings::CurrentScene].getNumStaticOpaqueObjects(); i++)
+		{
+			BBox &b = _scenes[AppSettings::CurrentScene].getStaticObjectBBoxPtr()[i];
+			_debugRenderer.QueueBBoxTranslucent(b, Float4(0.7f, 0.3f, 0.3f, 0.1f));
+		}
+
+		for (int i = 0; i < _scenes[AppSettings::CurrentScene].getNumDynamicOpaueObjects(); i++)
+		{
+			BBox &b = _scenes[AppSettings::CurrentScene].getDynamicObjectBBoxPtr()[i];
+			_debugRenderer.QueueBBoxTranslucent(b, Float4(0.3f, 0.7f, 0.3f, 0.1f));
+		}
+
+		_debugRenderer.QueueBBoxWire(_scenes[AppSettings::CurrentScene].getSceneBoundingBox(), Float4(0.1f, 0.3f, 0.9f, 1.0f));
+	}
+
 }
 
 void Realtime_GI::RenderAA()
@@ -544,6 +562,8 @@ void Realtime_GI::Render(const Timer& timer)
     context->OMSetRenderTargets(1, renderTargets, NULL);
 
     SetViewport(context, _deviceManager.BackBufferWidth(), _deviceManager.BackBufferHeight());
+
+	_debugRenderer.FlushDrawQueued();
     RenderHUD();
 
     ++_frameCount; 

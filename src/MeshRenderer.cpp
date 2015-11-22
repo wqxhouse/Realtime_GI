@@ -657,7 +657,7 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 
 	_scene->sortSceneObjects(camera.ViewMatrix());
 	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getStaticOpaqueObjectsPtr(), _scene->getNumStaticOpaqueObjects());
-	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getDynamicOpaqueObjectsPtr(), _scene->getNumDynmamicOpaueObjects());
+	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getDynamicOpaqueObjectsPtr(), _scene->getNumDynamicOpaueObjects());
 
 	// TODO: refactor
     ID3D11ShaderResourceView* nullSRVs[8] = { nullptr };
@@ -780,7 +780,7 @@ void MeshRenderer::RenderDepth(ID3D11DeviceContext* context, const Camera& camer
 
 	_scene->sortSceneObjects(camera.ViewMatrix());
 	RenderDepthSceneObjects(context, world, camera, _scene->getStaticOpaqueObjectsPtr(), _scene->getNumStaticOpaqueObjects());
-	RenderDepthSceneObjects(context, world, camera, _scene->getDynamicOpaqueObjectsPtr(), _scene->getNumDynmamicOpaueObjects());
+	RenderDepthSceneObjects(context, world, camera, _scene->getDynamicOpaqueObjectsPtr(), _scene->getNumDynamicOpaueObjects());
 }
 
 void MeshRenderer::RenderDepthSceneObjects(ID3D11DeviceContext* context, const Float4x4 &world, 
@@ -1080,7 +1080,7 @@ void MeshRenderer::DoSceneObjectsFrustumTests(const Camera &camera, bool ignoreN
 		DoSceneObjectFrustumTest(obj, camera, ignoreNearZ);
 	}
 
-	for (uint64 i = 0; i < _scene->getNumDynmamicOpaueObjects(); i++)
+	for (uint64 i = 0; i < _scene->getNumDynamicOpaueObjects(); i++)
 	{
 		SceneObject *obj = &_scene->getDynamicOpaqueObjectsPtr()[i];
 		DoSceneObjectFrustumTest(obj, camera, ignoreNearZ);

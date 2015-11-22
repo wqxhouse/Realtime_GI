@@ -51,3 +51,6 @@ void ComputeModelBounds(ID3D11Device* device, ID3D11DeviceContext* context,
 	Model* model,
 	std::vector<BSphere>& boundingSpheres, 
 	std::vector<BBox> &boundingBoxes);
+
+Float3 Float3Max(const Float3 &a, const Float3 &b);
+Float3 Float3Min(const Float3 &a, const Float3 &b);

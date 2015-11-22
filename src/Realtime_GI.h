@@ -27,6 +27,7 @@
 #include "Scene.h"
 
 #include "CreateCubemap.h"
+#include "DebugRenderer.h"
 
 using namespace SampleFramework11;
 
@@ -173,6 +174,8 @@ protected:
 
 	//Create Cubemap
 	CreateCubemap _cubemapGenerator;
+	DebugRenderer _debugRenderer;
+
 public:
 
     Realtime_GI();

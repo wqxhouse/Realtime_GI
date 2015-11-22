@@ -25,6 +25,7 @@ cbuffer AppSettings : register(b7)
     bool EnableDirectLighting;
     bool EnableAmbientLighting;
     bool RenderBackground;
+    bool RenderSceneObjectBBox;
     bool EnableShadows;
     bool EnableNormalMaps;
     bool EnableRealtimeCubemap;

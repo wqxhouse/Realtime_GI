@@ -1,15 +1,44 @@
 #include "BoundUtils.h"
 
+Float3 Float3Max(const Float3 &a, const Float3 &b)
+{
+	return Float3(a.x > b.x ? a.x : b.x,
+		a.y > b.y ? a.y : b.y,
+		a.z > b.z ? a.z : b.z);
+}
+
+Float3 Float3Min(const Float3 &a, const Float3 &b)
+{
+	return Float3(a.x < b.x ? a.x : b.x,
+		a.y < b.y ? a.y : b.y,
+		a.z < b.z ? a.z : b.z);
+}
+
 BBox GetTransformedBBox(const BBox &bbox, const Float4x4 &transform)
 {
-	Float3 vmax = Float3(bbox.Max);
+	/*Float3 vmax = Float3(bbox.Max);
 	Float3 vmin = Float3(bbox.Min);
 
 	vmax = Float3::Transform(vmax, transform);
 	vmin = Float3::Transform(vmin, transform);
 
 	XMFLOAT3 points[2] = { *(XMFLOAT3 *)&vmax, *(XMFLOAT3 *)&vmin };
-	return ComputeBoundingBoxFromPoints(points, 2, sizeof(XMFLOAT3));
+	return ComputeBoundingBoxFromPoints(points, 2, sizeof(XMFLOAT3));*/
+
+	Float3 xa = transform.Right() * bbox.Min.x;
+	Float3 xb = transform.Right() * bbox.Max.x;
+
+	Float3 ya = transform.Up() * bbox.Min.y;
+	Float3 yb = transform.Up() * bbox.Max.y;
+
+	Float3 za = transform.Forward() * bbox.Min.z;
+	Float3 zb = transform.Forward() * bbox.Max.z;
+		
+	BBox out;
+	out.Max = *(XMFLOAT3 *)&(Float3Max(xa, xb) + Float3Max(ya, yb) + Float3Max(za, zb) + transform.Translation());
+	out.Min = *(XMFLOAT3 *)&(Float3Min(xa, xb) + Float3Min(ya, yb) + Float3Min(za, zb) + transform.Translation());
+
+	return out;
 }
 
 BSphere GetTransformedBSphere(const BSphere &bsphere, const Float4x4 &transform)

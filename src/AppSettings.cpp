@@ -75,6 +75,7 @@ namespace AppSettings
     BoolSetting EnableDirectLighting;
     BoolSetting EnableAmbientLighting;
     BoolSetting RenderBackground;
+    BoolSetting RenderSceneObjectBBox;
     BoolSetting EnableShadows;
     BoolSetting EnableNormalMaps;
     BoolSetting EnableRealtimeCubemap;
@@ -179,6 +180,9 @@ namespace AppSettings
         RenderBackground.Initialize(tweakBar, "RenderBackground", "Scene Controls", "Render Background", "", true);
         Settings.AddSetting(&RenderBackground);
 
+        RenderSceneObjectBBox.Initialize(tweakBar, "RenderSceneObjectBBox", "Scene Controls", "Render Scene Object BBox", "", false);
+        Settings.AddSetting(&RenderSceneObjectBBox);
+
         EnableShadows.Initialize(tweakBar, "EnableShadows", "Scene Controls", "Enable Shadows", "", true);
         Settings.AddSetting(&EnableShadows);
 
@@ -267,6 +271,7 @@ namespace AppSettings
         CBuffer.Data.EnableDirectLighting = EnableDirectLighting;
         CBuffer.Data.EnableAmbientLighting = EnableAmbientLighting;
         CBuffer.Data.RenderBackground = RenderBackground;
+        CBuffer.Data.RenderSceneObjectBBox = RenderSceneObjectBBox;
         CBuffer.Data.EnableShadows = EnableShadows;
         CBuffer.Data.EnableNormalMaps = EnableNormalMaps;
         CBuffer.Data.EnableRealtimeCubemap = EnableRealtimeCubemap;

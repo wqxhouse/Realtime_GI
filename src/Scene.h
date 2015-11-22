@@ -98,7 +98,7 @@ public:
 	void sortSceneObjects(const Float4x4 &viewMatrix);
 
 	inline int getNumStaticOpaqueObjects() { return _numStaticOpaqueObjects;  }
-	inline int getNumDynmamicOpaueObjects() { return _numDynamicOpaqueObjects; }
+	inline int getNumDynamicOpaueObjects() { return _numDynamicOpaqueObjects; }
 	inline int getNumModels() { return (int)_modelIndices.size(); }
 	inline Model *getModel(uint64 index) { return &_models[_modelIndices[index]]; }
 	// inline MeshData *getModelData(uint64 index) { return &_modelsData[_modelIndices[index]]; }
@@ -110,6 +110,8 @@ public:
 	inline SceneObject *getStaticOpaqueObjectsPtr() { return _staticOpaqueObjects; }
 	inline SceneObject *getDynamicOpaqueObjectsPtr() { return _dynamicOpaqueObjects; }
 
+	inline BBox *getDynamicObjectBBoxPtr() { return _dynamicOpaqueObjectsBBoxes; }
+	inline BBox *getStaticObjectBBoxPtr() { return _staticOpaqueObjectsBBoxes; }
 
 	// Lights
 	PointLight *addPointLight();

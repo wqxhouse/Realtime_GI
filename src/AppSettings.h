@@ -101,6 +101,7 @@ namespace AppSettings
     extern BoolSetting EnableDirectLighting;
     extern BoolSetting EnableAmbientLighting;
     extern BoolSetting RenderBackground;
+    extern BoolSetting RenderSceneObjectBBox;
     extern BoolSetting EnableShadows;
     extern BoolSetting EnableNormalMaps;
     extern BoolSetting EnableRealtimeCubemap;
@@ -145,6 +146,7 @@ namespace AppSettings
         bool32 EnableDirectLighting;
         bool32 EnableAmbientLighting;
         bool32 RenderBackground;
+        bool32 RenderSceneObjectBBox;
         bool32 EnableShadows;
         bool32 EnableNormalMaps;
         bool32 EnableRealtimeCubemap;

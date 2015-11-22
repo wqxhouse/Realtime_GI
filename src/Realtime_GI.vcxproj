@@ -139,6 +139,7 @@
     <ClCompile Include="..\SampleFramework11\v1.01\Window.cpp" />
     <ClCompile Include="BoundUtils.cpp" />
     <ClCompile Include="CreateCubemap.cpp" />
+    <ClCompile Include="DebugRenderer.cpp" />
     <ClCompile Include="MeshRenderer.cpp" />
     <ClCompile Include="AppSettings.cpp" />
     <ClCompile Include="Scene.cpp" />
@@ -186,6 +187,7 @@
     <ClInclude Include="AppPCH.h" />
     <ClInclude Include="BoundUtils.h" />
     <ClInclude Include="CreateCubemap.h" />
+    <ClInclude Include="DebugRenderer.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="LightClusters.h" />
     <ClInclude Include="MeshRenderer.h" />
@@ -271,6 +273,13 @@
     <None Include="ClusteredDeferred.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="DebugGeom.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
