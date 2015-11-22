@@ -54,5 +54,5 @@ float2 BackgroundVelocityPS(in float4 PositionSS : SV_Position) : SV_Target0
     velocity -= JitterOffset;
     return velocity;
 
-    return 0.0f;
+    // return 0.0f;
 }
