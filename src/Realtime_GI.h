@@ -25,6 +25,7 @@
 #include "PostProcessor.h"
 #include "MeshRenderer.h"
 #include "Scene.h"
+#include "LightClusters.h"
 
 //#include "CreateCubemap.h"
 #include "ProbeManager.h"
@@ -130,10 +131,11 @@ protected:
 		float NearPlane;
 		Float3 CameraZAxisWS;
 		float FarPlane;
-		float ProjTermA;
-		float ProjTermB;
 
-		Float2 padding;
+		Float3 ClusterScale;
+		float ProjTermA;
+		Float3 ClusterBias;
+		float ProjTermB;
 	};
 
 
@@ -142,7 +144,6 @@ protected:
 	ConstantBuffer<DeferredPassConstants> _deferredPassConstants;
 
 	StructuredBuffer _pointLightBuffer;
-	StructuredBuffer _lightIndicesList;
 
 	SamplerStates _samplerStates;
 
@@ -176,9 +177,9 @@ protected:
 
 	void ApplyMomentum(float &prevVal, float &val, float deltaTime);
 
-	//Create Cubemap
 	CreateCubemap _cubemapGenerator;
 	DebugRenderer _debugRenderer;
+	LightClusters _lightClusters;
 
 	//Create probe manager
 	ProbeManager _probeManager;

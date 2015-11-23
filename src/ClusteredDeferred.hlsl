@@ -29,9 +29,18 @@ cbuffer ClusteredDeferredConstants : register(b0)
 	float NearPlane;
 	float3 CameraZAxisWS;
 	float FarPlane;
+
+	float3 ClusterScale;
 	float ProjTermA;
+	float3 ClusterBias;
 	float ProjTermB;
 }
+
+struct ClusterData
+{
+	uint offset;
+	uint counts;
+};
 
 Texture2D RT0 : register(t0);
 Texture2D RT1 : register(t1);
@@ -42,6 +51,9 @@ StructuredBuffer<PointLight> PointLights : register(t5);
 
 TextureCube<float3> SpecularCubemap : register(t6);
 Texture2D<float2> SpecularCubemapLookup : register(t7);
+
+StructuredBuffer<uint> LightIndices : register(t8);
+Texture3D<ClusterData> Clusters : register(t9);
 
 SamplerState EVSMSampler : register(s0);
 SamplerState LinearSampler : register(s1);
@@ -96,6 +108,7 @@ float4 ClusteredDeferredPS(in PSInput input) : SV_Target0
 		rt0, rt1, rt2, ndcZ, input.ViewRay, ViewToWorld, 
 		CameraPosWS, CameraZAxisWS, ProjTermA, ProjTermB);
 
+
 	float3 lighting = float3(0.0f, 0.0f, 0.0f);
 
 	if(EnableDirectLighting)
@@ -107,9 +120,22 @@ float4 ClusteredDeferredPS(in PSInput input) : SV_Target0
 		float sunShadow = EnableShadows ? ShadowVisibility(surface.posWS, surface.depthVS) : 1.0f;
 		lighting *= sunShadow;
 
+		// Load cluster data	
+		uint4 cluster_coord = int4(surface.posWS * ClusterScale + ClusterBias, 0);
+		ClusterData data = Clusters.Load(cluster_coord);
+
+		uint offset = data.offset;
+		uint counts = data.counts;
+		uint pointLightCount = counts >> 16;
+		uint spotLightCount  = counts & 0xFFFF;
+
 		// Point light
-		PointLight pl = PointLights[0];
-		lighting += CalcPointLight(surface, pl, CameraPosWS);
+		for (uint i = 0; i < pointLightCount; i++)
+		{
+			uint lightIndex = LightIndices[offset + i];
+			PointLight pl = PointLights[lightIndex];
+			lighting += CalcPointLight(surface, pl, CameraPosWS);
+		}
 	}
 
 	if(EnableAmbientLighting)
