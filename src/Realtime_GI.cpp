@@ -577,7 +577,10 @@ void Realtime_GI::RenderSceneCubemaps(ID3D11DeviceContext *context)
 	/*_probeManager.CreateProbe(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox,
 		float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ), ORIGIN_PROBE);*/
 	_probeManager.CreateProbes(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox,
-		probePos, 0, 2);
+		probePos);
+
+	/*_probeManager.AddProbe(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox,
+		probePos)*/
 	//_probeManager.GetProbe(_cubemapGenerator, 1);
 
 	_meshRenderer.SetCubemapCapture(false);

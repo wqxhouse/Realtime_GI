@@ -9,6 +9,7 @@
 
 
 ProbeManager::ProbeManager()
+	:probeNum(0)
 {
 
 }
@@ -16,6 +17,7 @@ ProbeManager::ProbeManager()
 
 void ProbeManager::Initialize(ID3D11Device *device, const std::vector<CameraClips> cameraClipVector)
 {
+	if (cameraClipVector.size() == 0) return;
 	probeNum = (uint32)cameraClipVector.size();
 	
 	for (uint32 probeIndex = 0; probeIndex < probeNum; ++probeIndex)
@@ -29,9 +31,9 @@ void ProbeManager::Initialize(ID3D11Device *device, const std::vector<CameraClip
 
 
 void ProbeManager::CreateProbe(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
-	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, Float3 position, uint32 index)
+	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, Float3 position, uint32 index = 0)
 {
-	if (probeNum == 0) return;
+	//if (probeNum == 0) return;
 	CreateCubemap *selectedCubemap = &_cubemaps.at(index);
 	RenderTarget2D cubemapRenderTarget;
 
@@ -46,17 +48,20 @@ void ProbeManager::CreateProbe(const DeviceManager &deviceManager, MeshRenderer 
 	selectedCubemap->GetPreFilterTargetViews(cubemapRenderTarget);
 	deviceManager.ImmediateContext()->GenerateMips(cubemapRenderTarget.SRView);
 
+	++probeNum;
 	selectedCubemap = nullptr;
 }
 
 void ProbeManager::CreateProbes(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
-	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, std::vector<Float3> positions, uint32 start, uint32 end)
+	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, std::vector<Float3> positions)
 {
-	if (probeNum == 0) return;
+	if (positions.size() == 0) return;
+
 	CreateCubemap *selectedCubemap = nullptr;
 	RenderTarget2D cubemapRenderTarget;
+	probeNum = (uint32)positions.size();
 
-	for (uint32 probeIndex = start; probeIndex <= end; ++probeIndex)
+	for (uint32 probeIndex = 0; probeIndex < probeNum; ++probeIndex)
 	{
 		selectedCubemap = &_cubemaps.at(probeIndex);
 
@@ -76,15 +81,35 @@ void ProbeManager::CreateProbes(const DeviceManager &deviceManager, MeshRenderer
 }
 
 void ProbeManager::AddProbe(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
-	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, Float3 position)
+	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, Float3 position, const CameraClips cameraClips)
 {
+	CreateCubemap newCubemap = CreateCubemap(cameraClips.NearClip, cameraClips.FarClip);
+	newCubemap.Initialize(deviceManager.Device());
 
+	RenderTarget2D cubemapRenderTarget;
+	newCubemap.SetPosition(position);
+
+	newCubemap.Create(deviceManager, meshRenderer, sceneTransform, environmentMap,
+		environmentMapSH, jitterOffset, skybox);
+	newCubemap.GetTargetViews(cubemapRenderTarget);
+	deviceManager.ImmediateContext()->GenerateMips(cubemapRenderTarget.SRView);
+
+	newCubemap.RenderPrefilterCubebox(deviceManager, sceneTransform);
+	newCubemap.GetPreFilterTargetViews(cubemapRenderTarget);
+	deviceManager.ImmediateContext()->GenerateMips(cubemapRenderTarget.SRView);
+
+	_cubemaps.push_back(newCubemap);
+	++probeNum;
 }
 
 
 void ProbeManager::AddProbes(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
-	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, std::vector<Float3> positions)
+	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, std::vector<Float3> positions, const std::vector<CameraClips> cameraClips)
 {
+	for ( uint32 probeIndex = 0; probeIndex < probeNum; ++probeIndex )
+	{
+		AddProbe(deviceManager, meshRenderer, sceneTransform, environmentMap, environmentMapSH, jitterOffset, skybox, positions.at(probeIndex), cameraClips.at(probeIndex));
+	}
 
 }
 
@@ -107,6 +132,7 @@ void ProbeManager::RemoveProbes(uint32 start, uint32 end)
 
 void ProbeManager::ClearProbes()
 {
+	_probePositions.clear();
 	_cubemaps.clear();
 	probeNum = 0;
 }
