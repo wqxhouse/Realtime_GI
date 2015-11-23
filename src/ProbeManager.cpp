@@ -56,7 +56,7 @@ void ProbeManager::CreateProbes(const DeviceManager &deviceManager, MeshRenderer
 	CreateCubemap *selectedCubemap = nullptr;
 	RenderTarget2D cubemapRenderTarget;
 
-	for (uint32 probeIndex = start; probeIndex < end; ++probeIndex)
+	for (uint32 probeIndex = start; probeIndex <= end; ++probeIndex)
 	{
 		selectedCubemap = &_cubemaps.at(probeIndex);
 
@@ -142,13 +142,17 @@ float ProbeManager::CalDistance(Float3 probePos, Float3 objPos)
 
 uint32 ProbeManager::CalNN(Float3 objPos)
 {
-	float maxDis = 0;
+	float minDis = FLT_MAX;
 	uint32 maxIndex = -1;
 
 	for (uint32 probeIndex = 0; probeIndex < _cubemaps.size(); ++probeIndex)
 	{
-		if (maxDis <= CalDistance(_cubemaps.at(probeIndex).GetPosition(), objPos))
+		float distance = CalDistance(_cubemaps.at(probeIndex).GetPosition(), objPos);
+		if (minDis >= distance)
+		{
 			maxIndex = probeIndex;
+			minDis = distance;
+		}
 	}
 
 	return maxIndex;

@@ -184,6 +184,8 @@ protected:
 	ProbeManager _probeManager;
 	ProbeManager::CameraClips _cameraClip;
 	std::vector<ProbeManager::CameraClips, std::allocator<ProbeManager::CameraClips>> _cameraClipVector;
+
+	std::vector<Float3> probePos;
 public:
 
     Realtime_GI();
