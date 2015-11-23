@@ -99,14 +99,40 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	scene->Initialize(device, _deviceManager.ImmediateContext());
 
 	Model *m = scene->addModel(ModelPaths[0]);
-	scene->addStaticOpaqueObject(m, 0.5f, Float3(0, 0, 0), Quaternion());
+	//scene->addStaticOpaqueObject(m, 0.5f, Float3(0, 0, 0), Quaternion());
 	
 	//scene->addDynamicOpaqueBoxObject(AppSettings::BoxMaxX - AppSettings::BoxMinX, 
 		//float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ), Quaternion());
+	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 0, 0), Quaternion());
 
 	PointLight *pl = scene->addPointLight();
 	pl->cRadius = 10.0f;
 	pl->cColor *= Float3(10, 10, 10);
+
+	PointLight *pl2 = scene->addPointLight();
+	pl2->cRadius = 5.0f;
+	pl2->cPos = Float3(-1, 0, 0);
+	pl2->cColor *= Float3(30, 10, 5);
+
+	PointLight *pl3 = scene->addPointLight();
+	pl3->cRadius = 5.0f;
+	pl3->cPos = Float3(1, 1, 0);
+	pl3->cColor *= Float3(60, 30, 5);
+
+	PointLight *pl4 = scene->addPointLight();
+	pl4->cRadius = 5.0f;
+	pl4->cPos = Float3(-1, -1, 0);
+	pl4->cColor *= Float3(30, 30, 5);
+
+	PointLight *pl5 = scene->addPointLight();
+	pl5->cRadius = 5.0f;
+	pl5->cPos = Float3(1, 0, 1);
+	pl5->cColor *= Float3(5, 30, 30);
+
+	PointLight *pl6 = scene->addPointLight();
+	pl6->cRadius = 5.0f;
+	pl6->cPos = Float3(-1, 0, -1);
+	pl6->cColor *= Float3(5, 50, 30);
 
 	_numScenes++;
 	/// Scene 2 /////////////////////////////////////////////////////////////
@@ -167,7 +193,7 @@ void Realtime_GI::Initialize()
 	LoadScenes(device);
 
     _meshRenderer.Initialize(device, _deviceManager.ImmediateContext());
-    _meshRenderer.SetScene(&_scenes[0]);
+    _meshRenderer.SetScene(&_scenes[AppSettings::CurrentScene]);
 
     _skybox.Initialize(device);
 
@@ -197,6 +223,10 @@ void Realtime_GI::Initialize()
 	//_cameraClipVector.push_back(_cameraClip);
 
 	_probeManager.Initialize(device, _cameraClipVector);
+
+	_lightClusters.Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext());
+	_lightClusters.SetScene(&_scenes[AppSettings::CurrentScene]);
+
 }
 
 // Creates all required render targets
@@ -294,7 +324,6 @@ void Realtime_GI::CreateQuadBuffers()
 void Realtime_GI::CreateLightBuffers()
 {
 	_pointLightBuffer.Initialize(_deviceManager.Device(), sizeof(PointLight), Scene::MAX_SCENE_LIGHTS, true);
-	_lightIndicesList.Initialize(_deviceManager.Device(), sizeof(uint32), Scene::MAX_SCENE_LIGHTS, true);
 }
 
 void Realtime_GI::ApplyMomentum(float &prevVal, float &val, float deltaTime)
@@ -417,6 +446,7 @@ void Realtime_GI::Update(const Timer& timer)
 		Scene *currScene = &_scenes[AppSettings::CurrentScene];
 		_meshRenderer.SetScene(currScene);
         AppSettings::SceneOrientation.SetValue(currScene->getSceneOrientation());
+		_lightClusters.SetScene(currScene);
     }
 
 	Quaternion orientation = AppSettings::SceneOrientation;
@@ -730,6 +760,8 @@ void Realtime_GI::RenderLightsDeferred()
 		_pointLightBuffer.SRView,
 		_envMap,
 		_meshRenderer.GetSpecularLookupTexturePtr(),
+		_lightClusters.getLightIndicesListSRV(),
+		_lightClusters.getClusterTexSRV(),
 	};
 
 	ID3D11SamplerState* sampStates[2] = {
@@ -969,7 +1001,8 @@ void Realtime_GI::UploadLights()
 
 void Realtime_GI::AssignLightAndUploadClusters()
 {
-
+	_lightClusters.AssignLightToClusters();
+	_lightClusters.UploadClustersData();
 }
 
 int APIENTRY wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPWSTR lpCmdLine, int nCmdShow)
