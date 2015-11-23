@@ -27,7 +27,8 @@
 #include "Scene.h"
 #include "LightClusters.h"
 
-#include "CreateCubemap.h"
+//#include "CreateCubemap.h"
+#include "ProbeManager.h"
 #include "DebugRenderer.h"
 
 using namespace SampleFramework11;
@@ -159,6 +160,9 @@ protected:
 	void CreateLightBuffers();
 	void CreateQuadBuffers();
 
+
+    void RenderScene();
+	void RenderSceneCubemaps(ID3D11DeviceContext *context);
     void RenderSceneForward();
 	void RenderSceneCubemaps();
     void RenderBackgroundVelocity();
@@ -177,6 +181,12 @@ protected:
 	DebugRenderer _debugRenderer;
 	LightClusters _lightClusters;
 
+	//Create probe manager
+	ProbeManager _probeManager;
+	ProbeManager::CameraClips _cameraClip;
+	std::vector<ProbeManager::CameraClips, std::allocator<ProbeManager::CameraClips>> _cameraClipVector;
+
+	std::vector<Float3> probePos;
 public:
 
     Realtime_GI();

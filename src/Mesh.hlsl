@@ -41,6 +41,7 @@ cbuffer VSConstants : register(b0)
 cbuffer PSConstants : register(b0)
 {
 	float3 CameraPosWS;
+	float3 CubemapPositionWS;
 	float4x4 ShadowMatrix;
 	float4 CascadeSplits;
 	float4 CascadeOffsets[NumCascades];
@@ -54,6 +55,8 @@ cbuffer PSConstants : register(b0)
 	SH9Color EnvironmentSH;
 	float2 RTSize;
 	float2 JitterOffset;
+	float3 BoxMax;
+	float3 BoxMin;
 }
 
 //=================================================================================================
@@ -326,6 +329,26 @@ float3 CalcLighting(in float3 normal, in float3 lightDir, in float3 lightColor,
     return lighting * nDotL * lightColor;
 }
 
+
+float3 parallaxCorrection(float3 PositionWS, float3 NormalWS){
+	float3 DirectionWS = normalize(PositionWS - CameraPosWS);
+	float3 ReflDirectionWS = reflect(DirectionWS, NormalWS);
+
+	float3 FirstPlaneIntersect = (BoxMax - PositionWS) / ReflDirectionWS;
+	float3 SecondPlaneIntersect = (BoxMin - PositionWS) / ReflDirectionWS;
+
+	float3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
+
+	float Distance = min(min(FurthestPlane.x, FurthestPlane.y), FurthestPlane.z);
+
+	float3 IntersectPositionWS = PositionWS + ReflDirectionWS * Distance;
+
+	ReflDirectionWS = IntersectPositionWS - CubemapPositionWS;
+
+	return ReflDirectionWS;
+}
+
+
 //=================================================================================================
 // Pixel Shader
 //=================================================================================================
@@ -427,6 +450,7 @@ PSOutput PS(in PSInput input)
 
 			lighting += indirectDiffuse * diffuseAlbedo;
 
+			//float3 reflectWS = parallaxCorrection(positionWS, normalize(normalWS));
 			float3 reflectWS = reflect(-viewWS, normalWS);
 			float3 vtxReflectWS = reflect(-viewWS, vtxNormal);
 
@@ -434,7 +458,6 @@ PSOutput PS(in PSInput input)
 			SpecularCubemap.GetDimensions(0, width, height, numMips);
 
 			const float SqrtRoughness = sqrt(roughness);
-
 			// Compute the mip level, assuming the top level is a roughness of 0.01
 			float mipLevel = saturate(SqrtRoughness - 0.01f) * (numMips - 1.0f);
 
@@ -450,7 +473,6 @@ PSOutput PS(in PSInput input)
 
 			lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;
 		}
-
 	
 		// Emissive term
 		lighting += emissiveColor;

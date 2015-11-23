@@ -45,7 +45,7 @@ static const float FarClip = 300.0f;
 Realtime_GI::Realtime_GI() :  App(L"Realtime GI (CSCI 580)", MAKEINTRESOURCEW(IDI_DEFAULT)),
                             _camera(WindowWidthF / WindowHeightF, Pi_4 * 0.75f, NearClip, FarClip), 
 							_prevForward(0.0f), _prevStrafe(0.0f), _prevAscend(0.0f), _numScenes(0),
-							_cubemapGenerator(NearClip, FarClip)
+							_cubemapGenerator(NearClip, FarClip), _probeManager()
 {
     _deviceManager.SetBackBufferWidth(WindowWidth);
     _deviceManager.SetBackBufferHeight(WindowHeight);
@@ -80,12 +80,14 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	{
 		// L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\Converted\\sponza.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\Cerberus_by_Andrew_Maximov\\Cerberus_by_Andrew_Maximov\\testfbxascii.fbx",
-		L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
+		//L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
 		// L"..\\Content\\Models\\CornellBox\\CornellBox_Max.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaNon_PBR\\Converted\\sponza.obj",
 		// L"..\\Content\\Models\\Powerplant\\Powerplant.sdkmesh",
 		// L"..\\Content\\Models\\RoboHand\\RoboHand.meshdata",
 		// L"",
+		L"..\\Content\\Models\\sphere\\sphere.obj",
+		//L"..\\Content\\Models\\3DScan\\model.obj",
 	};
 
 	Scene *scene = nullptr;
@@ -97,6 +99,10 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	scene->Initialize(device, _deviceManager.ImmediateContext());
 
 	Model *m = scene->addModel(ModelPaths[0]);
+	//scene->addStaticOpaqueObject(m, 0.5f, Float3(0, 0, 0), Quaternion());
+	
+	//scene->addDynamicOpaqueBoxObject(AppSettings::BoxMaxX - AppSettings::BoxMinX, 
+		//float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ), Quaternion());
 	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 0, 0), Quaternion());
 
 	PointLight *pl = scene->addPointLight();
@@ -209,8 +215,18 @@ void Realtime_GI::Initialize()
 	CreateLightBuffers();
 	CreateQuadBuffers();
 
+	_cameraClip.NearClip = NearClip;
+	_cameraClip.FarClip = FarClip;
+
+	for (int i = 0; i < 3; ++i)
+		_cameraClipVector.push_back(_cameraClip);
+	//_cameraClipVector.push_back(_cameraClip);
+
+	_probeManager.Initialize(device, _cameraClipVector);
+
 	_lightClusters.Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext());
 	_lightClusters.SetScene(&_scenes[AppSettings::CurrentScene]);
+
 }
 
 // Creates all required render targets
@@ -245,9 +261,10 @@ void Realtime_GI::CreateRenderTargets()
 		_colorTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	}
 
-	if (_firstFrame)
+	//if (_firstFrame)
 	{
-		_cubemapGenerator.Initialize(device, 1, NumSamples, Quality);
+		//_cubemapGenerator.Initialize(device);
+		
 	}
 
     if(_resolveTarget.Width != width || _resolveTarget.Height != height)
@@ -352,6 +369,12 @@ void Realtime_GI::Update(const Timer& timer)
 	float ascend = CamMoveSpeed * 
 		((kbState.IsKeyDown(KeyboardState::Q) ? 1 : 0.0f) +
 		(kbState.IsKeyDown(KeyboardState::E) ? -1 : 0.0f));
+
+	//if (kbState.IsKeyDown(KeyboardState::Up))
+	/*{
+		Float3 trans = _scenes[0].getStaticOpaqueObjectsPtr()->base->Translation();
+		_scenes[0].getStaticOpaqueObjectsPtr()->base->SetTranslation(Float3(0, trans[1] + 0.01f, 0));
+	}*/
 
     Float3 camPos = _camera.Position();
 
@@ -525,8 +548,9 @@ void Realtime_GI::RenderAA()
     context->CopyResource(_prevFrameTarget.Texture, _resolveTarget.Texture);
 }
 
-void Realtime_GI::RenderSceneCubemaps()
+void Realtime_GI::RenderSceneCubemaps(ID3D11DeviceContext *context)
 {
+	RenderTarget2D cubemapRenderTarget;
 	_meshRenderer.SetCubemapCapture(true);
 	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
 	{
@@ -534,8 +558,31 @@ void Realtime_GI::RenderSceneCubemaps()
 	}
 
 	// TODO: make a separate cubemap manager to set different locations
-	_cubemapGenerator.SetPosition(float3(0.0f, 0.0f, 0.0f));
+	//_cubemapGenerator.SetPosition(float3(0.0f, 0.0f, 0.0f));//!
+	//_cubemapGenerator.SetPosition(float3(0.5f, 0.5f, 0.5f));//!
+
+	/*_cubemapGenerator.SetPosition(float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ));
 	_cubemapGenerator.Create(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox);
+	_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
+	context->GenerateMips(cubemapRenderTarget.SRView);
+
+	_cubemapGenerator.GetPreFilterTargetViews(cubemapRenderTarget);
+	_cubemapGenerator.RenderPrefilterCubebox(_deviceManager, _globalTransform);
+	context->GenerateMips(cubemapRenderTarget.SRView);*/
+
+	probePos.push_back(Float3(0, 5, 0));
+	probePos.push_back(Float3(2, 3, 0));
+	probePos.push_back(Float3(4, 3, 0));
+
+	/*_probeManager.CreateProbe(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox,
+		float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ), ORIGIN_PROBE);*/
+	_probeManager.CreateProbes(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox,
+		probePos);
+
+	/*_probeManager.AddProbe(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox,
+		probePos)*/
+	//_probeManager.GetProbe(_cubemapGenerator, 1);
+
 	_meshRenderer.SetCubemapCapture(false);
 
 	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
@@ -563,7 +610,7 @@ void Realtime_GI::Render(const Timer& timer)
 	if (_firstFrame || AppSettings::CurrentScene.Changed() || AppSettings::EnableRealtimeCubemap)
 	{
 		// render cubemap every time scene has changed
-		RenderSceneCubemaps();
+		RenderSceneCubemaps(context);
 	}
 
 	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
@@ -596,8 +643,8 @@ void Realtime_GI::Render(const Timer& timer)
 	_debugRenderer.FlushDrawQueued();
     RenderHUD();
 
-    ++_frameCount; 
-	_firstFrame = false;
+    //if(++_frameCount == 2)
+		_firstFrame = false;
 }
 
 void Realtime_GI::RenderSceneGBuffer()
@@ -606,12 +653,17 @@ void Realtime_GI::RenderSceneGBuffer()
 
 	_meshRenderer.SetDrawGBuffer(true);
 
+	//Update the probe
+	SceneObject *obj = _scenes[0].getStaticOpaqueObjectsPtr();
+	_probeManager.GetNNProbe(_cubemapGenerator, obj[0].base->Translation());
+
 	ID3D11DeviceContextPtr context = _deviceManager.ImmediateContext();
 	RenderTarget2D cubemapRenderTarget;
 
 	SetViewport(context, _colorTarget.Width, _colorTarget.Height);
 
-	_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
+	//_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
+	_cubemapGenerator.GetPreFilterTargetViews(cubemapRenderTarget);
 
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	context->ClearRenderTargetView(_rt0Target.RTView, clearColor);
@@ -645,6 +697,12 @@ void Realtime_GI::RenderLightsDeferred()
 	PIXEvent event(L"Render Lights Deferred");
 
 	ID3D11DeviceContextPtr context = _deviceManager.ImmediateContext();
+
+	RenderTarget2D cubemapRenderTarget;
+
+	SetViewport(context, _colorTarget.Width, _colorTarget.Height);
+
+	_cubemapGenerator.GetPreFilterTargetViews(cubemapRenderTarget);
 
 	context->IASetInputLayout(_quadInputLayout);
 
@@ -727,6 +785,11 @@ void Realtime_GI::RenderLightsDeferred()
 	context->VSSetShader(nullptr, nullptr, 0);
 	context->PSSetShader(nullptr, nullptr, 0);
 
+	/*rtvs[0] = _colorTarget.RTView;
+	context->OMSetRenderTargets(1, rtvs, _depthBuffer.DSView);
+
+	_meshRenderer.Render(context, _camera, _globalTransform, cubemapRenderTarget.SRView, _envMapSH, _jitterOffset);*/
+
 	// Skybox
 	context->OMSetRenderTargets(1, rtvs, _depthBuffer.DSView);
 	if (AppSettings::RenderBackground)
@@ -748,7 +811,9 @@ void Realtime_GI::RenderSceneForward()
 
     SetViewport(context, _colorTarget.Width, _colorTarget.Height);
 
-	_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
+	//_cubemapGenerator.GetTargetViews(cubemapRenderTarget)
+
+	_cubemapGenerator.GetPreFilterTargetViews(cubemapRenderTarget);
 
     float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
     context->ClearRenderTargetView(_colorTarget.RTView, clearColor);
@@ -769,6 +834,10 @@ void Realtime_GI::RenderSceneForward()
     context->OMSetRenderTargets(2, renderTargets, _depthBuffer.DSView);
 
     // _meshRenderer.Render(context, _camera, _globalTransform, _envMap, _envMapSH, _jitterOffset);
+	_meshRenderer.SetParallaxCorrection(_cubemapGenerator.GetPosition(), 
+		Float3(AppSettings::BoxMaxX, AppSettings::BoxMaxY, AppSettings::BoxMaxZ), 
+		Float3(AppSettings::BoxMinX, AppSettings::BoxMinY, AppSettings::BoxMinZ));
+
 	_meshRenderer.Render(context, _camera, _globalTransform, cubemapRenderTarget.SRView, _envMapSH, _jitterOffset);
 
     renderTargets[0] = _colorTarget.RTView;
@@ -878,10 +947,29 @@ void Realtime_GI::RenderHUD()
     fpsText += ToString(_fps) + L" (" + ToString(1000.0f / _fps) + L"ms)";
     _spriteRenderer.RenderText(_font, fpsText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));
 
-    transform._42 += 25.0f;
+    /*transform._42 += 25.0f;
     wstring vsyncText(L"VSYNC (V): ");
     vsyncText += _deviceManager.VSYNCEnabled() ? L"Enabled" : L"Disabled";
-    _spriteRenderer.RenderText(_font, vsyncText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));
+    _spriteRenderer.RenderText(_font, vsyncText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));*/
+
+	transform._42 += 25.0f;
+	wstring posText(L"Camera Position: ");
+	posText += ToString(_camera.Position()[0]) + L", " + ToString(_camera.Position()[1]) + L", "
+		+ ToString(_camera.Position()[2]) + L", ";
+	_spriteRenderer.RenderText(_font, posText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));
+
+	transform._42 += 25.0f;
+	wstring probeText(L"Probe Position: ");
+	probeText += ToString(_cubemapGenerator.GetPosition()[0]) + L", " + ToString(_cubemapGenerator.GetPosition()[1]) + L", "
+		+ ToString(_cubemapGenerator.GetPosition()[2]) + L", ";
+	_spriteRenderer.RenderText(_font, probeText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));
+
+	/*Float3 trans = _scenes[0].getStaticOpaqueObjectsPtr()->base->Translation();
+	transform._42 += 25.0f;
+	wstring objText(L"Object Position: ");
+	probeText += ToString(trans[0]) + L", " + ToString(trans[1]) + L", "
+		+ ToString(trans[2]) + L", ";
+	_spriteRenderer.RenderText(_font, probeText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));*/
 
 	BBox sceneBoundingBox = _scenes[AppSettings::CurrentScene].getSceneBoundingBox();
 	/*std::wstring sceneBoundDebugText =

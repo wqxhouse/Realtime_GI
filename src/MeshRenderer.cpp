@@ -220,6 +220,12 @@ void MeshRenderer::SetDrawGBuffer(bool32 tf)
 	ReMapMeshShaders();
 }
 
+void MeshRenderer::SetParallaxCorrection(Float3 newProbePosWS, Float3 newMaxbox, Float3 newMinbox){
+	probePosWS = newProbePosWS;
+	maxbox = newMaxbox;
+	minbox = newMinbox;
+}
+
 void MeshRenderer::ReMapMeshShaders()
 {
 	_meshVertexShadersMap.clear();
@@ -278,6 +284,7 @@ void MeshRenderer::GenMeshShaderMap(const Model *model)
 		// TODO: the following case somehow defeats the purpose of the design
 		_drawingCubemap ? arr[5] = true : arr[5] = false;
 		AppSettings::CentroidSampling ? arr[6] = true : arr[6] = false;
+
 		_drawingGBuffer ? arr[7] = true : arr[7] = false;
 
 		uint32 vsbits = boolArrToUint32(arr, 5);
@@ -321,11 +328,17 @@ void MeshRenderer::GenAndCacheMeshInputLayout(const Model* model)
 void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
     this->_device = device;
+
+	this->_drawingCubemap = false;
+
 	_drawingCubemap = false;
 	_drawingGBuffer = false;
 
-    _blendStates.Initialize(device);
+
+	_blendStates.Initialize(device);
+	_rasterizerStates.Wireframe();
     _rasterizerStates.Initialize(device);
+
     _depthStencilStates.Initialize(device);
     _samplerStates.Initialize(device);
 
@@ -636,6 +649,7 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 	//if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
 	{
 		_meshPSConstants.Data.CameraPosWS = camera.Position();
+		_meshPSConstants.Data.ProbePosWS = probePosWS;
 		_meshPSConstants.Data.OffsetScale = OffsetScale;
 		_meshPSConstants.Data.PositiveExponent = PositiveExponent;
 		_meshPSConstants.Data.NegativeExponent = NegativeExponent;
@@ -648,6 +662,8 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 		_meshPSConstants.Data.JitterOffset = jitterOffset;
 		_meshPSConstants.ApplyChanges(context);
 		_meshPSConstants.SetPS(context, 0);
+		_meshPSConstants.Data.MaxBox = maxbox;
+		_meshPSConstants.Data.MinBox = minbox;
 	}
 
     // Set shaders
@@ -725,6 +741,9 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 			// Draw all parts
 			for (uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
 			{
+				const MeshPart& part = mesh.MeshParts()[partIdx];
+				const MeshMaterial& material = model->Materials()[part.MaterialIdx];
+
 				// Frustum culling on parts
 				if (partsBound->FrustumTests[partCount++])
 				{
