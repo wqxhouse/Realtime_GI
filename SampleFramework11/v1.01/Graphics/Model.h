@@ -89,7 +89,7 @@ class Mesh
 
 public:
 
-	Mesh() { memset(materialFlags, 0, sizeof(bool32) * 5); }
+	Mesh() { memset(materialFlags, 0, sizeof(bool32) * (int)MaterialFlag::NumMaterialFlags); }
 
     // Init from loaded files
     void InitFromSDKMesh(ID3D11Device* device, SDKMesh& sdkmesh, uint32 meshIdx, bool generateTangents);

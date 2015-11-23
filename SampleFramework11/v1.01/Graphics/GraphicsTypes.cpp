@@ -408,7 +408,7 @@ StructuredBuffer::StructuredBuffer() : Size(0), Stride(0), NumElements(0)
 {
 }
 
-void StructuredBuffer::Initialize(ID3D11Device* device, uint32 stride, uint32 numElements, bool32 useAsUAV,
+void StructuredBuffer::Initialize(ID3D11Device* device, uint32 stride, uint32 numElements, bool32 dynamic, bool32 useAsUAV,
                                     bool32 appendConsume, bool32 hiddenCounter, const void* initData)
 {
     Size = stride * numElements;
@@ -422,10 +422,10 @@ void StructuredBuffer::Initialize(ID3D11Device* device, uint32 stride, uint32 nu
 
     D3D11_BUFFER_DESC bufferDesc;
     bufferDesc.ByteWidth = stride * numElements;
-    bufferDesc.Usage = useAsUAV ? D3D11_USAGE_DEFAULT : D3D11_USAGE_IMMUTABLE;
+    bufferDesc.Usage = useAsUAV ? D3D11_USAGE_DEFAULT : dynamic ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_IMMUTABLE;
     bufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
     bufferDesc.BindFlags |= useAsUAV ? D3D11_BIND_UNORDERED_ACCESS : 0;
-    bufferDesc.CPUAccessFlags = 0;
+    bufferDesc.CPUAccessFlags = useAsUAV ? 0 : dynamic ? D3D11_CPU_ACCESS_WRITE : 0;
     bufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
     bufferDesc.StructureByteStride = stride;
 
@@ -466,6 +466,7 @@ void StructuredBuffer::WriteToFile(const wchar* path, ID3D11Device* device, ID3D
     Buffer->GetDesc(&desc);
 
     uint32 useAsUAV = (desc.BindFlags & D3D11_BIND_UNORDERED_ACCESS) ? 1 : 0;
+	uint32 dynamic = (desc.BindFlags & D3D11_USAGE_DYNAMIC) ? 1 : 0;
 
     uint32 appendConsume = 0;
     uint32 hiddenCounter = 0;
@@ -491,6 +492,7 @@ void StructuredBuffer::WriteToFile(const wchar* path, ID3D11Device* device, ID3D
     Win32Call(WriteFile(fileHandle, &Size, 4, &bytesWritten, nullptr));
     Win32Call(WriteFile(fileHandle, &Stride, 4, &bytesWritten, nullptr));
     Win32Call(WriteFile(fileHandle, &NumElements, 4, &bytesWritten, nullptr));
+    Win32Call(WriteFile(fileHandle, &dynamic, 4, &bytesWritten, nullptr));
     Win32Call(WriteFile(fileHandle, &useAsUAV, 4, &bytesWritten, nullptr));
     Win32Call(WriteFile(fileHandle, &hiddenCounter, 4, &bytesWritten, nullptr));
     Win32Call(WriteFile(fileHandle, &appendConsume, 4, &bytesWritten, nullptr));
@@ -519,11 +521,12 @@ void StructuredBuffer::ReadFromFile(const wchar* path, ID3D11Device* device)
         Win32Call(false);
 
     // Read the buffer info
-    bool32 useAsUAV, hiddenCounter, appendConsume;
+    bool32 dynamic, useAsUAV, hiddenCounter, appendConsume;
     DWORD bytesRead = 0;
     Win32Call(ReadFile(fileHandle, &Size, 4, &bytesRead, nullptr));
     Win32Call(ReadFile(fileHandle, &Stride, 4, &bytesRead, nullptr));
     Win32Call(ReadFile(fileHandle, &NumElements, 4, &bytesRead, nullptr));
+    Win32Call(ReadFile(fileHandle, &dynamic, 4, &bytesRead, nullptr));
     Win32Call(ReadFile(fileHandle, &useAsUAV, 4, &bytesRead, nullptr));
     Win32Call(ReadFile(fileHandle, &hiddenCounter, 4, &bytesRead, nullptr));
     Win32Call(ReadFile(fileHandle, &appendConsume, 4, &bytesRead, nullptr));
@@ -536,7 +539,7 @@ void StructuredBuffer::ReadFromFile(const wchar* path, ID3D11Device* device)
     Win32Call(CloseHandle(fileHandle));
 
     // Init
-    Initialize(device, Stride, NumElements, useAsUAV, appendConsume, hiddenCounter, bufferData);
+    Initialize(device, Stride, NumElements, dynamic, useAsUAV, appendConsume, hiddenCounter, bufferData);
 
     // Clean up
     delete [] bufferData;

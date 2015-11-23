@@ -105,6 +105,9 @@
     </ClCompile>
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="CreateCubemap.cpp" />
+    <ClCompile Include="BoundUtils.cpp" />
+    <ClCompile Include="DebugRenderer.cpp" />
+    <ClCompile Include="LightClusters.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PostProcessor.h" />
@@ -238,6 +241,11 @@
       <Filter>Misc</Filter>
     </ClInclude>
     <ClInclude Include="CreateCubemap.h" />
+    <ClInclude Include="Light.h" />
+    <ClInclude Include="LightClusters.h" />
+    <ClInclude Include="ShadowMapSettings.h" />
+    <ClInclude Include="BoundUtils.h" />
+    <ClInclude Include="DebugRenderer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="AppSettings.hlsl">
@@ -271,6 +279,24 @@
       <Filter>Shader</Filter>
     </None>
     <None Include="PostProcessing.hlsl">
+      <Filter>Shader</Filter>
+    </None>
+    <None Include="ClusteredDeferred.hlsl">
+      <Filter>Shader</Filter>
+    </None>
+    <None Include="LightCommon.hlsli">
+      <Filter>Shader</Filter>
+    </None>
+    <None Include="BRDF.hlsli">
+      <Filter>Shader</Filter>
+    </None>
+    <None Include="Shadow.hlsli">
+      <Filter>Shader</Filter>
+    </None>
+    <None Include="Surface.hlsli">
+      <Filter>Shader</Filter>
+    </None>
+    <None Include="DebugGeom.hlsl">
       <Filter>Shader</Filter>
     </None>
   </ItemGroup>

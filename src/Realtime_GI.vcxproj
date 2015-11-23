@@ -78,6 +78,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <StackReserveSize>2048000</StackReserveSize>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -98,6 +99,8 @@
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <StackReserveSize>2048000</StackReserveSize>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -136,7 +139,10 @@
     <ClCompile Include="..\SampleFramework11\v1.01\TwHelper.cpp" />
     <ClCompile Include="..\SampleFramework11\v1.01\Utility.cpp" />
     <ClCompile Include="..\SampleFramework11\v1.01\Window.cpp" />
+    <ClCompile Include="BoundUtils.cpp" />
     <ClCompile Include="CreateCubemap.cpp" />
+    <ClCompile Include="DebugRenderer.cpp" />
+    <ClCompile Include="LightClusters.cpp" />
     <ClCompile Include="MeshRenderer.cpp" />
     <ClCompile Include="AppSettings.cpp" />
     <ClCompile Include="Scene.cpp" />
@@ -182,13 +188,18 @@
     <ClInclude Include="..\SampleFramework11\v1.01\Utility.h" />
     <ClInclude Include="..\SampleFramework11\v1.01\Window.h" />
     <ClInclude Include="AppPCH.h" />
+    <ClInclude Include="BoundUtils.h" />
     <ClInclude Include="CreateCubemap.h" />
+    <ClInclude Include="DebugRenderer.h" />
+    <ClInclude Include="Light.h" />
+    <ClInclude Include="LightClusters.h" />
     <ClInclude Include="MeshRenderer.h" />
     <ClInclude Include="AppSettings.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="PostProcessor.h" />
     <ClInclude Include="Realtime_GI.h" />
+    <ClInclude Include="ShadowMapSettings.h" />
     <ClInclude Include="SharedConstants.h" />
   </ItemGroup>
   <ItemGroup>
@@ -212,16 +223,20 @@
       <FileType>Document</FileType>
     </CustomBuild>
     <None Include="AppSettings.hlsl" />
+    <None Include="BRDF.hlsli" />
     <None Include="DepthOnly.hlsl" />
     <None Include="DepthReduction.hlsl" />
     <None Include="EVSM.hlsl" />
     <None Include="EVSMConvert.hlsl" />
     <None Include="Icon.ico" />
+    <None Include="Shadow.hlsli" />
+    <None Include="Surface.hlsli" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Realtime_GI.rc" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="LightCommon.hlsli" />
     <None Include="Mesh.hlsl" />
     <None Include="PostProcessing.hlsl">
       <FileType>Document</FileType>
@@ -256,6 +271,20 @@
     <Image Include="..\Content\Textures\SpecularLookup.dds" />
     <Image Include="Debug\x64\t1.dds" />
     <Image Include="Debug\x64\t2.dds" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClusteredDeferred.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="DebugGeom.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <FileType>Document</FileType>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

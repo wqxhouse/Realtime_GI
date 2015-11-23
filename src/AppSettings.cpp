@@ -40,6 +40,12 @@ static const char* ScenesLabels[3] =
     "Plane",
 };
 
+static const char* ShadingTechLabels[2] =
+{
+    "Forward",
+    "Clustered_Deferred",
+};
+
 namespace AppSettings
 {
     MSAAModesSetting MSAAMode;
@@ -63,11 +69,13 @@ namespace AppSettings
     FloatSetting HiFreqWeight;
     FloatSetting SharpeningAmount;
     ScenesSetting CurrentScene;
+    ShadingTechSetting CurrentShadingTech;
     DirectionSetting LightDirection;
     ColorSetting LightColor;
     BoolSetting EnableDirectLighting;
     BoolSetting EnableAmbientLighting;
     BoolSetting RenderBackground;
+    BoolSetting RenderSceneObjectBBox;
     BoolSetting EnableShadows;
     BoolSetting EnableNormalMaps;
     BoolSetting EnableRealtimeCubemap;
@@ -154,6 +162,9 @@ namespace AppSettings
         CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene Controls", "Current Scene", "", Scenes::CornellBox, 3, ScenesLabels);
         Settings.AddSetting(&CurrentScene);
 
+        CurrentShadingTech.Initialize(tweakBar, "CurrentShadingTech", "Scene Controls", "Current Shading Tech", "", ShadingTech::Clustered_Deferred, 2, ShadingTechLabels);
+        Settings.AddSetting(&CurrentShadingTech);
+
         LightDirection.Initialize(tweakBar, "LightDirection", "Scene Controls", "Light Direction", "The direction of the light", Float3(-0.7500f, 0.9770f, -0.4000f));
         Settings.AddSetting(&LightDirection);
 
@@ -168,6 +179,9 @@ namespace AppSettings
 
         RenderBackground.Initialize(tweakBar, "RenderBackground", "Scene Controls", "Render Background", "", true);
         Settings.AddSetting(&RenderBackground);
+
+        RenderSceneObjectBBox.Initialize(tweakBar, "RenderSceneObjectBBox", "Scene Controls", "Render Scene Object BBox", "", false);
+        Settings.AddSetting(&RenderSceneObjectBBox);
 
         EnableShadows.Initialize(tweakBar, "EnableShadows", "Scene Controls", "Enable Shadows", "", true);
         Settings.AddSetting(&EnableShadows);
@@ -251,11 +265,13 @@ namespace AppSettings
         CBuffer.Data.HiFreqWeight = HiFreqWeight;
         CBuffer.Data.SharpeningAmount = SharpeningAmount;
         CBuffer.Data.CurrentScene = CurrentScene;
+        CBuffer.Data.CurrentShadingTech = CurrentShadingTech;
         CBuffer.Data.LightDirection = LightDirection;
         CBuffer.Data.LightColor = LightColor;
         CBuffer.Data.EnableDirectLighting = EnableDirectLighting;
         CBuffer.Data.EnableAmbientLighting = EnableAmbientLighting;
         CBuffer.Data.RenderBackground = RenderBackground;
+        CBuffer.Data.RenderSceneObjectBBox = RenderSceneObjectBBox;
         CBuffer.Data.EnableShadows = EnableShadows;
         CBuffer.Data.EnableNormalMaps = EnableNormalMaps;
         CBuffer.Data.EnableRealtimeCubemap = EnableRealtimeCubemap;

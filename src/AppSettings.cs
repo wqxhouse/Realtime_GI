@@ -53,6 +53,12 @@ public class Settings
         Hammersly16,
     }
 
+    enum ShadingTech
+    {
+        Forward,
+        Clustered_Deferred,
+    }
+
     public class AntiAliasing
     {
         MSAAModes MSAAMode = MSAAModes.MSAA4x;
@@ -123,6 +129,7 @@ public class Settings
     public class SceneControls
     {
         Scenes CurrentScene = Scenes.CornellBox;
+        ShadingTech CurrentShadingTech = ShadingTech.Clustered_Deferred;
 
         [DisplayName("Light Direction")]
         [HelpText("The direction of the light")]
@@ -143,6 +150,8 @@ public class Settings
         bool EnableAmbientLighting = true;
 
         bool RenderBackground = true;
+
+        bool RenderSceneObjectBBox = false;
 
         bool EnableShadows = true;
 

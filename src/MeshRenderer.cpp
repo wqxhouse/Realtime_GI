@@ -20,33 +20,8 @@
 
 #include "AppSettings.h"
 #include "SharedConstants.h"
+#include "ShadowMapSettings.h"
 
-// Constants - low shadow quality in debug mode to speed up
-#if _DEBUG 
-static const float ShadowNearClip = 1.0f;
-static const float FilterSize = 0.0f;
-static const uint32 SampleRadius = 0;
-static const float OffsetScale = 0.0f;
-static const float LightBleedingReduction = 0.10f;
-static const float PositiveExponent = 40.0f;
-static const float NegativeExponent = 8.0f;
-static const uint32 ShadowMapSize = 512;
-static const uint32 ShadowMSAASamples = 1;
-static const uint32 ShadowAnisotropy = 16;
-static const bool EnableShadowMips = false;	
-#else 
-static const float ShadowNearClip = 1.0f;
-static const float FilterSize = 7.0f;
-static const uint32 SampleRadius = 3;
-static const float OffsetScale = 0.0f;
-static const float LightBleedingReduction = 0.10f;
-static const float PositiveExponent = 40.0f;
-static const float NegativeExponent = 8.0f;
-static const uint32 ShadowMapSize = 1024;
-static const uint32 ShadowMSAASamples = 4;
-static const uint32 ShadowAnisotropy = 16;
-static const bool EnableShadowMips = true;
-#endif
 
 // Renders a text string indicating the current progress for compiling shaders
 static bool32 RenderShaderProgress(uint32 currShader, uint32 numShaders)
@@ -133,14 +108,14 @@ void MeshRenderer::GenPSRecursive(ID3D11Device *device, int depth, bool32 *descS
 		for (int i = 0; i < numDescs; i++)
 		{
 			opts->Add(shaderDescs[i], descStates[i]);
-			printf("%s ", shaderDescs[i]);
-			printf("%d ", descStates[i]);
+			/*printf("%s ", shaderDescs[i]);
+			printf("%d ", descStates[i]);*/
 		}
 
-		printf("\n");
+		//printf("\n");
 
 		uint32 bits = boolArrToUint32(descStates, numDescs);
-		printf("Bits: %d\n", bits);
+		//printf("Bits: %d\n", bits);
 		PixelShaderPtr ptr = CompilePSFromFile(device, path, entryName, "ps_5_0", *opts);
 		out.insert(std::make_pair(bits, ptr));
 	}
@@ -157,13 +132,13 @@ void MeshRenderer::GenPSRecursive(ID3D11Device *device, int depth, bool32 *descS
 
 void MeshRenderer::LoadShaders()
 {
-	_totalShaderNum = (int)pow(2, 5) + (int)pow(2, 7) + 8;
+	_totalShaderNum = (int)pow(2, 5) + (int)pow(2, 8) + 8;
 
     CompileOptions opts;
 
 	// Mesh.hlsl
 	const char *vsDescs[] = { "UseNormalMapping_", "UseAlbedoMap_", "UseMetallicMap_", "UseRoughnessMap_", "UseEmissiveMap_" };
-	const char *psDescs[] = { "UseNormalMapping_", "UseAlbedoMap_", "UseMetallicMap_", "UseRoughnessMap_", "UseEmissiveMap_", "CreateCubemap_", "CentroidSampling_" };
+	const char *psDescs[] = { "UseNormalMapping_", "UseAlbedoMap_", "UseMetallicMap_", "UseRoughnessMap_", "UseEmissiveMap_", "CreateCubemap_", "CentroidSampling_", "IsGBuffer_" };
 	GenVSShaderPermutations(_device, L"Mesh.hlsl", "VS", vsDescs, _countof(vsDescs), _meshVertexShaders);
 	GenPSShaderPermutations(_device, L"Mesh.hlsl", "PS", psDescs, _countof(psDescs), _meshPixelShaders);
 
@@ -233,11 +208,16 @@ void MeshRenderer::CreateShadowMaps()
 
 void MeshRenderer::SetCubemapCapture(bool32 tf)
 {
+	if (_drawingCubemap == tf) return;
 	_drawingCubemap = tf;
-	if (_drawingCubemap)
-	{
-		ReMapMeshShaders();
-	}
+	ReMapMeshShaders();
+}
+
+void MeshRenderer::SetDrawGBuffer(bool32 tf)
+{
+	if (_drawingGBuffer == tf) return;
+	_drawingGBuffer = tf;
+	ReMapMeshShaders();
 }
 
 void MeshRenderer::ReMapMeshShaders()
@@ -288,7 +268,7 @@ void MeshRenderer::GenMeshShaderMap(const Model *model)
 
 		// TODO: use AppSettings to automate the process - data driven
 		// decouple string dependency
-		bool32 arr[7]; // five maps + two modes
+		bool32 arr[8]; // five maps + two modes + if gen gbuffer
 		materialFlags[(uint64)MaterialFlag::HasNormalMap] ? arr[0] = true : arr[0] = false;
 		materialFlags[(uint64)MaterialFlag::HasAlbedoMap] ? arr[1] = true : arr[1] = false;
 		materialFlags[(uint64)MaterialFlag::HasRoughnessMap] ? arr[2] = true : arr[2] = false;
@@ -298,9 +278,10 @@ void MeshRenderer::GenMeshShaderMap(const Model *model)
 		// TODO: the following case somehow defeats the purpose of the design
 		_drawingCubemap ? arr[5] = true : arr[5] = false;
 		AppSettings::CentroidSampling ? arr[6] = true : arr[6] = false;
+		_drawingGBuffer ? arr[7] = true : arr[7] = false;
 
 		uint32 vsbits = boolArrToUint32(arr, 5);
-		uint32 psbits = boolArrToUint32(arr, 7);
+		uint32 psbits = boolArrToUint32(arr, 8);
 
 		VertexShaderPtr vs = _meshVertexShaders[vsbits];
 		PixelShaderPtr ps = _meshPixelShaders[psbits];
@@ -340,7 +321,8 @@ void MeshRenderer::GenAndCacheMeshInputLayout(const Model* model)
 void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
     this->_device = device;
-	this->_drawingCubemap = false;
+	_drawingCubemap = false;
+	_drawingGBuffer = false;
 
     _blendStates.Initialize(device);
     _rasterizerStates.Initialize(device);
@@ -464,6 +446,8 @@ void MeshRenderer::ReduceDepth(ID3D11DeviceContext* context, DepthStencilBuffer&
     // Copy to a staging texture
     ID3D11Texture2D* lastTarget = _depthReductionTargets[_depthReductionTargets.size() - 1].Texture;
     context->CopyResource(_reductionStagingTextures[_currFrame % ReadbackLatency].Texture, lastTarget);
+
+	context->CSSetShader(nullptr, nullptr, 0);
 
     ++_currFrame;
 
@@ -622,10 +606,21 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 {
     PIXEvent event(L"Mesh Rendering");
 
+	DoSceneObjectsFrustumTests(camera, false);
+
     // Set states
     float blendFactor[4] = {1, 1, 1, 1};
     context->OMSetBlendState(_blendStates.BlendDisabled(), blendFactor, 0xFFFFFFFF);
-    context->OMSetDepthStencilState(_depthStencilStates.DepthEnabled(), 0);
+
+	// TODO: this is super bad coupling... but we are out of time
+	if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
+	{
+		context->OMSetDepthStencilState(_depthStencilStates.DepthEnabled(), 0);
+	}
+	else if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
+	{
+		context->OMSetDepthStencilState(_depthStencilStates.DepthWriteEnabled(), 0);
+	}
     context->RSSetState(_rasterizerStates.BackFaceCull());
 
     ID3D11SamplerState* sampStates[3] = {
@@ -637,18 +632,23 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
     context->PSSetSamplers(0, 3, sampStates);
 
 	// set PS constants
-    _meshPSConstants.Data.CameraPosWS = camera.Position();
-    _meshPSConstants.Data.OffsetScale = OffsetScale;
-    _meshPSConstants.Data.PositiveExponent = PositiveExponent;
-    _meshPSConstants.Data.NegativeExponent = NegativeExponent;
-    _meshPSConstants.Data.LightBleedingReduction = LightBleedingReduction;
-    _meshPSConstants.Data.Projection = Float4x4::Transpose(camera.ProjectionMatrix());
-    _meshPSConstants.Data.EnvironmentSH = envMapSH;
-    _meshPSConstants.Data.RTSize.x = float(GlobalApp->DeviceManager().BackBufferWidth());
-    _meshPSConstants.Data.RTSize.y = float(GlobalApp->DeviceManager().BackBufferHeight());
-    _meshPSConstants.Data.JitterOffset = jitterOffset;
-    _meshPSConstants.ApplyChanges(context);
-    _meshPSConstants.SetPS(context, 0);
+	// TODO: make deferred a unique structure
+	//if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
+	{
+		_meshPSConstants.Data.CameraPosWS = camera.Position();
+		_meshPSConstants.Data.OffsetScale = OffsetScale;
+		_meshPSConstants.Data.PositiveExponent = PositiveExponent;
+		_meshPSConstants.Data.NegativeExponent = NegativeExponent;
+		_meshPSConstants.Data.LightBleedingReduction = LightBleedingReduction;
+		_meshPSConstants.Data.View = Float4x4::Transpose(camera.ViewMatrix());
+		_meshPSConstants.Data.Projection = Float4x4::Transpose(camera.ProjectionMatrix());
+		_meshPSConstants.Data.EnvironmentSH = envMapSH;
+		_meshPSConstants.Data.RTSize.x = float(GlobalApp->DeviceManager().BackBufferWidth());
+		_meshPSConstants.Data.RTSize.y = float(GlobalApp->DeviceManager().BackBufferHeight());
+		_meshPSConstants.Data.JitterOffset = jitterOffset;
+		_meshPSConstants.ApplyChanges(context);
+		_meshPSConstants.SetPS(context, 0);
+	}
 
     // Set shaders
     context->DSSetShader(nullptr, nullptr, 0);
@@ -657,10 +657,11 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 
 	_scene->sortSceneObjects(camera.ViewMatrix());
 	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getStaticOpaqueObjectsPtr(), _scene->getNumStaticOpaqueObjects());
-	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getDynamicOpaqueObjectsPtr(), _scene->getNumDynmamicOpaueObjects());
+	RenderSceneObjects(context, world, camera, envMap, envMapSH, jitterOffset, _scene->getDynamicOpaqueObjectsPtr(), _scene->getNumDynamicOpaueObjects());
 
-    ID3D11ShaderResourceView* nullSRVs[5] = { nullptr };
-    context->PSSetShaderResources(0, 5, nullSRVs);
+	// TODO: refactor
+    ID3D11ShaderResourceView* nullSRVs[8] = { nullptr };
+    context->PSSetShaderResources(0, 8, nullSRVs);
 }
 
 void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4x4 &world, const Camera& camera,
@@ -669,6 +670,13 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 {
 	for (uint64 objIndex = 0; objIndex < numSceneObjs; objIndex++)
 	{
+		// Frustum culling on scene object bound
+		if (!sceneObjectsArr[objIndex].bound->frustumTest)
+		{
+			continue;
+		}
+
+		ModelPartsBound *partsBound = sceneObjectsArr[objIndex].bound->modelPartsBound;
 		Float4x4 worldMat = *sceneObjectsArr[objIndex].base * world;
 		Model *model = sceneObjectsArr[objIndex].model;
 
@@ -687,6 +695,14 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 		for (uint64 meshIdx = 0; meshIdx < model->Meshes().size(); ++meshIdx)
 		{
 			const Mesh& mesh = model->Meshes()[meshIdx];
+
+			if (partsBound->BoundingSpheres.size() == 1) // which means the mesh has only one part - which is the assimp-type mesh
+			{
+				if (!partsBound->FrustumTests[0])
+				{
+					continue;
+				}
+			}
 
 			// Set per mesh shaders
 			// TODO: sort by view depth
@@ -709,24 +725,29 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 			// Draw all parts
 			for (uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
 			{
-				const MeshPart& part = mesh.MeshParts()[partIdx];
-				const MeshMaterial& material = model->Materials()[part.MaterialIdx];
-
-				// Set the textures
-				ID3D11ShaderResourceView* psTextures[] =
+				// Frustum culling on parts
+				if (partsBound->FrustumTests[partCount++])
 				{
-					material.DiffuseMap,
-					material.NormalMap,
-					_varianceShadowMap.SRView,
-					envMap,
-					_specularLookupTexture,
-					material.RoughnessMap, 
-					material.MetallicMap, 
-					material.EmissiveMap
-				};
+					const MeshPart& part = mesh.MeshParts()[partIdx];
+					const MeshMaterial& material = model->Materials()[part.MaterialIdx];
 
-				context->PSSetShaderResources(0, _countof(psTextures), psTextures);
-				context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
+					// Set the textures
+					// TODO : strip out unnecessary cases for unique
+					ID3D11ShaderResourceView* psTextures[] =
+					{
+						material.DiffuseMap,
+						material.NormalMap,
+						_varianceShadowMap.SRView,
+						envMap,
+						_specularLookupTexture,
+						material.RoughnessMap, 
+						material.MetallicMap, 
+						material.EmissiveMap
+					};
+
+					context->PSSetShaderResources(0, _countof(psTextures), psTextures);
+					context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
+				}
 			}
 		}
 	}
@@ -737,6 +758,8 @@ void MeshRenderer::RenderDepth(ID3D11DeviceContext* context, const Camera& camer
     const Float4x4& world, bool shadowRendering)
 {
     PIXEvent event(L"Mesh Depth Rendering");
+
+	DoSceneObjectsFrustumTests(camera, shadowRendering);
 
     // Set states
     float blendFactor[4] = {1, 1, 1, 1};
@@ -757,7 +780,7 @@ void MeshRenderer::RenderDepth(ID3D11DeviceContext* context, const Camera& camer
 
 	_scene->sortSceneObjects(camera.ViewMatrix());
 	RenderDepthSceneObjects(context, world, camera, _scene->getStaticOpaqueObjectsPtr(), _scene->getNumStaticOpaqueObjects());
-	RenderDepthSceneObjects(context, world, camera, _scene->getDynamicOpaqueObjectsPtr(), _scene->getNumDynmamicOpaueObjects());
+	RenderDepthSceneObjects(context, world, camera, _scene->getDynamicOpaqueObjectsPtr(), _scene->getNumDynamicOpaueObjects());
 }
 
 void MeshRenderer::RenderDepthSceneObjects(ID3D11DeviceContext* context, const Float4x4 &world, 
@@ -765,6 +788,13 @@ void MeshRenderer::RenderDepthSceneObjects(ID3D11DeviceContext* context, const F
 {
 	for (uint64 objIndex = 0; objIndex < numSceneObjs; objIndex++)
 	{
+		// Frustum culling on scene object bound
+		if (!sceneObjectsArr[objIndex].bound->frustumTest)
+		{
+			continue;
+		}
+
+		ModelPartsBound *partsBound = sceneObjectsArr[objIndex].bound->modelPartsBound;
 		Float4x4 worldMat = *sceneObjectsArr[objIndex].base * world;
 		Model *model = sceneObjectsArr[objIndex].model;
 
@@ -794,8 +824,12 @@ void MeshRenderer::RenderDepthSceneObjects(ID3D11DeviceContext* context, const F
 			// Draw all parts
 			for (uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
 			{
-				const MeshPart& part = mesh.MeshParts()[partIdx];
-				context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
+				// Frustum culling on parts
+				if (partsBound->FrustumTests[partCount++])
+				{
+					const MeshPart& part = mesh.MeshParts()[partIdx];
+					context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
+				}
 			}
 		}
 	}
@@ -1007,4 +1041,48 @@ void MeshRenderer::RenderShadowMap(ID3D11DeviceContext* context, const Camera& c
             renderTargets[i]->Release();
     if(depthStencil != NULL)
         depthStencil->Release();
+}
+
+void MeshRenderer::DoSceneObjectModelPartsFrustumTests(const Frustum &frustum, const Camera& camera, bool ignoreNearZ, ModelPartsBound& mesh)
+{
+	mesh.FrustumTests.clear();
+	mesh.NumSuccessfulTests = 0;
+
+	for (uint32 i = 0; i < mesh.BoundingSpheres.size(); ++i)
+	{
+		const BSphere& sphere = mesh.BoundingSpheres[i];
+		uint32 test = TestFrustumSphere(frustum, sphere, ignoreNearZ);
+		mesh.FrustumTests.push_back(test);
+		mesh.NumSuccessfulTests += test;
+	}
+}
+
+void MeshRenderer::DoSceneObjectFrustumTest(SceneObject *obj, const Camera &camera, bool ignoreNearZ)
+{
+	Frustum frustum;
+	ComputeFrustum(camera.ViewProjectionMatrix().ToSIMD(), frustum);
+
+	uint32 test = TestFrustumSphere(frustum, *obj->bound->bsphere, ignoreNearZ);
+	obj->bound->frustumTest = test > 0;
+	
+	// early out - do not transform if the scene obj bounding box is not in view
+	if (test)
+	{
+		DoSceneObjectModelPartsFrustumTests(frustum, camera, ignoreNearZ, *obj->bound->modelPartsBound);
+	}
+}
+
+void MeshRenderer::DoSceneObjectsFrustumTests(const Camera &camera, bool ignoreNearZ)
+{
+	for (uint64 i = 0; i < _scene->getNumStaticOpaqueObjects(); i++)
+	{
+		SceneObject *obj = &_scene->getStaticOpaqueObjectsPtr()[i];
+		DoSceneObjectFrustumTest(obj, camera, ignoreNearZ);
+	}
+
+	for (uint64 i = 0; i < _scene->getNumDynamicOpaueObjects(); i++)
+	{
+		SceneObject *obj = &_scene->getDynamicOpaqueObjectsPtr()[i];
+		DoSceneObjectFrustumTest(obj, camera, ignoreNearZ);
+	}
 }
