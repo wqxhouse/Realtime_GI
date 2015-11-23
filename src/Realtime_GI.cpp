@@ -103,7 +103,7 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	
 	//scene->addDynamicOpaqueBoxObject(AppSettings::BoxMaxX - AppSettings::BoxMinX, 
 		//float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ), Quaternion());
-	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 0, 0), Quaternion());
+	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 1, 0), Quaternion());
 
 	PointLight *pl = scene->addPointLight();
 	pl->cRadius = 10.0f;
@@ -370,10 +370,10 @@ void Realtime_GI::Update(const Timer& timer)
 		((kbState.IsKeyDown(KeyboardState::Q) ? 1 : 0.0f) +
 		(kbState.IsKeyDown(KeyboardState::E) ? -1 : 0.0f));
 
-	//if (kbState.IsKeyDown(KeyboardState::Up))
-	/*{
+	/*if (kbState.IsKeyDown(KeyboardState::Up))
+	{
 		Float3 trans = _scenes[0].getStaticOpaqueObjectsPtr()->base->Translation();
-		_scenes[0].getStaticOpaqueObjectsPtr()->base->SetTranslation(Float3(0, trans[1] + 0.01f, 0));
+		_scenes[0].getStaticOpaqueObjectsPtr()->base->SetTranslation(Float3(0, trans[1] + 1, 0));
 	}*/
 
     Float3 camPos = _camera.Position();
@@ -579,8 +579,12 @@ void Realtime_GI::RenderSceneCubemaps(ID3D11DeviceContext *context)
 	_probeManager.CreateProbes(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox,
 		probePos);
 
-	/*_probeManager.AddProbe(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox,
-		probePos)*/
+	probePos.clear();
+	probePos.push_back(Float3(0, 1, 0));
+	probePos.push_back(Float3(0, 0, 0));
+
+	_probeManager.AddProbes(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox,
+		probePos, _cameraClipVector);
 	//_probeManager.GetProbe(_cubemapGenerator, 1);
 
 	_meshRenderer.SetCubemapCapture(false);
@@ -654,7 +658,7 @@ void Realtime_GI::RenderSceneGBuffer()
 	_meshRenderer.SetDrawGBuffer(true);
 
 	//Update the probe
-	SceneObject *obj = _scenes[0].getStaticOpaqueObjectsPtr();
+	SceneObject *obj = _scenes[AppSettings::CurrentScene].getStaticOpaqueObjectsPtr();
 	_probeManager.GetNNProbe(_cubemapGenerator, obj[0].base->Translation());
 
 	ID3D11DeviceContextPtr context = _deviceManager.ImmediateContext();
@@ -803,6 +807,10 @@ void Realtime_GI::RenderLightsDeferred()
 void Realtime_GI::RenderSceneForward()
 {
     PIXEvent event(L"Render Scene Forward");
+
+	//Update the probe
+	SceneObject *obj = _scenes[AppSettings::CurrentScene].getStaticOpaqueObjectsPtr();
+	_probeManager.GetNNProbe(_cubemapGenerator, obj[0].base->Translation());
 
 	_meshRenderer.SetDrawGBuffer(false);
 

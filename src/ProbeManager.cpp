@@ -7,6 +7,9 @@
 
 #include "ProbeManager.h"
 
+#define DefaultNearClip 0.01f
+#define DefaultFarClip 300.0f
+
 
 ProbeManager::ProbeManager()
 	:probeNum(0)
@@ -106,9 +109,19 @@ void ProbeManager::AddProbe(const DeviceManager &deviceManager, MeshRenderer *me
 void ProbeManager::AddProbes(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
 	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, std::vector<Float3> positions, const std::vector<CameraClips> cameraClips)
 {
-	for ( uint32 probeIndex = 0; probeIndex < probeNum; ++probeIndex )
+	size_t clipsSize = positions.size();
+	for (size_t probeIndex = 0; probeIndex < clipsSize; ++probeIndex)
 	{
-		AddProbe(deviceManager, meshRenderer, sceneTransform, environmentMap, environmentMapSH, jitterOffset, skybox, positions.at(probeIndex), cameraClips.at(probeIndex));
+		if (probeIndex < clipsSize)
+			AddProbe(deviceManager, meshRenderer, sceneTransform, environmentMap, environmentMapSH, jitterOffset, skybox, positions.at(probeIndex), cameraClips.at(probeIndex));
+		else
+		{
+			CameraClips tempCameraClips;
+			tempCameraClips.NearClip = DefaultNearClip;
+			tempCameraClips.FarClip = DefaultFarClip;
+			AddProbe(deviceManager, meshRenderer, sceneTransform, environmentMap, environmentMapSH, jitterOffset, skybox, positions.at(probeIndex), tempCameraClips);
+		}
+
 	}
 
 }
