@@ -23,7 +23,7 @@ CreateCubemap::CreateCubemap(const float NearClip, const float FarClip)
 {
 }
 
-void CreateCubemap::Initialize(ID3D11Device *device, uint32 numMipLevels, uint32 multiSamples, uint32 msQuality)
+void CreateCubemap::Initialize(ID3D11Device *device)
 {
 	cubemapTarget.Initialize(device, CubemapWidth, CubemapHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, 8,
 		1, 0, TRUE, FALSE, 6, TRUE);

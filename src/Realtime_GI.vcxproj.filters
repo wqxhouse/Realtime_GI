@@ -107,6 +107,7 @@
     <ClCompile Include="CreateCubemap.cpp" />
     <ClCompile Include="BoundUtils.cpp" />
     <ClCompile Include="DebugRenderer.cpp" />
+    <ClCompile Include="ProbeManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PostProcessor.h" />
@@ -245,6 +246,7 @@
     <ClInclude Include="ShadowMapSettings.h" />
     <ClInclude Include="BoundUtils.h" />
     <ClInclude Include="DebugRenderer.h" />
+    <ClInclude Include="ProbeManager.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="AppSettings.hlsl">

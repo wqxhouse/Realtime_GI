@@ -223,7 +223,7 @@ void Realtime_GI::CreateRenderTargets()
 
 	if (_firstFrame)
 	{
-		_cubemapGenerator.Initialize(device, 1, NumSamples, Quality);
+		_cubemapGenerator.Initialize(device);
 	}
 
     if(_resolveTarget.Width != width || _resolveTarget.Height != height)

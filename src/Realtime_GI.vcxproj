@@ -142,6 +142,7 @@
     <ClCompile Include="DebugRenderer.cpp" />
     <ClCompile Include="MeshRenderer.cpp" />
     <ClCompile Include="AppSettings.cpp" />
+    <ClCompile Include="ProbeManager.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Realtime_GI.cpp" />
     <ClCompile Include="PostProcessor.cpp" />
@@ -192,6 +193,7 @@
     <ClInclude Include="LightClusters.h" />
     <ClInclude Include="MeshRenderer.h" />
     <ClInclude Include="AppSettings.h" />
+    <ClInclude Include="ProbeManager.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="PostProcessor.h" />
