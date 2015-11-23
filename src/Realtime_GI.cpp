@@ -45,7 +45,7 @@ static const float FarClip = 300.0f;
 Realtime_GI::Realtime_GI() :  App(L"Realtime GI (CSCI 580)", MAKEINTRESOURCEW(IDI_DEFAULT)),
                             _camera(WindowWidthF / WindowHeightF, Pi_4 * 0.75f, NearClip, FarClip), 
 							_prevForward(0.0f), _prevStrafe(0.0f), _prevAscend(0.0f), _numScenes(0),
-							_cubemapGenerator(NearClip, FarClip)
+							_cubemapGenerator(NearClip, FarClip), _probeManager()
 {
     _deviceManager.SetBackBufferWidth(WindowWidth);
     _deviceManager.SetBackBufferHeight(WindowHeight);
@@ -223,7 +223,12 @@ void Realtime_GI::CreateRenderTargets()
 
 	if (_firstFrame)
 	{
-		_cubemapGenerator.Initialize(device);
+		//_cubemapGenerator.Initialize(device);
+		_cameraClip.NearClip = NearClip;
+		_cameraClip.FarClip = FarClip;
+		_cameraClipVector.push_back(_cameraClip);
+
+		_probeManager.Initialize(device, _cameraClipVector);
 	}
 
     if(_resolveTarget.Width != width || _resolveTarget.Height != height)
@@ -503,7 +508,7 @@ void Realtime_GI::RenderAA()
 
 void Realtime_GI::RenderSceneCubemaps(ID3D11DeviceContext *context)
 {
-	RenderTarget2D cubemapRenderTarget;
+	//RenderTarget2D cubemapRenderTarget;
 	_meshRenderer.SetCubemapCapture(true);
 	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
 	{
@@ -513,14 +518,19 @@ void Realtime_GI::RenderSceneCubemaps(ID3D11DeviceContext *context)
 	// TODO: make a separate cubemap manager to set different locations
 	//_cubemapGenerator.SetPosition(float3(0.0f, 0.0f, 0.0f));//!
 	//_cubemapGenerator.SetPosition(float3(0.5f, 0.5f, 0.5f));//!
-	_cubemapGenerator.SetPosition(float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ));
+
+	/*_cubemapGenerator.SetPosition(float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ));
 	_cubemapGenerator.Create(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox);
 	_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
 	context->GenerateMips(cubemapRenderTarget.SRView);
 
 	_cubemapGenerator.GetPreFilterTargetViews(cubemapRenderTarget);
 	_cubemapGenerator.RenderPrefilterCubebox(_deviceManager, _globalTransform);
-	context->GenerateMips(cubemapRenderTarget.SRView);
+	context->GenerateMips(cubemapRenderTarget.SRView);*/
+
+	_probeManager.CreateProbe(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox,
+		float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ), ORIGIN_PROBE);
+	_probeManager.GetProbe(_cubemapGenerator, ORIGIN_PROBE);
 
 	_meshRenderer.SetCubemapCapture(false);
 
@@ -597,7 +607,8 @@ void Realtime_GI::RenderSceneGBuffer()
 
 	SetViewport(context, _colorTarget.Width, _colorTarget.Height);
 
-	_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
+	//_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
+	_cubemapGenerator.GetPreFilterTargetViews(cubemapRenderTarget);
 
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	context->ClearRenderTargetView(_rt0Target.RTView, clearColor);

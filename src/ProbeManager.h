@@ -6,17 +6,31 @@
 
 #include "CreateCubemap.h"
 
+#define ORIGIN_PROBE 0
+
 class ProbeManager
 {
 public:
 	ProbeManager();
 
-	void Initialize(ID3D11Device *device);
+	struct CameraClips
+	{
+		float NearClip;
+		float FarClip;
+	};
+
+	void Initialize(ID3D11Device *device, const std::vector<CameraClips> cameraClipVector);
 	
-	void AddSingleProbe(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
+	void CreateProbe(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
+		const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, Float3 position, uint32 index);
+	void CreateProbes(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
+		const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, std::vector<Float3> positions, uint32 start, uint32 end);
+
+	void AddProbe(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
 		const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, Float3 position);
 	void AddProbes(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
 		const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, std::vector<Float3> positions);
+	
 	void RemoveProbe(uint32 index);
 	void RemoveProbes(uint32 start, uint32 end);
 	void ClearProbes();
@@ -35,4 +49,6 @@ private:
 
 	std::vector<Float3> _probePositions;
 	std::vector<CreateCubemap> _cubemaps;
+
+	uint32 probeNum = 0;
 };

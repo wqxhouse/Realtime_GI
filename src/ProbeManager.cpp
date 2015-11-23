@@ -14,13 +14,68 @@ ProbeManager::ProbeManager()
 }
 
 
-void ProbeManager::Initialize(ID3D11Device *device)
+void ProbeManager::Initialize(ID3D11Device *device, const std::vector<CameraClips> cameraClipVector)
 {
+	probeNum = (uint32)cameraClipVector.size();
 	
+	for (uint32 probeIndex = 0; probeIndex < probeNum; ++probeIndex)
+	{
+		CreateCubemap newCubemap = CreateCubemap(cameraClipVector.at(probeIndex).NearClip,
+			cameraClipVector.at(probeIndex).FarClip);
+		newCubemap.Initialize(device);
+		_cubemaps.push_back(newCubemap);
+	}
 }
 
 
-void ProbeManager::AddSingleProbe(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
+void ProbeManager::CreateProbe(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
+	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, Float3 position, uint32 index)
+{
+	if (probeNum == 0) return;
+	CreateCubemap *selectedCubemap = &_cubemaps.at(index);
+	RenderTarget2D cubemapRenderTarget;
+
+	selectedCubemap->SetPosition(position);
+
+	selectedCubemap->Create(deviceManager, meshRenderer, sceneTransform, environmentMap,
+		environmentMapSH, jitterOffset, skybox);
+	selectedCubemap->GetTargetViews(cubemapRenderTarget);
+	deviceManager.ImmediateContext()->GenerateMips(cubemapRenderTarget.SRView);
+
+	selectedCubemap->RenderPrefilterCubebox(deviceManager, sceneTransform);
+	selectedCubemap->GetPreFilterTargetViews(cubemapRenderTarget);
+	deviceManager.ImmediateContext()->GenerateMips(cubemapRenderTarget.SRView);
+
+	selectedCubemap = nullptr;
+}
+
+void ProbeManager::CreateProbes(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
+	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, std::vector<Float3> positions, uint32 start, uint32 end)
+{
+	if (probeNum == 0) return;
+	CreateCubemap *selectedCubemap = nullptr;
+	RenderTarget2D cubemapRenderTarget;
+
+	for (uint32 probeIndex = start; probeIndex < end; ++probeIndex)
+	{
+		selectedCubemap = &_cubemaps.at(probeIndex);
+
+		selectedCubemap->SetPosition(positions.at(probeIndex));
+
+		selectedCubemap->Create(deviceManager, meshRenderer, sceneTransform, environmentMap,
+			environmentMapSH, jitterOffset, skybox);
+		selectedCubemap->GetTargetViews(cubemapRenderTarget);
+		deviceManager.ImmediateContext()->GenerateMips(cubemapRenderTarget.SRView);
+
+		selectedCubemap->RenderPrefilterCubebox(deviceManager, sceneTransform);
+		selectedCubemap->GetPreFilterTargetViews(cubemapRenderTarget);
+		deviceManager.ImmediateContext()->GenerateMips(cubemapRenderTarget.SRView);
+	}
+
+	selectedCubemap = nullptr;
+}
+
+void ProbeManager::AddProbe(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
 	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, Float3 position)
 {
 
@@ -36,6 +91,7 @@ void ProbeManager::AddProbes(const DeviceManager &deviceManager, MeshRenderer *m
 
 void ProbeManager::RemoveProbe(uint32 index)
 {
+	if (probeNum == 0) return;
 	if (index >= 0 && index <_cubemaps.size())
 		_cubemaps.erase(_cubemaps.begin() + index);
 }
@@ -43,6 +99,7 @@ void ProbeManager::RemoveProbe(uint32 index)
 
 void ProbeManager::RemoveProbes(uint32 start, uint32 end)
 {
+	if (probeNum == 0) return;
 	if (start >= 0 && end < _cubemaps.size() && start <= end)
 		_cubemaps.erase(_cubemaps.begin() + start, _cubemaps.begin() + end);
 }
@@ -51,6 +108,7 @@ void ProbeManager::RemoveProbes(uint32 start, uint32 end)
 void ProbeManager::ClearProbes()
 {
 	_cubemaps.clear();
+	probeNum = 0;
 }
 
 
@@ -62,7 +120,8 @@ void ProbeManager::GetProbe(CreateCubemap &cubemap, uint32 index)
 
 void ProbeManager::GetNNProbe(CreateCubemap &nearCubemap, Float3 objPos)
 {
-
+	uint32 NNIndex = CalNN(objPos);
+	nearCubemap = _cubemaps.at(NNIndex);
 }
 
 
@@ -88,7 +147,7 @@ uint32 ProbeManager::CalNN(Float3 objPos)
 
 	for (uint32 probeIndex = 0; probeIndex < _cubemaps.size(); ++probeIndex)
 	{
-		if (maxDis < CalDistance(_cubemaps.at(probeIndex).GetPosition(), objPos))
+		if (maxDis <= CalDistance(_cubemaps.at(probeIndex).GetPosition(), objPos))
 			maxIndex = probeIndex;
 	}
 

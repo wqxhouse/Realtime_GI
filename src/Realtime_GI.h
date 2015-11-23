@@ -26,7 +26,8 @@
 #include "MeshRenderer.h"
 #include "Scene.h"
 
-#include "CreateCubemap.h"
+//#include "CreateCubemap.h"
+#include "ProbeManager.h"
 #include "DebugRenderer.h"
 
 using namespace SampleFramework11;
@@ -179,6 +180,10 @@ protected:
 	CreateCubemap _cubemapGenerator;
 	DebugRenderer _debugRenderer;
 
+	//Create probe manager
+	ProbeManager _probeManager;
+	ProbeManager::CameraClips _cameraClip;
+	std::vector<ProbeManager::CameraClips, std::allocator<ProbeManager::CameraClips>> _cameraClipVector;
 public:
 
     Realtime_GI();
