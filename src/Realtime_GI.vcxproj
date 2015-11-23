@@ -100,6 +100,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <AdditionalDependencies>Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <StackReserveSize>2048000</StackReserveSize>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
