@@ -153,6 +153,8 @@ public class Settings
 
         bool RenderSceneObjectBBox = false;
 
+        bool RenderIrradianceVolumeProbes = false;
+
         bool EnableShadows = true;
 
         bool EnableNormalMaps = true;

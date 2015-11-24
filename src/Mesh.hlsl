@@ -145,8 +145,12 @@ struct PSOutput
 		float4 Color                : SV_Target0;
 	#elif IsGBuffer_
 		float4 RT0					: SV_Target0;	// albedo (xyz) 
-		float4 RT1					: SV_Target1;	// roughness(x) | metallic(y) | emissive (z) | SSR? (w)
-		float4 RT2					: SV_Target2;	// spheremap_vs_normal (xy) | velocity (zw)
+		#if CreateCubemap_
+			float2 RT1					: SV_Target1;	// spheremap normal
+		#else
+			float4 RT1					: SV_Target1;	// roughness(x) | metallic(y) | emissive (z) | SSR? (w)
+			float4 RT2					: SV_Target2;	// spheremap_vs_normal (xy) | velocity (zw)
+		#endif
 	#else
 		float4 Color                : SV_Target0;
 		float2 Velocity             : SV_Target1;
@@ -395,20 +399,26 @@ PSOutput PS(in PSInput input)
 		// output.RT0.a   = shadowVisibility;
 		output.RT0.a = 0;
 
-		output.RT1.r   = roughness;
-		output.RT1.g   = metallic;
-		output.RT1.b   = EmissiveIntensity; // TODO: hook up emissive map later
-		output.RT1.a   = 0.0f;
-		// ouput.RT1.a = SSR?;
+		#if !CreateCubemap_
+			output.RT1.r   = roughness;
+			output.RT1.g   = metallic;
+			output.RT1.b   = EmissiveIntensity; // TODO: hook up emissive map later
+			output.RT1.a   = 0.0f;
+			// ouput.RT1.a = SSR?;
 
-		float3 normalVS = normalize(mul(normalWS, (float3x3)View_));
-		output.RT2.zw = EncodeSphereMap(normalVS);
+			float3 normalVS = normalize(mul(normalWS, (float3x3)View_));
+			output.RT2.zw = EncodeSphereMap(normalVS);
 		
-		// Velocity
-		float2 prevPositionSS = (input.PrevPosition.xy / input.PrevPosition.z) * float2(0.5f, -0.5f) + 0.5f;
-		prevPositionSS *= RTSize;
-		output.RT2.xy = input.PositionSS.xy - prevPositionSS;
-		output.RT2.xy -= JitterOffset;
+			// Velocity
+			float2 prevPositionSS = (input.PrevPosition.xy / input.PrevPosition.z) * float2(0.5f, -0.5f) + 0.5f;
+			prevPositionSS *= RTSize;
+			output.RT2.xy = input.PositionSS.xy - prevPositionSS;
+			output.RT2.xy -= JitterOffset;
+
+		#else
+			float3 normalVS = normalize(mul(normalWS, (float3x3)View_));
+			output.RT1 = EncodeSphereMap(normalVS);
+		#endif
 
 	#else // Forward path
 		// Add in the primary directional light

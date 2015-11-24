@@ -28,6 +28,7 @@
 #include "LightClusters.h"
 
 #include "CreateCubemap.h"
+#include "IrradianceVolume.h"
 #include "DebugRenderer.h"
 
 using namespace SampleFramework11;
@@ -176,6 +177,7 @@ protected:
 	CreateCubemap _cubemapGenerator;
 	DebugRenderer _debugRenderer;
 	LightClusters _lightClusters;
+	IrradianceVolume _irradianceVolume;
 
 public:
 

@@ -141,6 +141,7 @@
     <ClCompile Include="..\SampleFramework11\v1.01\Window.cpp" />
     <ClCompile Include="BoundUtils.cpp" />
     <ClCompile Include="CreateCubemap.cpp" />
+    <ClCompile Include="IrradianceVolume.cpp" />
     <ClCompile Include="DebugRenderer.cpp" />
     <ClCompile Include="LightClusters.cpp" />
     <ClCompile Include="MeshRenderer.cpp" />
@@ -190,6 +191,7 @@
     <ClInclude Include="AppPCH.h" />
     <ClInclude Include="BoundUtils.h" />
     <ClInclude Include="CreateCubemap.h" />
+    <ClInclude Include="IrradianceVolume.h" />
     <ClInclude Include="DebugRenderer.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="LightClusters.h" />

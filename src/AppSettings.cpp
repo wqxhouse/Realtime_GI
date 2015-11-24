@@ -76,6 +76,7 @@ namespace AppSettings
     BoolSetting EnableAmbientLighting;
     BoolSetting RenderBackground;
     BoolSetting RenderSceneObjectBBox;
+    BoolSetting RenderIrradianceVolumeProbes;
     BoolSetting EnableShadows;
     BoolSetting EnableNormalMaps;
     BoolSetting EnableRealtimeCubemap;
@@ -183,6 +184,9 @@ namespace AppSettings
         RenderSceneObjectBBox.Initialize(tweakBar, "RenderSceneObjectBBox", "Scene Controls", "Render Scene Object BBox", "", false);
         Settings.AddSetting(&RenderSceneObjectBBox);
 
+        RenderIrradianceVolumeProbes.Initialize(tweakBar, "RenderIrradianceVolumeProbes", "Scene Controls", "Render Irradiance Volume Probes", "", false);
+        Settings.AddSetting(&RenderIrradianceVolumeProbes);
+
         EnableShadows.Initialize(tweakBar, "EnableShadows", "Scene Controls", "Enable Shadows", "", true);
         Settings.AddSetting(&EnableShadows);
 
@@ -272,6 +276,7 @@ namespace AppSettings
         CBuffer.Data.EnableAmbientLighting = EnableAmbientLighting;
         CBuffer.Data.RenderBackground = RenderBackground;
         CBuffer.Data.RenderSceneObjectBBox = RenderSceneObjectBBox;
+        CBuffer.Data.RenderIrradianceVolumeProbes = RenderIrradianceVolumeProbes;
         CBuffer.Data.EnableShadows = EnableShadows;
         CBuffer.Data.EnableNormalMaps = EnableNormalMaps;
         CBuffer.Data.EnableRealtimeCubemap = EnableRealtimeCubemap;

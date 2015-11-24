@@ -108,6 +108,9 @@
     <ClCompile Include="BoundUtils.cpp" />
     <ClCompile Include="DebugRenderer.cpp" />
     <ClCompile Include="LightClusters.cpp" />
+    <ClCompile Include="IrradianceVolume.cpp">
+      <Filter>GI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PostProcessor.h" />
@@ -246,6 +249,9 @@
     <ClInclude Include="ShadowMapSettings.h" />
     <ClInclude Include="BoundUtils.h" />
     <ClInclude Include="DebugRenderer.h" />
+    <ClInclude Include="IrradianceVolume.h">
+      <Filter>GI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="AppSettings.hlsl">
@@ -327,6 +333,9 @@
     </Filter>
     <Filter Include="Contents\Textures\CornellBox">
       <UniqueIdentifier>{40289545-e11f-4c57-940c-9eab44dc2469}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GI">
+      <UniqueIdentifier>{ed4601c0-7961-49a1-a4e4-bba0d0b18c70}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

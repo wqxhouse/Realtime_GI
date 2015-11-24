@@ -80,8 +80,8 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	{
 		// L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\Converted\\sponza.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\Cerberus_by_Andrew_Maximov\\Cerberus_by_Andrew_Maximov\\testfbxascii.fbx",
-		//L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
-		L"..\\Content\\Models\\CornellBox\\TestPlane.FBX",
+		L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
+		// L"..\\Content\\Models\\CornellBox\\TestPlane.FBX",
 		// L"..\\Content\\Models\\CornellBox\\CornellBox_Max.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaNon_PBR\\Converted\\sponza.obj",
 		// L"..\\Content\\Models\\Powerplant\\Powerplant.sdkmesh",
@@ -212,6 +212,9 @@ void Realtime_GI::Initialize()
 
 	_lightClusters.Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext());
 	_lightClusters.SetScene(&_scenes[AppSettings::CurrentScene]);
+
+	_irradianceVolume.Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext(), &_meshRenderer, &_debugRenderer);
+	_irradianceVolume.SetScene(&_scenes[AppSettings::CurrentScene]);
 }
 
 // Creates all required render targets
@@ -425,6 +428,7 @@ void Realtime_GI::Update(const Timer& timer)
 		_meshRenderer.SetScene(currScene);
         AppSettings::SceneOrientation.SetValue(currScene->getSceneOrientation());
 		_lightClusters.SetScene(currScene);
+		_irradianceVolume.SetScene(currScene);
     }
 
 	Quaternion orientation = AppSettings::SceneOrientation;
@@ -452,6 +456,16 @@ void Realtime_GI::Update(const Timer& timer)
 		}
 
 		_debugRenderer.QueueBBoxWire(_scenes[AppSettings::CurrentScene].getSceneBoundingBox(), Float4(0.1f, 0.3f, 0.9f, 1.0f));
+	}
+
+	if (AppSettings::RenderIrradianceVolumeProbes)
+	{
+		const std::vector<Float3> posList = _irradianceVolume.getPositionList();
+		for (size_t i = 0; i < posList.size(); i++)
+		{
+			const Float3 &pos = posList[i];
+			_debugRenderer.QueueLightSphere(pos, Float4(1.0f, 1.0f, 1.0f, 0.3f), 0.2f);
+		}
 	}
 
 }
@@ -542,6 +556,10 @@ void Realtime_GI::RenderSceneCubemaps()
 	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
 	{
 		_meshRenderer.SetDrawGBuffer(true);
+
+		_meshRenderer.SetCubemapCapture(true);
+		_irradianceVolume.RenderSceneAtlasGBuffer();
+		_meshRenderer.SetCubemapCapture(false);
 	}
 }
 

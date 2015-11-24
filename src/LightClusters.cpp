@@ -173,6 +173,7 @@ void LightClusters::UploadClustersData()
 	{
 		for (int y = 0; y < CY; y++)
 		{
+			// TODO: check for bug
 			memcpy(mappedData + z * mappedResource.DepthPitch
 				+ y * mappedResource.RowPitch,
 				_clusters[z][y], CX * sizeof(ClusterData));

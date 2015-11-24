@@ -20,13 +20,16 @@ const CreateCubemap::CameraStruct CreateCubemap::DefaultCubemapCameraStruct[6] =
 CreateCubemap::CreateCubemap(const float NearClip, const float FarClip) 
 	: cubemapCamera(1.0f, 90.0f * (Pi / 180), NearClip, FarClip)
 {
+	_CubemapWidth = 128;
+	_CubemapHeight = 128;
 }
 
 void CreateCubemap::Initialize(ID3D11Device *device, uint32 numMipLevels, uint32 multiSamples, uint32 msQuality)
 {
-	cubemapTarget.Initialize(device, CubemapWidth, CubemapHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, numMipLevels,
+	cubemapTarget.Initialize(device, _CubemapWidth, _CubemapHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, numMipLevels,
 		1, 0, TRUE, FALSE, 6, TRUE);
-	cubemapDepthTarget.Initialize(device, CubemapWidth, CubemapHeight, DXGI_FORMAT_D32_FLOAT, numMipLevels, 1,
+
+	cubemapDepthTarget.Initialize(device, _CubemapWidth, _CubemapHeight, DXGI_FORMAT_D32_FLOAT, numMipLevels, 1,
 		0, 6, TRUE);
 }
 
@@ -44,7 +47,6 @@ void CreateCubemap::SetPosition(Float3 newPosition)
 	}
 }
 
-
 void CreateCubemap::Create(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
 	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox)
 {
@@ -53,7 +55,7 @@ void CreateCubemap::Create(const DeviceManager &deviceManager, MeshRenderer *mes
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	ID3D11DeviceContext *context = deviceManager.ImmediateContext();
 
-	SetViewport(context, CubemapWidth, CubemapHeight);
+	SetViewport(context, _CubemapWidth, _CubemapHeight);
 
 	for (int cubeboxFaceIndex = 0; cubeboxFaceIndex < 6; cubeboxFaceIndex++)
 	{
@@ -107,6 +109,11 @@ void CreateCubemap::GetTargetViews(RenderTarget2D &resCubemapTarget)
 	resCubemapTarget = cubemapTarget;
 }
 
+void CreateCubemap::SetCubemapSize(uint32 size)
+{
+	_CubemapWidth = size;
+	_CubemapHeight = size;
+}
 
 CreateCubemap::~CreateCubemap()
 {

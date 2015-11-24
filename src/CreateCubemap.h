@@ -29,11 +29,13 @@ public:
 	void Create(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
 		const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox);
 
+	void SetCubemapSize(uint32 size);
+
 	const PerspectiveCamera &GetCubemapCamera();
 
 private:
-	const uint32 CubemapWidth = 128;
-	const uint32 CubemapHeight = 128;
+	uint32 _CubemapWidth;
+	uint32 _CubemapHeight;
 
 	PerspectiveCamera cubemapCamera;
 	RenderTarget2D cubemapTarget;

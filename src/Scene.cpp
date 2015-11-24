@@ -278,6 +278,8 @@ SceneObject *Scene::addStaticOpaqueObject(Model *model, float scale, const Float
 	_numPrevWVPs++;
 	_numStaticOpaqueObjects++;
 
+	genStaticSceneWSAABB();
+
 	return &obj;
 }
 
