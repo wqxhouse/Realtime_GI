@@ -95,9 +95,13 @@ public:
 	SceneObject *addDynamicOpaqueBoxObject(float scale = 1.0f, const Float3 &pos = Float3(), const Quaternion &rot = Quaternion());
 	SceneObject *addDynamicOpaquePlaneObject(float scale = 1.0f, const Float3 &pos = Float3(), const Quaternion &rot = Quaternion());
 
+	void setProxySceneObject(const std::wstring &modelPath, float scale = 1.0f, const Float3 &pos = Float3(), const Quaternion &rot = Quaternion());
+	inline SceneObject *getProxySceneObjectPtr() { return &_proxySceneObject; }
+	inline bool32 hasProxySceneObject() { return _hasProxySceneObject; }
+
 	void sortSceneObjects(const Float4x4 &viewMatrix);
 
-	inline int getNumStaticOpaqueObjects() { return _numStaticOpaqueObjects;  }
+	inline int getNumStaticOpaqueObjects() { return _numStaticOpaqueObjects; }
 	inline int getNumDynamicOpaueObjects() { return _numDynamicOpaqueObjects; }
 	inline int getNumModels() { return (int)_modelIndices.size(); }
 	inline Model *getModel(uint64 index) { return &_models[_modelIndices[index]]; }
@@ -167,6 +171,8 @@ private:
 	// TODO: refactor so that a controlled set of scene api is exposed
 	void(*_updateFunc)(Scene *scene, const Timer &timer);
 
+	bool32 _hasProxySceneObject;
+	SceneObject _proxySceneObject;
 	SceneObject _staticOpaqueObjects[MAX_STATIC_OBJECTS];
 	SceneObject _dynamicOpaqueObjects[MAX_DYNAMIC_OBJECTS];
 
@@ -181,6 +187,7 @@ private:
 	ModelPartsBound _sceneDynamicOpaqueObjectModelPartsBounds[MAX_DYNAMIC_OBJECTS];
 	SceneObjectBound _sceneStaticOpaqueObjectBounds[MAX_STATIC_OBJECTS];
 	SceneObjectBound _sceneDynamicOpaqueObjectBounds[MAX_DYNAMIC_OBJECTS];
+	
 
 	BBox _sceneWSAABB_staticObj;
 

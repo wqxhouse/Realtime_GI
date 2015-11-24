@@ -31,6 +31,8 @@ Scene::Scene()
 	_sceneWSAABB_staticObj.Min = XMFLOAT3(0, 0, 0);
 
 	_updateFunc = NULL;
+
+	_hasProxySceneObject = false;
 }
 
 Scene::~Scene()
@@ -129,6 +131,25 @@ Model *Scene::addModel(const std::wstring &modelPath)
 	_modelCache.insert(std::make_pair(fullPath, &_models[_numTotalModelsShared - 1]));
 
 	return &_models[_numTotalModelsShared - 1];
+}
+
+void Scene::setProxySceneObject(const std::wstring &modelPath, float scale, const Float3 &pos, const Quaternion &rot)
+{
+	Model *m = addModel(modelPath);
+	_objectBases[_numObjectBases] = createBase(scale, pos, rot);
+	_prevWVPs[_numPrevWVPs] = _objectBases[_numObjectBases];
+
+	SceneObject &obj = _proxySceneObject;
+	obj.base = &_objectBases[_numObjectBases];
+	obj.model = m;
+	obj.bound = nullptr;
+	obj.prevWVP = &_prevWVPs[_numPrevWVPs];
+	obj.id = _highestSceneObjId++;
+
+	_numObjectBases++;
+	_numPrevWVPs++;
+
+	_hasProxySceneObject = true;
 }
 
 void Scene::genSceneObjectBounds(uint64 objTypeflag, uint64 sceneObjIndex, uint64 modelIndex)

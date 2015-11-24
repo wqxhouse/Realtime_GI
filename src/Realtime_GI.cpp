@@ -81,6 +81,7 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 		// L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\Converted\\sponza.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\Cerberus_by_Andrew_Maximov\\Cerberus_by_Andrew_Maximov\\testfbxascii.fbx",
 		L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
+		L"..\\Content\\Models\\CornellBox\\UVUnwrapped\\cbox_unwrapped.FBX",
 		// L"..\\Content\\Models\\CornellBox\\TestPlane.FBX",
 		// L"..\\Content\\Models\\CornellBox\\CornellBox_Max.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaNon_PBR\\Converted\\sponza.obj",
@@ -99,6 +100,8 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 
 	Model *m = scene->addModel(ModelPaths[0]);
 	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 0, 0), Quaternion());
+
+	scene->setProxySceneObject(ModelPaths[1], 0.1f, Float3(0, 0, 0), Quaternion());
 
 	PointLight *pl = scene->addPointLight();
 	pl->cRadius = 10.0f;
@@ -213,7 +216,7 @@ void Realtime_GI::Initialize()
 	_lightClusters.Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext());
 	_lightClusters.SetScene(&_scenes[AppSettings::CurrentScene]);
 
-	_irradianceVolume.Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext(), &_meshRenderer, &_debugRenderer);
+	_irradianceVolume.Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext(), &_meshRenderer, &_camera, &_debugRenderer);
 	_irradianceVolume.SetScene(&_scenes[AppSettings::CurrentScene]);
 }
 
@@ -557,9 +560,13 @@ void Realtime_GI::RenderSceneCubemaps()
 	{
 		_meshRenderer.SetDrawGBuffer(true);
 
-		_meshRenderer.SetCubemapCapture(true);
-		_irradianceVolume.RenderSceneAtlasGBuffer();
-		_meshRenderer.SetCubemapCapture(false);
+		if (_scenes[AppSettings::CurrentScene].hasProxySceneObject())
+		{
+			_meshRenderer.SetCubemapCapture(true);
+			_irradianceVolume.RenderSceneAtlasGBuffer();
+			_irradianceVolume.RenderSceneAtlasProxyMeshTexcoord();
+			_meshRenderer.SetCubemapCapture(false);
+		}
 	}
 }
 

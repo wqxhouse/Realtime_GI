@@ -9,16 +9,33 @@ IrradianceVolume::IrradianceVolume()
 {
 }
 
-void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *context, MeshRenderer *meshRenderer, DebugRenderer *debugRenderer)
+void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *context, MeshRenderer *meshRenderer, Camera *camera, DebugRenderer *debugRenderer)
 {
 	_device = device;
 	_context = context;
 	_meshRenderer = meshRenderer;
+	_mainCamera = camera;
 	_debugRenderer = debugRenderer;
 
 	_cubemapSizeGBuffer = 16;
 	_cubemapSizeTexcoord = 32;
 	_unitsBetweenProbes = 0.8f; // auto compute this value baesd on texture resource limit 16384
+
+	// setup for proxy geometry
+	_proxyMeshVSConstants.Initialize(_device);
+	_proxyMeshVS = CompileVSFromFile(_device, L"ProxyMeshTexcoord.hlsl", "VS");
+	_proxyMeshPS = CompilePSFromFile(_device, L"ProxyMeshTexcoord.hlsl", "PS");
+
+	D3D11_INPUT_ELEMENT_DESC layout[] =
+	{
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+		{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+	};
+
+	DXCall(_device->CreateInputLayout(layout, 3,
+		_proxyMeshVS->ByteCode->GetBufferPointer(),
+		_proxyMeshVS->ByteCode->GetBufferSize(), &_proxyMeshInputLayout));
 }
 
 void IrradianceVolume::SetProbeDensity(float unitsBetweenProbes)
@@ -37,6 +54,11 @@ void IrradianceVolume::setupResourcesForScene()
 {
 	BBox &bbox = _scene->getSceneBoundingBox();
 	Float3 diff = Float3(bbox.Max) - Float3(bbox.Min);
+
+	// Set minimum volume
+	diff.x = Max(diff.x, 2.0f);
+	diff.y = Max(diff.y, 2.0f);
+	diff.z = Max(diff.z, 2.0f);
 	Float3 numProbesAxis = diff * (float)(1.0 / _unitsBetweenProbes);
 	uint32 probeNumX = (uint32)ceilf(numProbesAxis.x) - 1;
 	uint32 probeNumY = (uint32)ceilf(numProbesAxis.y) - 1;
@@ -58,6 +80,7 @@ void IrradianceVolume::setupResourcesForScene()
 		_positionList[index] = positionWS;
 	}}}
 
+
 	createCubemapAtlasRTs();
 }
 
@@ -70,7 +93,7 @@ void IrradianceVolume::createCubemapAtlasRTs()
 
 	_albedoCubemapRT.Initialize(_device, gbufferAtlasWidth, gbufferAtlasHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
 	_normalCubemapRT.Initialize(_device, gbufferAtlasWidth, gbufferAtlasHeight, DXGI_FORMAT_R16G16_FLOAT);
-	_proxyGeomTexCoordCubemapRT.Initialize(_device, texcoordAtlasWidth, texcoordAtlasHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
+	_proxyMeshTexCoordCubemapRT.Initialize(_device, texcoordAtlasWidth, texcoordAtlasHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
 	_depthBufferGBufferRT.Initialize(_device, gbufferAtlasWidth, gbufferAtlasHeight, DXGI_FORMAT_D32_FLOAT);
 	_depthBufferTexcoordRT.Initialize(_device, texcoordAtlasWidth, texcoordAtlasHeight, DXGI_FORMAT_D32_FLOAT);
 }
@@ -115,14 +138,77 @@ void IrradianceVolume::RenderSceneAtlasGBuffer()
 			_context->OMSetRenderTargets(2, renderTarget, nullptr);
 		}
 	}
-
-	//for (size_t i = 0; i < _positionList.size(); i++)
-	//{
-	//	_debugRenderer->QueueLightSphere(_positionList[i], Float4(1, 1, 1, 1), 0.3f);
-	//}
-	// TODO: this is not safe
-	// SetViewport(_context, deviceManager.BackBufferWidth(), deviceManager.BackBufferHeight());
 }
+
+void IrradianceVolume::RenderSceneAtlasProxyMeshTexcoord()
+{
+	PIXEvent event(L"RenderProxyMeshTexcoordAtlas");
+
+	float clearColor[4] = { 0.0f, 0.0f, 1.0f, 0.0f }; // keep blue channel for sky light
+	_context->ClearRenderTargetView(_proxyMeshTexCoordCubemapRT.RTView, clearColor);
+	_context->ClearDepthStencilView(_depthBufferTexcoordRT.DSView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	_context->VSSetShader(_proxyMeshVS, nullptr, 0);
+	_context->PSSetShader(_proxyMeshPS, nullptr, 0);
+	_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	_context->IASetInputLayout(_proxyMeshInputLayout);
+
+	SceneObject *proxyObj = _scene->getProxySceneObjectPtr();
+	Model *proxyModel = proxyObj->model;
+
+	ID3D11RenderTargetView *renderTarget[1] = { _proxyMeshTexCoordCubemapRT.RTView };
+	_context->OMSetRenderTargets(1, renderTarget, _depthBufferTexcoordRT.DSView);
+
+	for (uint32 currCubemap = 0; currCubemap < _cubemapNum; currCubemap++)
+	{
+		for (int cubeboxFaceIndex = 0; cubeboxFaceIndex < 6; cubeboxFaceIndex++)
+		{
+			Float3 &eyePos = _positionList[currCubemap];
+			_cubemapCamera.SetLookAt(eyePos,
+				_CubemapCameraStruct[cubeboxFaceIndex].LookAt,
+				_CubemapCameraStruct[cubeboxFaceIndex].Up);
+
+			_proxyMeshVSConstants.Data.WorldViewProjection =
+				Float4x4::Transpose(*_scene->getProxySceneObjectPtr()->base * _cubemapCamera.ViewProjectionMatrix());
+
+			_proxyMeshVSConstants.ApplyChanges(_context);
+			_proxyMeshVSConstants.SetVS(_context, 0);
+			_proxyMeshVSConstants.SetPS(_context, 0);
+
+			D3D11_VIEWPORT viewport;
+			viewport.Width = static_cast<float>(_cubemapSizeTexcoord);
+			viewport.Height = static_cast<float>(_cubemapSizeTexcoord);
+			viewport.MinDepth = 0.0f;
+			viewport.MaxDepth = 1.0f;
+			viewport.TopLeftX = (float)(cubeboxFaceIndex * _cubemapSizeTexcoord);
+			viewport.TopLeftY = (float)(currCubemap * _cubemapSizeTexcoord);
+			_context->RSSetViewports(1, &viewport);
+
+			// Set the vertices and indices
+			for (size_t i = 0; i < proxyModel->Meshes().size(); i++)
+			{
+				Mesh *proxyMesh = &proxyModel->Meshes()[i];
+
+				ID3D11Buffer* vertexBuffers[1] = { proxyMesh->VertexBuffer() };
+				UINT vertexStrides[1] = { proxyMesh->VertexStride() };
+				UINT offsets[1] = { 0 };
+				_context->IASetVertexBuffers(0, 1, vertexBuffers, vertexStrides, offsets);
+				_context->IASetIndexBuffer(proxyMesh->IndexBuffer(), proxyMesh->IndexBufferFormat(), 0);
+
+				// TODO: frustum culling for proxy object
+				for (size_t j = 0; j < proxyMesh->MeshParts().size(); j++)
+				{
+					const MeshPart& part = proxyMesh->MeshParts()[j];
+					_context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
+				}
+			}
+
+		}
+	}
+
+	renderTarget[0] = nullptr;
+	_context->OMSetRenderTargets(1, renderTarget, nullptr);
+}
+
 
 
 const IrradianceVolume::CameraStruct IrradianceVolume::_CubemapCameraStruct[6] = 

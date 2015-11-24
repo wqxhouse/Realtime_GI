@@ -2,6 +2,7 @@
 
 #include <InterfacePointers.h>
 #include <Graphics\\GraphicsTypes.h>
+#include <Graphics\\ShaderCompilation.h>
 #include <Graphics\\Camera.h>
 
 
@@ -14,19 +15,29 @@ class IrradianceVolume
 {
 public:
 	IrradianceVolume();
-	void Initialize(ID3D11Device *device, ID3D11DeviceContext *context, MeshRenderer *meshRenderer, DebugRenderer *debugRenderer);
+	void Initialize(ID3D11Device *device, ID3D11DeviceContext *context, MeshRenderer *meshRenderer, Camera *camera, DebugRenderer *debugRenderer);
 	
 	void SetScene(Scene *scene);
 	void SetProbeDensity(float unitsBetweenProbes);
 
 	void RenderSceneAtlasGBuffer();
-	void RenderSceneAtlasProxyGeomTexcoord();
+	void RenderSceneAtlasProxyMeshTexcoord();
 
 	const std::vector<Float3> &getPositionList() { return _positionList; }
 
 private:
 	void setupResourcesForScene();
 	void createCubemapAtlasRTs();
+
+	struct ProxyMeshVSContants
+	{
+		Float4x4 WorldViewProjection;
+	};
+
+	ConstantBuffer<ProxyMeshVSContants> _proxyMeshVSConstants;
+	VertexShaderPtr _proxyMeshVS;
+	PixelShaderPtr  _proxyMeshPS;
+	ID3D11InputLayoutPtr _proxyMeshInputLayout;
 
 	ID3D11Device *_device;
 	ID3D11DeviceContext *_context;
@@ -39,7 +50,7 @@ private:
 
 	RenderTarget2D _albedoCubemapRT;
 	RenderTarget2D _normalCubemapRT;
-	RenderTarget2D _proxyGeomTexCoordCubemapRT;
+	RenderTarget2D _proxyMeshTexCoordCubemapRT;
 	DepthStencilBuffer _depthBufferGBufferRT;
 	DepthStencilBuffer _depthBufferTexcoordRT;
 
@@ -47,6 +58,8 @@ private:
 	PerspectiveCamera _cubemapCamera;
 	MeshRenderer *_meshRenderer;
 	DebugRenderer *_debugRenderer;
+
+	Camera *_mainCamera;
 
 	static const struct CameraStruct
 	{
