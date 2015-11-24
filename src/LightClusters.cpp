@@ -72,6 +72,9 @@ void LightClusters::AssignLightToClusters()
 		PointLight *pl = &_scene->getPointLightPtr()[i];
 
 		Float3 posBoundCoord = (pl->cPos - bMin);
+	
+		Assert_(posBoundCoord.x >= 0.0f && posBoundCoord.y >= 0.0f && posBoundCoord.z >= 0.0f);
+
 		Float3 posClusterCoord = posBoundCoord * scale;
 		Float3 minPosClusterCoord = (posBoundCoord - pl->cRadius) * scale;
 		Float3 maxPosClusterCoord = (posBoundCoord + pl->cRadius) * scale;
