@@ -35,6 +35,7 @@ Scene::Scene()
 
 Scene::~Scene()
 {
+	//delete _probeManager;
 }
 
 void Scene::Initialize(ID3D11Device *device, ID3D11DeviceContext *context)
@@ -387,6 +388,18 @@ uint64 Scene::getModelIndex(Model *model)
 BBox Scene::getSceneBoundingBox()
 {
 	return _sceneWSAABB_staticObj;
+}
+
+
+void Scene::setProbeManager(ProbeManager *probeManager)
+{
+	_probeManager = probeManager;
+}
+
+
+ProbeManager &Scene::getProbeManager()
+{
+	return *_probeManager;
 }
 
 void Scene::transformSceneObjectModelPartsBounds(SceneObject *obj)

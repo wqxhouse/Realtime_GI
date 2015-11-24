@@ -182,7 +182,9 @@ protected:
 	LightClusters _lightClusters;
 
 	//Create probe manager
-	ProbeManager _probeManager;
+	ProbeManager _probeManager[1024];
+	ProbeManager probeManager; 
+	int _probeCount = 0;
 	ProbeManager::CameraClips _cameraClip;
 	std::vector<ProbeManager::CameraClips, std::allocator<ProbeManager::CameraClips>> _cameraClipVector;
 

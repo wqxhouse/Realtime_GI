@@ -1,7 +1,7 @@
 /*
-	Author: bxs3514
-	Date:	2015.11
-	Manage the probes created by Cubemap
+Author: bxs3514
+Date:	2015.11
+Manage the probes created by Cubemap
 */
 
 
@@ -12,17 +12,15 @@
 
 
 ProbeManager::ProbeManager()
-	:probeNum(0)
 {
 
 }
-
 
 void ProbeManager::Initialize(ID3D11Device *device, const std::vector<CameraClips> cameraClipVector)
 {
 	if (cameraClipVector.size() == 0) return;
 	probeNum = (uint32)cameraClipVector.size();
-	
+
 	for (uint32 probeIndex = 0; probeIndex < probeNum; ++probeIndex)
 	{
 		CreateCubemap newCubemap = CreateCubemap(cameraClipVector.at(probeIndex).NearClip,
@@ -109,8 +107,10 @@ void ProbeManager::AddProbe(const DeviceManager &deviceManager, MeshRenderer *me
 void ProbeManager::AddProbes(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
 	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, std::vector<Float3> positions, const std::vector<CameraClips> cameraClips)
 {
-	size_t clipsSize = positions.size();
-	for (size_t probeIndex = 0; probeIndex < clipsSize; ++probeIndex)
+	size_t posSize = positions.size();
+	size_t clipsSize = cameraClips.size();
+
+	for (size_t probeIndex = 0; probeIndex < posSize; ++probeIndex)
 	{
 		if (probeIndex < clipsSize)
 			AddProbe(deviceManager, meshRenderer, sceneTransform, environmentMap, environmentMapSH, jitterOffset, skybox, positions.at(probeIndex), cameraClips.at(probeIndex));

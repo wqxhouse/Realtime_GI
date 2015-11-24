@@ -107,8 +107,8 @@
     <ClCompile Include="CreateCubemap.cpp" />
     <ClCompile Include="BoundUtils.cpp" />
     <ClCompile Include="DebugRenderer.cpp" />
-    <ClCompile Include="ProbeManager.cpp" />
     <ClCompile Include="LightClusters.cpp" />
+    <ClCompile Include="ProbeManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PostProcessor.h" />

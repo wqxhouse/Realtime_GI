@@ -8,7 +8,12 @@
 #include "Light.h"
 #include "BoundUtils.h"
 
+//#include "ProbeManager.h"
+//#include "CreateCubemap.h"
+
 using namespace SampleFramework11;
+
+class ProbeManager;
 
 struct ModelPartsBound
 {
@@ -121,6 +126,10 @@ public:
 	// std::wstring getSceneBoundInfo();
 	BBox getSceneBoundingBox();
 
+	// ProbeManager
+	void setProbeManager(ProbeManager *probeManager);
+	ProbeManager &Scene::getProbeManager();
+
 	// Caution: too large will stack overflow
 	static const int MAX_STATIC_OBJECTS = 32;
 	static const int MAX_DYNAMIC_OBJECTS = 128;
@@ -188,6 +197,8 @@ private:
 	Float4x4 _prevWVPs[MAX_OBJECT_MATRICES];
 
 	PointLight _pointLights[MAX_SCENE_LIGHTS];
+
+	ProbeManager *_probeManager;
 
 private:
 
