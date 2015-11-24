@@ -408,3 +408,4 @@ void Scene::transformSceneObjectModelPartsBounds(SceneObject *obj)
 	}
 	
 }
+

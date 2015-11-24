@@ -73,7 +73,11 @@ void LightClusters::AssignLightToClusters()
 
 		Float3 posBoundCoord = (pl->cPos - bMin);
 	
-		Assert_(posBoundCoord.x >= 0.0f && posBoundCoord.y >= 0.0f && posBoundCoord.z >= 0.0f);
+		// Assert_(posBoundCoord.x >= 0.0f && posBoundCoord.y >= 0.0f && posBoundCoord.z >= 0.0f);
+		if (posBoundCoord.x >= 0.0f && posBoundCoord.y >= 0.0f && posBoundCoord.z >= 0.0f)
+		{
+			continue; // skip lights that are out of bounds
+		}
 
 		Float3 posClusterCoord = posBoundCoord * scale;
 		Float3 minPosClusterCoord = (posBoundCoord - pl->cRadius) * scale;
