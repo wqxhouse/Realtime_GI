@@ -22,6 +22,8 @@
 #include "SharedConstants.h"
 #include "ShadowMapSettings.h"
 
+#include "ProbeManager.h"
+
 
 // Renders a text string indicating the current progress for compiling shaders
 static bool32 RenderShaderProgress(uint32 currShader, uint32 numShaders)
@@ -619,6 +621,8 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 {
     PIXEvent event(L"Mesh Rendering");
 
+	//Set Cubemap
+
 	DoSceneObjectsFrustumTests(camera, false);
 
     // Set states
@@ -695,6 +699,9 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 		ModelPartsBound *partsBound = sceneObjectsArr[objIndex].bound->modelPartsBound;
 		Float4x4 worldMat = *sceneObjectsArr[objIndex].base * world;
 		Model *model = sceneObjectsArr[objIndex].model;
+		Float3 objPos = sceneObjectsArr[objIndex].base->Translation();
+		ProbeManager probeManager = _scene->getProbeManager();
+		RenderTarget2D renderTargetView;
 
 		// Set VS constant buffer
 		_meshVSConstants.Data.World = Float4x4::Transpose(worldMat);
@@ -705,6 +712,12 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 		_meshVSConstants.SetVS(context, 0);
 
 		*sceneObjectsArr[objIndex].prevWVP = _meshVSConstants.Data.WorldViewProjection;
+
+		//TODO Get cubemap
+		CreateCubemap cubeMap;
+		probeManager.GetNNProbe(cubeMap, objPos);
+		cubeMap.GetPreFilterTargetViews(renderTargetView);
+		envMap = renderTargetView.SRView;
 
 		// Draw all meshes
 		uint32 partCount = 0;

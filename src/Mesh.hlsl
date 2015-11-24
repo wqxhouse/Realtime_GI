@@ -71,6 +71,7 @@ Texture2D<float2> SpecularCubemapLookup : register(t4);
 Texture2D RoughnessMap : register(t5);
 Texture2D MetallicMap : register(t6);
 Texture2D EmissiveMap : register(t7);
+TextureCubeArray<float3> SpecularCubemapArray : register(t8);
 
 SamplerState AnisoSampler : register(s0);
 SamplerState EVSMSampler : register(s1);

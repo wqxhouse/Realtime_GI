@@ -27,7 +27,6 @@
 #include "Scene.h"
 #include "LightClusters.h"
 
-//#include "CreateCubemap.h"
 #include "ProbeManager.h"
 #include "DebugRenderer.h"
 
@@ -150,6 +149,7 @@ protected:
     virtual void Initialize() override;
 	void LoadScenes(ID3D11DevicePtr device);
 	void LoadShaders(ID3D11DevicePtr device);
+	void InitializeProbeManager();
 
     virtual void Render(const Timer& timer) override;
     virtual void Update(const Timer& timer) override;
@@ -182,13 +182,14 @@ protected:
 	LightClusters _lightClusters;
 
 	//Create probe manager
-	ProbeManager _probeManager[1024];
+	/*ProbeManager _probeManager[1024];
 	ProbeManager probeManager; 
 	int _probeCount = 0;
 	ProbeManager::CameraClips _cameraClip;
-	std::vector<ProbeManager::CameraClips, std::allocator<ProbeManager::CameraClips>> _cameraClipVector;
+	std::vector<ProbeManager::CameraClips, std::allocator<ProbeManager::CameraClips>> _cameraClipVector;*/
+	std::vector<float> _nearClips;
+	std::vector<float> _farClips;
 
-	std::vector<Float3> probePos;
 public:
 
     Realtime_GI();

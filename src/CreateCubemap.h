@@ -28,6 +28,7 @@ class CreateCubemap
 {
 
 public:
+	CreateCubemap();
 	CreateCubemap(const FLOAT NearClip, const FLOAT FarClip);
 	~CreateCubemap();
 
@@ -35,6 +36,8 @@ public:
 	
 	void SetPosition(Float3 position);
 	Float3 GetPosition();
+	void SetBoxSize(float boxSize);
+	float GetBoxSize();
 	void GetTargetViews(RenderTarget2D &resCubemapTarget);
 	void GetPreFilterTargetViews(RenderTarget2D &prefilterTarget);
 
@@ -55,6 +58,8 @@ private:
 	RenderTarget2D prefilterCubemapTarget;
 	DepthStencilBuffer prefilterDepthTarget;
 	Float3 position;
+
+	float _boxSize;
 
 	ID3D11InputLayoutPtr inputLayout;
 

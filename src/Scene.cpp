@@ -1,5 +1,6 @@
 #include "Scene.h"
 #include "FileIO.h"
+#include "ProbeManager.h"
 
 int Scene::_highestSceneObjId = 0;
 int Scene::_numTotalModelsShared = 0;
@@ -390,6 +391,24 @@ BBox Scene::getSceneBoundingBox()
 	return _sceneWSAABB_staticObj;
 }
 
+
+void Scene::InitializeProbeManager(std::vector<float> nearClips, std::vector<float> farClips)
+{
+	_probeManager = new ProbeManager();
+
+	size_t clampProbeNum = std::min(nearClips.size(), farClips.size());
+	std::vector<ProbeManager::CameraClips> cameraClips;
+
+	for (int probeClipsIndex = 0; probeClipsIndex < clampProbeNum; ++probeClipsIndex)
+	{
+		ProbeManager::CameraClips cameraClip;
+		cameraClips.push_back(cameraClip);
+		cameraClips[probeClipsIndex].NearClip = nearClips.at(probeClipsIndex);
+		cameraClips[probeClipsIndex].FarClip = farClips.at(probeClipsIndex);
+	}
+
+	_probeManager->Initialize(_device, cameraClips);
+}
 
 void Scene::setProbeManager(ProbeManager *probeManager)
 {

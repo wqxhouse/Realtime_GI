@@ -45,7 +45,7 @@ static const float FarClip = 300.0f;
 Realtime_GI::Realtime_GI() :  App(L"Realtime GI (CSCI 580)", MAKEINTRESOURCEW(IDI_DEFAULT)),
                             _camera(WindowWidthF / WindowHeightF, Pi_4 * 0.75f, NearClip, FarClip), 
 							_prevForward(0.0f), _prevStrafe(0.0f), _prevAscend(0.0f), _numScenes(0),
-							_cubemapGenerator(NearClip, FarClip), _probeManager()
+							_cubemapGenerator(NearClip, FarClip)
 {
     _deviceManager.SetBackBufferWidth(WindowWidth);
     _deviceManager.SetBackBufferHeight(WindowHeight);
@@ -80,13 +80,13 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	{
 		// L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\Converted\\sponza.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\Cerberus_by_Andrew_Maximov\\Cerberus_by_Andrew_Maximov\\testfbxascii.fbx",
-		//L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
+		L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
 		// L"..\\Content\\Models\\CornellBox\\CornellBox_Max.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaNon_PBR\\Converted\\sponza.obj",
 		// L"..\\Content\\Models\\Powerplant\\Powerplant.sdkmesh",
 		// L"..\\Content\\Models\\RoboHand\\RoboHand.meshdata",
 		// L"",
-		L"..\\Content\\Models\\sphere\\sphere.obj",
+		//L"..\\Content\\Models\\sphere\\sphere.obj",
 		//L"..\\Content\\Models\\3DScan\\model.obj",
 	};
 
@@ -98,21 +98,27 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	scene = &_scenes[_numScenes];
 	scene->Initialize(device, _deviceManager.ImmediateContext());
 
+	for (int i = 0; i < 3; ++i)
+	{
+		_nearClips.push_back(NearClip);
+		_farClips.push_back(FarClip);
+	}
+
+	scene->InitializeProbeManager(_nearClips, _farClips);
+	_nearClips.clear();
+	_farClips.clear();
+
+
 	Model *m = scene->addModel(ModelPaths[0]);
 	//scene->addStaticOpaqueObject(m, 0.5f, Float3(0, 0, 0), Quaternion());
 	
 	//scene->addDynamicOpaqueBoxObject(AppSettings::BoxMaxX - AppSettings::BoxMinX, 
 		//float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ), Quaternion());
-	scene->addStaticOpaqueObject(m, 1.0f, Float3(0, 1, 0), Quaternion());
+	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 1, 0), Quaternion());
 
-	_cameraClip.NearClip = NearClip;
-	_cameraClip.FarClip = FarClip;
-	for (int i = 0; i < 3; ++i)
-		_cameraClipVector.push_back(_cameraClip);
-
-	_probeManager[_probeCount].Initialize(device, _cameraClipVector);
-	scene->setProbeManager(&_probeManager[_probeCount++]);
-	_cameraClipVector.clear();
+	/*_cameraClip.NearClip = NearClip;
+	_cameraClip.FarClip = FarClip;*/
+	
 
 	PointLight *pl = scene->addPointLight();
 	pl->cRadius = 10.0f;
@@ -149,15 +155,25 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	scene = &_scenes[_numScenes];
 	scene->Initialize(device, _deviceManager.ImmediateContext());
 
+	for (int i = 0; i < 3; ++i)
+	{
+		_nearClips.push_back(NearClip);
+		_farClips.push_back(FarClip);
+	}
+
+	scene->InitializeProbeManager(_nearClips, _farClips);
+	_nearClips.clear();
+	_farClips.clear();
+
 	scene->addDynamicOpaqueBoxObject(1.0f, Float3(-1.0f, 0.0f, 0.0f), Quaternion(0.0f, 1.0f, 0.0f, 0.3f));
 	scene->addDynamicOpaqueBoxObject(1.5f, Float3(0.0f, 0.0f, 0.0f), Quaternion(-0.7f, 1.0f, 0.0f, 0.3f));
 	scene->addDynamicOpaqueBoxObject(2.0f, Float3(1.0f, 0.0f, 0.0f), Quaternion(0.0f, 1.0f, 0.7f, 0.3f));
 
-	for (int i = 0; i < 3; ++i)
+	/*for (int i = 0; i < 3; ++i)
 		_cameraClipVector.push_back(_cameraClip);
 	_probeManager[_probeCount].Initialize(device, _cameraClipVector);
 	scene->setProbeManager(&_probeManager[_probeCount++]);
-	_cameraClipVector.clear();
+	_cameraClipVector.clear();*/
 
 	_numScenes++;
 
@@ -165,13 +181,22 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	_scenes[_numScenes] = Scene();
 	scene = &_scenes[_numScenes];
 	scene->Initialize(device, _deviceManager.ImmediateContext());
+	for (int i = 0; i < 3; ++i)
+	{
+		_nearClips.push_back(NearClip);
+		_farClips.push_back(FarClip);
+	}
+
+	scene->InitializeProbeManager(_nearClips, _farClips);
+	_nearClips.clear();
+	_farClips.clear();
 
 	scene->addDynamicOpaquePlaneObject(10.0f, Float3(0.0f, 0.0f, 0.0f), Quaternion(0.0f, 0.0f, 0.0f, 1.0f));
-	for (int i = 0; i < 3; ++i)
+	/*for (int i = 0; i < 3; ++i)
 		_cameraClipVector.push_back(_cameraClip);
 	_probeManager[_probeCount].Initialize(device, _cameraClipVector);
 	scene->setProbeManager(&_probeManager[_probeCount++]);
-	_cameraClipVector.clear();
+	_cameraClipVector.clear();*/
 
 	_numScenes++;
 }
@@ -244,7 +269,36 @@ void Realtime_GI::Initialize()
 
 	_lightClusters.Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext());
 	_lightClusters.SetScene(&_scenes[AppSettings::CurrentScene]);
+}
 
+void Realtime_GI::InitializeProbeManager()
+{
+	if (_scenes[AppSettings::CurrentScene].getProbeManager().GetProbeNums() != 0)
+	{
+		//TODO Refresh
+		return;
+	}
+
+	std::vector<Float3> probePos;
+	probePos.push_back(Float3(0, 5, 0));
+	probePos.push_back(Float3(2, 3, 0));
+	probePos.push_back(Float3(4, 3, 0));
+
+	/*_probeManager.CreateProbe(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox,
+	float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ), ORIGIN_PROBE);*/
+	//probeManager = _scenes[AppSettings::CurrentScene].getProbeManager();
+	_scenes[AppSettings::CurrentScene].getProbeManager()
+		.CreateProbes(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox, probePos);
+
+	probePos.clear();
+
+	std::vector<ProbeManager::CameraClips> cameraClips;
+	probePos.push_back(Float3(0, 1, 0));
+	probePos.push_back(Float3(0, 0, 0));
+
+	_scenes[AppSettings::CurrentScene].getProbeManager().AddProbes(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox,
+		probePos, cameraClips);
+	probePos.clear();
 }
 
 // Creates all required render targets
@@ -569,7 +623,7 @@ void Realtime_GI::RenderAA()
 void Realtime_GI::RenderSceneCubemaps(ID3D11DeviceContext *context)
 {
 	ProbeManager probeManager;
-	RenderTarget2D cubemapRenderTarget;
+	//RenderTarget2D cubemapRenderTarget;
 	_meshRenderer.SetCubemapCapture(true);
 	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
 	{
@@ -577,7 +631,6 @@ void Realtime_GI::RenderSceneCubemaps(ID3D11DeviceContext *context)
 	}
 
 	// TODO: make a separate cubemap manager to set different locations
-	//_cubemapGenerator.SetPosition(float3(0.0f, 0.0f, 0.0f));//!
 	//_cubemapGenerator.SetPosition(float3(0.5f, 0.5f, 0.5f));//!
 
 	/*_cubemapGenerator.SetPosition(float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ));
@@ -588,25 +641,8 @@ void Realtime_GI::RenderSceneCubemaps(ID3D11DeviceContext *context)
 	_cubemapGenerator.GetPreFilterTargetViews(cubemapRenderTarget);
 	_cubemapGenerator.RenderPrefilterCubebox(_deviceManager, _globalTransform);
 	context->GenerateMips(cubemapRenderTarget.SRView);*/
-
-	probePos.push_back(Float3(0, 5, 0));
-	probePos.push_back(Float3(2, 3, 0));
-	probePos.push_back(Float3(4, 3, 0));
-
-	/*_probeManager.CreateProbe(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox,
-		float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ), ORIGIN_PROBE);*/
-	//probeManager = _scenes[AppSettings::CurrentScene].getProbeManager();
-	_scenes[AppSettings::CurrentScene].getProbeManager()
-		.CreateProbes(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox, probePos);//!!hack
-
-	probePos.clear();
-	probePos.push_back(Float3(0, 1, 0));
-	probePos.push_back(Float3(0, 0, 0));
-
-	_scenes[AppSettings::CurrentScene].getProbeManager().AddProbes(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox,
-		probePos, _cameraClipVector);
-	probePos.clear();
-	//_probeManager.GetProbe(_cubemapGenerator, 1);
+	//if (_frameCount || AppSettings::CurrentScene.Changed())
+		InitializeProbeManager();
 
 	_meshRenderer.SetCubemapCapture(false);
 
@@ -680,7 +716,8 @@ void Realtime_GI::RenderSceneGBuffer()
 	_meshRenderer.SetDrawGBuffer(true);
 
 	ID3D11DeviceContextPtr context = _deviceManager.ImmediateContext();
-	RenderTarget2D cubemapRenderTarget;
+	ProbeManager probeManager;
+	//RenderTarget2D cubemapRenderTarget;
 
 	SceneObject *staticObj = _scenes[AppSettings::CurrentScene].getStaticOpaqueObjectsPtr();
 	SceneObject *dynamicObj = _scenes[AppSettings::CurrentScene].getDynamicOpaqueObjectsPtr();
@@ -707,26 +744,7 @@ void Realtime_GI::RenderSceneGBuffer()
 	// _meshRenderer.Render(context, _camera, _globalTransform, _envMap, _envMapSH, _jitterOffset);
 	// TODO: note that render is controlled by AppSettings::CurrentShadingTech, in deferred settings, it writes to depth buffer
 
-	//Update the probe
-	for (int staticIndex = 0; staticIndex < staticNum; ++staticIndex){
-		probeManager = _scenes[AppSettings::CurrentScene].getProbeManager();
-		probeManager.GetNNProbe(_cubemapGenerator, staticObj[staticIndex].base->Translation());
-
-		//_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
-		_cubemapGenerator.GetPreFilterTargetViews(cubemapRenderTarget);
-
-		_meshRenderer.Render(context, _camera, _globalTransform, cubemapRenderTarget.SRView, _envMapSH, _jitterOffset);
-	}
-	for (int staticIndex = 0; staticIndex < dynamicNum; ++staticIndex)
-	{
-		probeManager = _scenes[AppSettings::CurrentScene].getProbeManager();
-		probeManager.GetNNProbe(_cubemapGenerator, dynamicObj[staticIndex].base->Translation());
-
-		//_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
-		_cubemapGenerator.GetPreFilterTargetViews(cubemapRenderTarget);
-
-		_meshRenderer.Render(context, _camera, _globalTransform, cubemapRenderTarget.SRView, _envMapSH, _jitterOffset);
-	}
+	_meshRenderer.Render(context, _camera, _globalTransform, _envMap, _envMapSH, _jitterOffset);
 	
 	// sample the depth after gbuffer and depth is filled
 	_meshRenderer.ReduceDepth(context, _depthBuffer, _camera);
@@ -858,13 +876,14 @@ void Realtime_GI::RenderSceneForward()
 	_meshRenderer.SetDrawGBuffer(false);
 
     ID3D11DeviceContextPtr context = _deviceManager.ImmediateContext();
-	RenderTarget2D cubemapRenderTarget;
+	ProbeManager probeManager;
+	//RenderTarget2D cubemapRenderTarget;
 
     SetViewport(context, _colorTarget.Width, _colorTarget.Height);
 
 	//_cubemapGenerator.GetTargetViews(cubemapRenderTarget)
 
-	_cubemapGenerator.GetPreFilterTargetViews(cubemapRenderTarget);
+	//_cubemapGenerator.GetPreFilterTargetViews(cubemapRenderTarget);
 
     float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
     context->ClearRenderTargetView(_colorTarget.RTView, clearColor);
@@ -889,26 +908,8 @@ void Realtime_GI::RenderSceneForward()
 		Float3(AppSettings::BoxMaxX, AppSettings::BoxMaxY, AppSettings::BoxMaxZ), 
 		Float3(AppSettings::BoxMinX, AppSettings::BoxMinY, AppSettings::BoxMinZ));
 
-	//Update the probe
-	for (int staticIndex = 0; staticIndex < staticNum; ++staticIndex){
-		probeManager = _scenes[AppSettings::CurrentScene].getProbeManager();
-		probeManager.GetNNProbe(_cubemapGenerator, staticObj[staticIndex].base->Translation());
 
-		//_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
-		_cubemapGenerator.GetPreFilterTargetViews(cubemapRenderTarget);
-
-		_meshRenderer.Render(context, _camera, _globalTransform, cubemapRenderTarget.SRView, _envMapSH, _jitterOffset);
-	}
-	for (int staticIndex = 0; staticIndex < dynamicNum; ++staticIndex)
-	{
-		probeManager = _scenes[AppSettings::CurrentScene].getProbeManager();
-		probeManager.GetNNProbe(_cubemapGenerator, dynamicObj[staticIndex].base->Translation());
-
-		//_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
-		_cubemapGenerator.GetPreFilterTargetViews(cubemapRenderTarget);
-
-		_meshRenderer.Render(context, _camera, _globalTransform, cubemapRenderTarget.SRView, _envMapSH, _jitterOffset);
-	}
+	_meshRenderer.Render(context, _camera, _globalTransform, _envMap, _envMapSH, _jitterOffset);
 
     renderTargets[0] = _colorTarget.RTView;
     renderTargets[1] = nullptr;

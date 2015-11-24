@@ -6,6 +6,9 @@
 
 #include "CreateCubemap.h"
 
+#define DefaultNearClip 0.01f
+#define DefaultFarClip 300.0f
+
 const Float3 CreateCubemap::DefaultPosition = { 0.0f, 0.0f, 0.0f };
 
 const CreateCubemap::CameraStruct CreateCubemap::DefaultCubemapCameraStruct[6] = {
@@ -16,6 +19,13 @@ const CreateCubemap::CameraStruct CreateCubemap::DefaultCubemapCameraStruct[6] =
 		{ DefaultPosition, Float3(0.0f, 0.0f, 1.0f), Float3(0.0f, 1.0f, 0.0f) }, //Center
 		{ DefaultPosition, Float3(0.0f, 0.0f, -1.0f), Float3(0.0f, 1.0f, 0.0f) },//Back
 };
+
+CreateCubemap::CreateCubemap()
+	:cubemapCamera(1.0f, 90.0f * (Pi / 180), DefaultNearClip, DefaultFarClip),
+	filterCamera(1.0f, 90.0f * (Pi / 180), DefaultNearClip, DefaultFarClip)
+{
+
+}
 
 CreateCubemap::CreateCubemap(const float NearClip, const float FarClip) 
 	: cubemapCamera(1.0f, 90.0f * (Pi / 180), NearClip, FarClip),
@@ -82,6 +92,19 @@ Float3 CreateCubemap::GetPosition()
 {
 	return position;
 }
+
+
+void CreateCubemap::SetBoxSize(float newBoxSize)
+{
+	_boxSize = newBoxSize;
+}
+
+
+float CreateCubemap::GetBoxSize()
+{
+	return _boxSize;
+}
+
 
 void CreateCubemap::GenAndCacheConvoluteSphereInputLayout(const DeviceManager &deviceManager, const Model *model)
 {	

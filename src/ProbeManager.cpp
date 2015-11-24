@@ -19,7 +19,7 @@ ProbeManager::ProbeManager()
 void ProbeManager::Initialize(ID3D11Device *device, const std::vector<CameraClips> cameraClipVector)
 {
 	if (cameraClipVector.size() == 0) return;
-	probeNum = (uint32)cameraClipVector.size();
+	uint32 probeNum = (uint32)cameraClipVector.size();
 
 	for (uint32 probeIndex = 0; probeIndex < probeNum; ++probeIndex)
 	{
@@ -151,6 +151,12 @@ void ProbeManager::ClearProbes()
 }
 
 
+uint32 ProbeManager::GetProbeNums()
+{
+	return probeNum;
+}
+
+
 void ProbeManager::GetProbe(CreateCubemap &cubemap, uint32 index)
 {
 	cubemap = _cubemaps.at(index);
@@ -206,11 +212,11 @@ void ProbeManager::BlendCubemaps(Float3 objPos)
 
 ProbeManager::~ProbeManager()
 {
-	if (_resCubemap != nullptr)
+	/*if (_resCubemap != nullptr)
 	{
 		delete _resCubemap;
 		_resCubemap = nullptr;
-	}
+	}*/
 
 	ClearProbes();
 }

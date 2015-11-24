@@ -8,7 +8,7 @@
 #include "Light.h"
 #include "BoundUtils.h"
 
-//#include "ProbeManager.h"
+//#include "ProbeMankager.h"
 //#include "CreateCubemap.h"
 
 using namespace SampleFramework11;
@@ -127,8 +127,10 @@ public:
 	BBox getSceneBoundingBox();
 
 	// ProbeManager
+	void InitializeProbeManager(std::vector<float> nearClips, std::vector<float> farClips);
 	void setProbeManager(ProbeManager *probeManager);
 	ProbeManager &Scene::getProbeManager();
+	//std::vector<ProbeManager::CameraClips, std::allocator<ProbeManager::CameraClips>> _cameraClips;
 
 	// Caution: too large will stack overflow
 	static const int MAX_STATIC_OBJECTS = 32;

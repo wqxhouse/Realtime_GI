@@ -40,6 +40,7 @@ public:
 	void RemoveProbes(uint32 start, uint32 end);
 	void ClearProbes();
 
+	uint32 GetProbeNums();
 	void GetProbe(CreateCubemap &cubemap, uint32 index);
 	void GetNNProbe(CreateCubemap &nearCubemap, Float3 objPos);
 	void GetBlendProbe(CreateCubemap &blendCubemap);
@@ -54,6 +55,7 @@ private:
 
 	std::vector<Float3> _probePositions;
 	std::vector<CreateCubemap> _cubemaps;
+	std::vector<CameraClips> _cameraClipVector;
 
 	uint32 probeNum = 0;
 };
