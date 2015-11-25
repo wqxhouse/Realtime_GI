@@ -3,6 +3,7 @@
 #include <InterfacePointers.h>
 #include <Graphics\\GraphicsTypes.h>
 #include <Graphics\\ShaderCompilation.h>
+#include <Graphics\\DeviceStates.h>
 #include <Graphics\\Camera.h>
 
 
@@ -22,7 +23,6 @@ public:
 
 	void RenderSceneAtlasGBuffer();
 	void RenderSceneAtlasProxyMeshTexcoord();
-	void RenderProxyMeshDirectLighting();
 
 	void MainRender();
 
@@ -75,10 +75,22 @@ private:
 
 	std::vector<Float3> _positionList;
 
+private:
 	// ===============================
+	void renderProxyMeshDirectLighting();
+	void renderProxyMeshShadowMap();
+
 	RenderTarget2D _relightCubemapRT;
 	RenderTarget2D _dirLightDiffuseBufferRT;
 	RenderTarget2D _indirectLightDiffuseBufferRT;
+
+	DepthStencilBuffer _dirLightProxyMeshShadowMapBuffer;
+	ID3D11InputLayoutPtr _proxyMeshDepthInputLayout;
+
+    RasterizerStates _rasterizerStates;
+	DepthStencilStates _depthStencilStates;
+	
+    VertexShaderPtr _meshDepthVS;
 
 	VertexShaderPtr _dirLightDiffuseVS;
 	PixelShaderPtr _dirLightDiffusePS;

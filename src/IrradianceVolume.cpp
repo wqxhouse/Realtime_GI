@@ -2,6 +2,7 @@
 #include "Scene.h"
 #include "MeshRenderer.h"
 #include "DebugRenderer.h"
+#include "BoundUtils.h"
 
 IrradianceVolume::IrradianceVolume()
 	: _cubemapCamera(1.0f, 90.0f * (Pi / 180), 0.01f, 40.0f) // TODO: experiment with far clip plane
@@ -40,6 +41,11 @@ void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *con
 		_proxyMeshVS->ByteCode->GetBufferSize(), &_proxyMeshInputLayout));
 
 
+	_meshDepthVS = CompileVSFromFile(_device, L"SimpleDepthOnly.hlsl", "VS");
+	DXCall(_device->CreateInputLayout(layout, 1, _meshDepthVS->ByteCode->GetBufferPointer(), 
+		_meshDepthVS->ByteCode->GetBufferSize(), &_proxyMeshDepthInputLayout));
+
+
 	// ========================================================
 	_dirLightMapSize = 128;
 	_indirectLightMapSize = 256;
@@ -49,6 +55,11 @@ void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *con
 
 	_dirLightDiffuseVS = CompileVSFromFile(_device, L"DirectDiffuse.hlsl", "VS");
 	_dirLightDiffusePS = CompilePSFromFile(_device, L"DirectDiffuse.hlsl", "PS");
+
+	_dirLightProxyMeshShadowMapBuffer.Initialize(_device, _dirLightMapSize, _dirLightMapSize, DXGI_FORMAT_D16_UNORM, true);
+
+	_rasterizerStates.Initialize(_device);
+	_depthStencilStates.Initialize(_device);
 }
 
 void IrradianceVolume::SetProbeDensity(float unitsBetweenProbes)
@@ -231,9 +242,64 @@ void IrradianceVolume::renderProxyModel()
 	}
 }
 
-void IrradianceVolume::RenderProxyMeshDirectLighting()
+void IrradianceVolume::renderProxyMeshShadowMap()
+{
+	PIXEvent event(L"RenderProxyMeshShadowMap");
+
+	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; // keep blue channel for sky light
+	_context->RSSetState(_rasterizerStates.BackFaceCull());
+	_context->OMSetDepthStencilState(_depthStencilStates.DepthWriteEnabled(), 0);
+	ID3D11RenderTargetView* renderTargets[1] = { nullptr };
+	_context->OMSetRenderTargets(0, renderTargets, _dirLightProxyMeshShadowMapBuffer.DSView);
+
+	_context->ClearDepthStencilView(_dirLightProxyMeshShadowMapBuffer.DSView, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	_context->VSSetShader(_meshDepthVS, nullptr, 0);
+	_context->PSSetShader(nullptr, nullptr, 0);
+	_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	_context->IASetInputLayout(_proxyMeshDepthInputLayout);
+
+	D3D11_VIEWPORT viewport;
+	viewport.Width = static_cast<float>(_dirLightMapSize);
+	viewport.Height = static_cast<float>(_dirLightMapSize);
+	viewport.MinDepth = 0.0f;
+	viewport.MaxDepth = 1.0f;
+	viewport.TopLeftX = 0.0f;
+	viewport.TopLeftY = 0.0f;
+	_context->RSSetViewports(1, &viewport);
+
+	// Shadow camera construction - transform scene aabb to light space aabb
+	BBox &bbox = _scene->getSceneBoundingBox();
+
+	// Create a temporary view matrix for the light
+	Float3 lightCameraPos = Float3(0, 0, 0);
+	Float3 lookAt = lightCameraPos - AppSettings::LightDirection;
+	Float3 upDir = Float3(0.0f, 1.0f, 0.0f);
+	Float4x4 lightView = XMMatrixLookAtLH(lightCameraPos.ToSIMD(), lookAt.ToSIMD(), upDir.ToSIMD());
+	printf("%s\n", lightView.Print().c_str());
+	BBox lightSpaceBBox = GetTransformedBBox(bbox, lightView);
+	Float3 lightMin = lightSpaceBBox.Min;
+	Float3 lightMax = lightSpaceBBox.Max;
+
+	OrthographicCamera shadowCamera(lightMin.x, lightMin.y, lightMax.x,
+		lightMax.y, lightMin.z, lightMax.z);
+	shadowCamera.SetLookAt(lightCameraPos, lookAt, upDir);
+
+	_proxyMeshVSConstants.Data.WorldViewProjection =
+		Float4x4::Transpose(*_scene->getProxySceneObjectPtr()->base * shadowCamera.ViewProjectionMatrix());
+	_proxyMeshVSConstants.ApplyChanges(_context);
+	_proxyMeshVSConstants.SetVS(_context, 0);
+
+	renderProxyModel();
+	_debugRenderer->QueueSprite(_dirLightProxyMeshShadowMapBuffer.SRView, Float3(0, 128, 0), Float4(1, 1, 1, 1));
+	_context->OMSetRenderTargets(0, renderTargets, nullptr);
+}
+
+void IrradianceVolume::renderProxyMeshDirectLighting()
 {
 	PIXEvent event(L"RenderProxyMeshDirectLighting");
+
+	_context->RSSetState(_rasterizerStates.NoCull());
+	_context->OMSetDepthStencilState(_depthStencilStates.DepthDisabled(), 0);
 
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; // keep blue channel for sky light
 	_context->ClearRenderTargetView(_dirLightDiffuseBufferRT.RTView, clearColor);
@@ -264,7 +330,8 @@ void IrradianceVolume::RenderProxyMeshDirectLighting()
 
 void IrradianceVolume::MainRender()
 {
-	RenderProxyMeshDirectLighting();
+	renderProxyMeshShadowMap();
+	renderProxyMeshDirectLighting();
 }
 
 const IrradianceVolume::CameraStruct IrradianceVolume::_CubemapCameraStruct[6] = 
