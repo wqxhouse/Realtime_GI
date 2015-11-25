@@ -64,8 +64,11 @@ public:
 
 	void SetDrawGBuffer(bool32 tf);
 
+	void SetInitializeProbes(bool32 tf);
+
 	void ReMapMeshShaders();
 	void SortSceneObjects(const Float4x4 &viewMatrix);
+
 
 	inline RenderTarget2D *GetVSMRenderTargetPtr() { return &_varianceShadowMap; }
 	inline ID3D11SamplerStatePtr GetEVSMSamplerStatePtr() { return _evsmSampler; }	
@@ -184,6 +187,7 @@ protected:
     ID3D11ShaderResourceViewPtr _specularLookupTexture;
 
 	bool32 _drawingCubemap;
+	bool32 _initializeProbes;
 
 	Float3 probePosWS;
 	Float3 maxbox;

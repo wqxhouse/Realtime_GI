@@ -114,7 +114,7 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	
 	//scene->addDynamicOpaqueBoxObject(AppSettings::BoxMaxX - AppSettings::BoxMinX, 
 		//float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ), Quaternion());
-	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 1, 0), Quaternion());
+	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, -3, 0), Quaternion());
 
 	/*_cameraClip.NearClip = NearClip;
 	_cameraClip.FarClip = FarClip;*/
@@ -169,12 +169,6 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	scene->addDynamicOpaqueBoxObject(1.5f, Float3(0.0f, 0.0f, 0.0f), Quaternion(-0.7f, 1.0f, 0.0f, 0.3f));
 	scene->addDynamicOpaqueBoxObject(2.0f, Float3(1.0f, 0.0f, 0.0f), Quaternion(0.0f, 1.0f, 0.7f, 0.3f));
 
-	/*for (int i = 0; i < 3; ++i)
-		_cameraClipVector.push_back(_cameraClip);
-	_probeManager[_probeCount].Initialize(device, _cameraClipVector);
-	scene->setProbeManager(&_probeManager[_probeCount++]);
-	_cameraClipVector.clear();*/
-
 	_numScenes++;
 
 	/// Scene 3 /////////////////////////////////////////////////////////////
@@ -192,11 +186,6 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	_farClips.clear();
 
 	scene->addDynamicOpaquePlaneObject(10.0f, Float3(0.0f, 0.0f, 0.0f), Quaternion(0.0f, 0.0f, 0.0f, 1.0f));
-	/*for (int i = 0; i < 3; ++i)
-		_cameraClipVector.push_back(_cameraClip);
-	_probeManager[_probeCount].Initialize(device, _cameraClipVector);
-	scene->setProbeManager(&_probeManager[_probeCount++]);
-	_cameraClipVector.clear();*/
 
 	_numScenes++;
 }
@@ -273,9 +262,11 @@ void Realtime_GI::Initialize()
 
 void Realtime_GI::InitializeProbeManager()
 {
+	_meshRenderer.SetInitializeProbes(true);
 	if (_scenes[AppSettings::CurrentScene].getProbeManager().GetProbeNums() != 0)
 	{
 		//TODO Refresh
+		_meshRenderer.SetInitializeProbes(false);
 		return;
 	}
 
@@ -299,6 +290,8 @@ void Realtime_GI::InitializeProbeManager()
 	_scenes[AppSettings::CurrentScene].getProbeManager().AddProbes(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox,
 		probePos, cameraClips);
 	probePos.clear();
+
+	_meshRenderer.SetInitializeProbes(false);
 }
 
 // Creates all required render targets

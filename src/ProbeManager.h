@@ -43,13 +43,14 @@ public:
 	uint32 GetProbeNums();
 	void GetProbe(CreateCubemap &cubemap, uint32 index);
 	void GetNNProbe(CreateCubemap &nearCubemap, Float3 objPos);
-	void GetBlendProbe(CreateCubemap &blendCubemap);
+	void GetBlendProbes(std::vector<CreateCubemap> &blendCubemaps, Float3 objPos);
 
 	~ProbeManager();
 private:
 	float CalDistance(Float3 probePos, Float3 objPos);//Calculate distance between object and a single probe.
 	uint32 CalNN(Float3 objPos);
-	void BlendCubemaps(Float3 objPos);
+	void CalTwoNN(Float3 objPos, uint32 &first, uint32 &second);
+	//void BlendCubemaps(Float3 objPos);
 
 	CreateCubemap *_resCubemap = nullptr;
 

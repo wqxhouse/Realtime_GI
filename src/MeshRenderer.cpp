@@ -222,6 +222,11 @@ void MeshRenderer::SetDrawGBuffer(bool32 tf)
 	ReMapMeshShaders();
 }
 
+void MeshRenderer::SetInitializeProbes(bool32 tf)
+{
+	_initializeProbes = tf;
+}
+
 void MeshRenderer::SetParallaxCorrection(Float3 newProbePosWS, Float3 newMaxbox, Float3 newMinbox){
 	probePosWS = newProbePosWS;
 	maxbox = newMaxbox;
@@ -331,11 +336,9 @@ void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context
 {
     this->_device = device;
 
-	this->_drawingCubemap = false;
-
 	_drawingCubemap = false;
 	_drawingGBuffer = false;
-
+	_initializeProbes = true;
 
 	_blendStates.Initialize(device);
 	_rasterizerStates.Wireframe();
@@ -699,9 +702,6 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 		ModelPartsBound *partsBound = sceneObjectsArr[objIndex].bound->modelPartsBound;
 		Float4x4 worldMat = *sceneObjectsArr[objIndex].base * world;
 		Model *model = sceneObjectsArr[objIndex].model;
-		Float3 objPos = sceneObjectsArr[objIndex].base->Translation();
-		ProbeManager probeManager = _scene->getProbeManager();
-		RenderTarget2D renderTargetView;
 
 		// Set VS constant buffer
 		_meshVSConstants.Data.World = Float4x4::Transpose(worldMat);
@@ -713,11 +713,21 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 
 		*sceneObjectsArr[objIndex].prevWVP = _meshVSConstants.Data.WorldViewProjection;
 
-		//TODO Get cubemap
+		//Get cubemap
+		Float3 objPos = sceneObjectsArr[objIndex].base->Translation();
+		ProbeManager probeManager = _scene->getProbeManager();
+		RenderTarget2D renderTargetView;
 		CreateCubemap cubeMap;
-		probeManager.GetNNProbe(cubeMap, objPos);
-		cubeMap.GetPreFilterTargetViews(renderTargetView);
-		envMap = renderTargetView.SRView;
+
+		if (!_initializeProbes)
+		{	
+			probeManager.GetNNProbe(cubeMap, objPos);
+			cubeMap.GetPreFilterTargetViews(renderTargetView);
+			envMap = renderTargetView.SRView;
+
+			std::vector<CreateCubemap> blendCubeMaps;
+			probeManager.GetBlendProbes(blendCubeMaps, objPos);
+		}
 
 		// Draw all meshes
 		uint32 partCount = 0;
@@ -770,7 +780,7 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 						material.DiffuseMap,
 						material.NormalMap,
 						_varianceShadowMap.SRView,
-						envMap,
+						envMap, 
 						_specularLookupTexture,
 						material.RoughnessMap, 
 						material.MetallicMap, 

@@ -170,9 +170,13 @@ void ProbeManager::GetNNProbe(CreateCubemap &nearCubemap, Float3 objPos)
 }
 
 
-void ProbeManager::GetBlendProbe(CreateCubemap &blendCubemap)
+void ProbeManager::GetBlendProbes(std::vector<CreateCubemap> &blendCubemaps, Float3 objPos)
 {
+	uint32 firstIndex, secondIndex;
+	CalTwoNN(objPos, firstIndex, secondIndex);
 
+	blendCubemaps.push_back(_cubemaps.at(firstIndex));
+	blendCubemaps.push_back(_cubemaps.at(secondIndex));
 }
 
 float ProbeManager::CalDistance(Float3 probePos, Float3 objPos)
@@ -204,19 +208,44 @@ uint32 ProbeManager::CalNN(Float3 objPos)
 }
 
 
-void ProbeManager::BlendCubemaps(Float3 objPos)
+void ProbeManager::CalTwoNN(Float3 objPos, uint32 &first, uint32 &second)
 {
+	if (_cubemaps.size() == 0) return;
 
+	float minDis[2] = { FLT_MAX, FLT_MAX };
+	uint32 firstIndex = -1, secondIndex = -1;
+
+	for (uint32 probeIndex = 0; probeIndex < _cubemaps.size(); ++probeIndex)
+	{
+		float distance = CalDistance(_cubemaps.at(probeIndex).GetPosition(), objPos);
+		if (probeIndex == 0)
+		{
+			minDis[0] = minDis[1] = distance;
+			firstIndex = secondIndex = 0;
+		}
+		else{
+			if (distance < minDis[0])
+			{
+				minDis[1] = minDis[0];
+				minDis[0] = distance;
+				secondIndex = firstIndex;
+				firstIndex = probeIndex;
+			}
+			else if (distance <= minDis[1])
+			{
+				minDis[1] = distance;
+				secondIndex = probeIndex;
+			}
+			
+		}
+	}
+
+	first = firstIndex;
+	second = secondIndex;
 }
 
 
 ProbeManager::~ProbeManager()
 {
-	/*if (_resCubemap != nullptr)
-	{
-		delete _resCubemap;
-		_resCubemap = nullptr;
-	}*/
-
 	ClearProbes();
 }
