@@ -31,6 +31,7 @@ public:
 private:
 	void setupResourcesForScene();
 	void createCubemapAtlasRTs();
+	void renderProxyModel();
 
 	struct ProxyMeshVSContants
 	{
