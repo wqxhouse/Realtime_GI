@@ -149,7 +149,7 @@ protected:
     virtual void Initialize() override;
 	void LoadScenes(ID3D11DevicePtr device);
 	void LoadShaders(ID3D11DevicePtr device);
-	void InitializeProbeManager();
+	void SetProbeManager();
 
     virtual void Render(const Timer& timer) override;
     virtual void Update(const Timer& timer) override;

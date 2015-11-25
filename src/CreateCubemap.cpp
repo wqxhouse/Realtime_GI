@@ -94,13 +94,13 @@ Float3 CreateCubemap::GetPosition()
 }
 
 
-void CreateCubemap::SetBoxSize(float newBoxSize)
+void CreateCubemap::SetBoxSize(Float3 newBoxSize)
 {
 	_boxSize = newBoxSize;
 }
 
 
-float CreateCubemap::GetBoxSize()
+Float3 CreateCubemap::GetBoxSize()
 {
 	return _boxSize;
 }

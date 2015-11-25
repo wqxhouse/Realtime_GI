@@ -114,7 +114,7 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	
 	//scene->addDynamicOpaqueBoxObject(AppSettings::BoxMaxX - AppSettings::BoxMinX, 
 		//float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ), Quaternion());
-	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, -3, 0), Quaternion());
+	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 1, 0), Quaternion());
 
 	/*_cameraClip.NearClip = NearClip;
 	_cameraClip.FarClip = FarClip;*/
@@ -260,7 +260,7 @@ void Realtime_GI::Initialize()
 	_lightClusters.SetScene(&_scenes[AppSettings::CurrentScene]);
 }
 
-void Realtime_GI::InitializeProbeManager()
+void Realtime_GI::SetProbeManager()
 {
 	_meshRenderer.SetInitializeProbes(true);
 	if (_scenes[AppSettings::CurrentScene].getProbeManager().GetProbeNums() != 0)
@@ -278,8 +278,16 @@ void Realtime_GI::InitializeProbeManager()
 	/*_probeManager.CreateProbe(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox,
 	float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ), ORIGIN_PROBE);*/
 	//probeManager = _scenes[AppSettings::CurrentScene].getProbeManager();
-	_scenes[AppSettings::CurrentScene].getProbeManager()
-		.CreateProbes(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox, probePos);
+	//ProbeManager probeManager = _scenes[AppSettings::CurrentScene].getProbeManager();
+	_scenes[AppSettings::CurrentScene].getProbeManager().CreateProbes(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox, probePos);
+	
+	CreateCubemap cubeMap;
+	_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(cubeMap, 0);
+	cubeMap.SetBoxSize(Float3(0.5f, 0.5f, 0.5f));
+	_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(cubeMap, 1);
+	cubeMap.SetBoxSize(Float3(0.5f, 0.5f, 0.5f));
+	_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(cubeMap, 2);
+	cubeMap.SetBoxSize(Float3(0.5f, 0.5f, 0.5f));
 
 	probePos.clear();
 
@@ -287,8 +295,13 @@ void Realtime_GI::InitializeProbeManager()
 	probePos.push_back(Float3(0, 1, 0));
 	probePos.push_back(Float3(0, 0, 0));
 
-	_scenes[AppSettings::CurrentScene].getProbeManager().AddProbes(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox,
-		probePos, cameraClips);
+	_scenes[AppSettings::CurrentScene].getProbeManager().AddProbes(_deviceManager, &_meshRenderer, _globalTransform,
+		_envMap, _envMapSH, _jitterOffset, &_skybox, probePos, cameraClips);
+	_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(cubeMap, 3);
+	cubeMap.SetBoxSize(Float3(0.5f, 0.5f, 0.5f));
+	_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(cubeMap, 4);
+	cubeMap.SetBoxSize(Float3(0.5f, 0.5f, 0.5f));
+
 	probePos.clear();
 
 	_meshRenderer.SetInitializeProbes(false);
@@ -635,7 +648,7 @@ void Realtime_GI::RenderSceneCubemaps(ID3D11DeviceContext *context)
 	_cubemapGenerator.RenderPrefilterCubebox(_deviceManager, _globalTransform);
 	context->GenerateMips(cubemapRenderTarget.SRView);*/
 	//if (_frameCount || AppSettings::CurrentScene.Changed())
-		InitializeProbeManager();
+	SetProbeManager();
 
 	_meshRenderer.SetCubemapCapture(false);
 
@@ -897,9 +910,9 @@ void Realtime_GI::RenderSceneForward()
     context->OMSetRenderTargets(2, renderTargets, _depthBuffer.DSView);
 
     // _meshRenderer.Render(context, _camera, _globalTransform, _envMap, _envMapSH, _jitterOffset);
-	_meshRenderer.SetParallaxCorrection(_cubemapGenerator.GetPosition(), 
+	/*_meshRenderer.SetParallaxCorrection(_cubemapGenerator.GetPosition(), 
 		Float3(AppSettings::BoxMaxX, AppSettings::BoxMaxY, AppSettings::BoxMaxZ), 
-		Float3(AppSettings::BoxMinX, AppSettings::BoxMinY, AppSettings::BoxMinZ));
+		Float3(AppSettings::BoxMinX, AppSettings::BoxMinY, AppSettings::BoxMinZ));*/
 
 
 	_meshRenderer.Render(context, _camera, _globalTransform, _envMap, _envMapSH, _jitterOffset);

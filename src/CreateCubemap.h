@@ -36,8 +36,8 @@ public:
 	
 	void SetPosition(Float3 position);
 	Float3 GetPosition();
-	void SetBoxSize(float boxSize);
-	float GetBoxSize();
+	void SetBoxSize(Float3 boxSize);
+	Float3 GetBoxSize();
 	void GetTargetViews(RenderTarget2D &resCubemapTarget);
 	void GetPreFilterTargetViews(RenderTarget2D &prefilterTarget);
 
@@ -59,7 +59,7 @@ private:
 	DepthStencilBuffer prefilterDepthTarget;
 	Float3 position;
 
-	float _boxSize;
+	Float3 _boxSize;
 
 	ID3D11InputLayoutPtr inputLayout;
 

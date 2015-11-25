@@ -60,7 +60,7 @@ public:
 
 	void SetCubemapCapture(bool32 tf);
 
-	void MeshRenderer::SetParallaxCorrection(Float3 newProbePosWS, Float3 newMaxBox, Float3 newMinBox);
+	void MeshRenderer::SetParallaxCorrection(Float3 newProbePosWS[2], Float3 newBoxSize[2], Float3 newObjectPosWS[2]);
 
 	void SetDrawGBuffer(bool32 tf);
 
@@ -87,7 +87,6 @@ public:
 	struct MeshPSConstants
 	{
 		Float4Align Float3 CameraPosWS;
-		Float4Align Float3 ProbePosWS;
 		Float4Align Float4x4 ShadowMatrix;
 		Float4Align float CascadeSplits[NumCascades];
 
@@ -107,8 +106,9 @@ public:
 		Float2 RTSize;
 		Float2 JitterOffset;
 
-		Float3 MaxBox;
-		Float3 MinBox;
+		Float4Align Float3 ProbePosWS[2];
+		Float3 BoxSize[2];
+		Float4Align Float3 ObjPos;
 	};
 
 	inline ConstantBuffer<MeshPSConstants> *getMeshPSConstantsPtr() { return &_meshPSConstants; }
@@ -189,9 +189,9 @@ protected:
 	bool32 _drawingCubemap;
 	bool32 _initializeProbes;
 
-	Float3 probePosWS;
-	Float3 maxbox;
-	Float3 minbox;
+	Float3 _probePosWS[2];
+	Float3 _boxSize[2];
+	Float3 _objPosWS[2];
 
 	bool32 _drawingGBuffer;
 
