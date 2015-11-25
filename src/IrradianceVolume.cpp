@@ -258,6 +258,8 @@ void IrradianceVolume::RenderProxyMeshDirectLighting()
 
 	renderTarget[0] = nullptr;
 	_context->OMSetRenderTargets(1, renderTarget, nullptr);
+
+	_debugRenderer->QueueSprite(_dirLightDiffuseBufferRT.SRView, Float3(0, 0, 0), Float4(1, 1, 1, 1));
 }
 
 void IrradianceVolume::MainRender()
