@@ -209,41 +209,23 @@ public class Settings
         [StepSize(0.1f)]
         float ProbeZ = 0.0f;
 
-        [DisplayName("BoxMaxX")]
+        [DisplayName("BoxSizeX")]
         [MinValue(-100.0f)]
         [MaxValue(100.0f)]
         [StepSize(0.1f)]
-        float BoxMaxX = 1.0f;
+        float BoxSizeX = 1.0f;
 
-        [DisplayName("BoxMaxY")]
+        [DisplayName("BoxSizeY")]
         [MinValue(-100.0f)]
         [MaxValue(100.0f)]
         [StepSize(0.1f)]
-        float BoxMaxY = 1.0f;
+        float BoxSizeY = 1.0f;
 
-        [DisplayName("BoxMaxZ")]
+        [DisplayName("BoxSizeZ")]
         [MinValue(-100.0f)]
         [MaxValue(100.0f)]
         [StepSize(0.1f)]
-        float BoxMaxZ = 1.0f;
-
-        [DisplayName("BoxMinX")]
-        [MinValue(-100.0f)]
-        [MaxValue(100.0f)]
-        [StepSize(0.1f)]
-        float BoxMinX = -1.0f;
-
-        [DisplayName("BoxMinY")]
-        [MinValue(-100.0f)]
-        [MaxValue(100.0f)]
-        [StepSize(0.1f)]
-        float BoxMinY = -1.0f;
-
-        [DisplayName("BoxMinZ")]
-        [MinValue(-100.0f)]
-        [MaxValue(100.0f)]
-        [StepSize(0.1f)]
-        float BoxMinZ = -1.0f;
+        float BoxSizeZ = 1.0f;
 
         // Orientation SceneOrientation = new Orientation(0.41f, -0.55f, -0.29f, 0.67f);
         Orientation SceneOrientation = new Orientation(0.0f, 0.0f, 0.0f, 1.0f);

@@ -81,6 +81,7 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 		// L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\Converted\\sponza.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\Cerberus_by_Andrew_Maximov\\Cerberus_by_Andrew_Maximov\\testfbxascii.fbx",
 		L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
+		//L"..\\Content\\Models\\CornellBox\\CornellBox2.FBX",
 		// L"..\\Content\\Models\\CornellBox\\CornellBox_Max.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaNon_PBR\\Converted\\sponza.obj",
 		// L"..\\Content\\Models\\Powerplant\\Powerplant.sdkmesh",
@@ -266,12 +267,19 @@ void Realtime_GI::SetProbeManager()
 	if (_scenes[AppSettings::CurrentScene].getProbeManager().GetProbeNums() != 0)
 	{
 		//TODO Refresh
+		CreateCubemap *cubeMap;
+		_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, 0);
+		//cubeMap->SetBoxSize(Float3(2.2f, 2.2f, 2.0f));
+		cubeMap->SetBoxSize(Float3(AppSettings::BoxSizeX, AppSettings::BoxSizeY, AppSettings::BoxSizeZ));
+		cubeMap->SetPosition(Float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ));
+
 		_meshRenderer.SetInitializeProbes(false);
 		return;
 	}
 
 	std::vector<Float3> probePos;
-	probePos.push_back(Float3(0, 0, 0));
+	//probePos.push_back(Float3(1, 1.2f, 0));
+	probePos.push_back(Float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ));
 	/*probePos.push_back(Float3(2, 3, 0));
 	probePos.push_back(Float3(4, 3, 0));*/
 
@@ -283,7 +291,8 @@ void Realtime_GI::SetProbeManager()
 	
 	CreateCubemap *cubeMap;
 	_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, 0);
-	cubeMap->SetBoxSize(Float3(0.5f, 0.5f, 0.5f));
+	//cubeMap->SetBoxSize(Float3(2.2f, 2.2f, 2.0f));
+	cubeMap->SetBoxSize(Float3(AppSettings::BoxSizeX, AppSettings::BoxSizeY, AppSettings::BoxSizeZ));
 	/*_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, 1);
 	cubeMap->SetBoxSize(Float3(0.5f, 0.5f, 0.5f));
 	_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, 2);
