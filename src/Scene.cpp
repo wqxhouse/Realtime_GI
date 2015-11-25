@@ -369,7 +369,7 @@ PointLight *Scene::addPointLight()
 	return &_pointLights[_numPointLights - 1];
 }
 
-uint32 Scene::fillPointLightsUniformGrid(float unitGridSize, float radius)
+uint32 Scene::fillPointLightsUniformGrid(float unitGridSize, float radius, Float3 offset)
 {
 	Float3 diff = Float3(_sceneWSAABB_staticObj.Max) - Float3(_sceneWSAABB_staticObj.Min);
 	Float3 lightNumAxis = diff / (float)unitGridSize;
@@ -390,7 +390,7 @@ uint32 Scene::fillPointLightsUniformGrid(float unitGridSize, float radius)
 				if (pl == NULL) return lightNum; // reached maximum
 				pl->cRadius = radius;
 				pl->cColor = Float3((float)x / xnum, (float)y / ynum, (float)z / znum);
-				pl->cPos = Float3((float)x, (float)y, (float)z) * inv_scale + Float3(_sceneWSAABB_staticObj.Min);
+				pl->cPos = Float3((float)x, (float)y, (float)z) * inv_scale + Float3(_sceneWSAABB_staticObj.Min) + offset;
 				lightNum++;
 			}
 		}

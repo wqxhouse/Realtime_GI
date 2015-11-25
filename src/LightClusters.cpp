@@ -157,7 +157,7 @@ void LightClusters::AssignLightToClusters()
 
 					if (dx < radius_sqr)
 					{
-						int clusterIndex = z * maxPosClusterIntCoord.y * maxPosClusterIntCoord.x + y * maxPosClusterIntCoord.x + x;
+						int clusterIndex = z * _cy * _cx + y * _cx + x;
 
 						// Assert_(numPointLightsInCluster[z][y][x] < NUM_LIGHTS_PER_CLUSTER_MAX);
 						// if (numPointLightsInCluster[z][y][x] >= _maxNumLightIndicesPerCluster)
@@ -167,22 +167,24 @@ void LightClusters::AssignLightToClusters()
 							continue;
 						}
 
-						int curPtCount = _clusters[clusterIndex].counts >> 16;
+						//int curPtCount = _clusters[clusterIndex].counts >> 16;
 						//int curPtCount = _clusters[z][y][x].counts >> 16;
-						curPtCount++;
+						//curPtCount++;
 
 						// clear original 
 						//_clusters[z][y][x].counts &= 0xFFFF;
 						//_clusters[z][y][x].counts |= (curPtCount << 16);
 
-						_clusters[clusterIndex].counts &= 0xFFFF;
-						_clusters[clusterIndex].counts |= (curPtCount << 16);
+						/*_clusters[clusterIndex].counts &= 0xFFFF;
+						_clusters[clusterIndex].counts |= (curPtCount << 16);*/
+
+						_clusters[clusterIndex].counts++;
 
 						int numPt = numPointLightsInCluster[clusterIndex]++;
 
 						int pointLightIndexInClusterIndex = 
-							z * maxPosClusterIntCoord.y * maxPosClusterIntCoord.x * _maxNumLightIndicesPerCluster +
-							y * maxPosClusterIntCoord.x * _maxNumLightIndicesPerCluster + 
+							z * _cy * _cx * _maxNumLightIndicesPerCluster +
+							y * _cx * _maxNumLightIndicesPerCluster + 
 							x * _maxNumLightIndicesPerCluster + numPt;
 						// pointLightIndexInCluster[z][y][x][numPointLightsInCluster[z][y][x]++] = i;
 						pointLightIndexInCluster[pointLightIndexInClusterIndex] = i;

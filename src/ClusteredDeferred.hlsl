@@ -126,8 +126,10 @@ float4 ClusteredDeferredPS(in PSInput input) : SV_Target0
 
 		uint offset = data.offset;
 		uint counts = data.counts;
-		uint pointLightCount = counts >> 16;
-		uint spotLightCount  = counts & 0xFFFF;
+		//uint pointLightCount = counts >> 16;
+		//uint spotLightCount  = counts & 0xFFFF;
+
+		uint pointLightCount = counts & 0xFFFF;
 
 		// Point light
 		for (uint i = 0; i < pointLightCount; i++)
@@ -137,15 +139,17 @@ float4 ClusteredDeferredPS(in PSInput input) : SV_Target0
 			lighting += CalcPointLight(surface, pl, CameraPosWS);
 		}
 
-		float scaleCount = pointLightCount * (1.0f / 73.0f);
-		lighting = float3(scaleCount, scaleCount, scaleCount);
+		//float scaleCount = pointLightCount * (1.0f / 73.0f);
+		//lighting = float3(scaleCount, scaleCount, scaleCount);
 
 		// debug
-		//for (uint i = 0; i < 48; i++)
+		//for (uint j = 0; j < 16; j++)
 		//{
-		//	PointLight pl = PointLights[i];
+		//	PointLight pl = PointLights[j];
 		//	lighting += CalcPointLight(surface, pl, CameraPosWS);
 		//}
+		// lighting = float3(1, 1, 1);
+		//lighting *= 100;
 
 	}
 

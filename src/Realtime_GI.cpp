@@ -104,7 +104,7 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 
 	scene->setProxySceneObject(ModelPaths[1], 0.1f, Float3(0, 0, 0), Quaternion());
 	// scene->fillPointLightsUniformGrid(50.0f, 100.0f);
-	scene->fillPointLightsUniformGrid(10.0f, 2.0f);
+	scene->fillPointLightsUniformGrid(10.0f, 10.0f, Float3(0, 1, 0));
 
 	_numScenes++;
 	/// Scene 2 /////////////////////////////////////////////////////////////
