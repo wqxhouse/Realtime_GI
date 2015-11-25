@@ -25,7 +25,7 @@ void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *con
 	_cubemapSizeTexcoord = 32;
 	//_unitsBetweenProbes = 0.8f; // auto compute this value baesd on texture resource limit 16384
 	//_unitsBetweenProbes = 50.0f; // auto compute this value baesd on texture resource limit 16384
-	_unitsBetweenProbes = 3.0f; // auto compute this value baesd on texture resource limit 16384
+	_unitsBetweenProbes = 1.0f; // auto compute this value based on texture resource limit 16384
 
 	// setup for proxy geometry
 	_proxyMeshVSConstants.Initialize(_device);
@@ -67,6 +67,9 @@ void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *con
 	_directDiffuseConstants.Initialize(_device);
 	_pointLightBuffer = pointLightBuffer;
 	_samplerStates.Initialize(_device);
+
+	_relightCubemapVS = CompileVSFromFile(_device, L"RelightCubemap.hlsl", "VS");
+	_relightCubemapPS = CompilePSFromFile(_device, L"RelightCubemap.hlsl", "PS");
 }
 
 void IrradianceVolume::SetProbeDensity(float unitsBetweenProbes)
@@ -345,7 +348,61 @@ void IrradianceVolume::renderProxyMeshDirectLighting()
 	ID3D11ShaderResourceView* nullSRVs[_countof(srvs)] = { nullptr };
 	_context->PSSetShaderResources(0, _countof(srvs), nullSRVs);
 
+	sampStates[0] = nullptr;
+	_context->PSSetSamplers(0, 1, sampStates);
+
 	_debugRenderer->QueueSprite(_dirLightDiffuseBufferRT.SRView, Float3(0, 0, 0), Float4(1, 1, 1, 1));
+}
+
+void IrradianceVolume::renderRelightCubemap()
+{
+	PIXEvent event(L"RenderRelightCubemap");
+
+	_context->RSSetState(_rasterizerStates.NoCull());
+	_context->OMSetDepthStencilState(_depthStencilStates.DepthDisabled(), 0);
+
+	ID3D11Buffer* vbs[1] = { NULL };
+	uint32 strides[1] = { 0 };
+	uint32 offsets[1] = { 0 };
+	_context->IASetVertexBuffers(0, 1, vbs, strides, offsets);
+	_context->IASetIndexBuffer(NULL, DXGI_FORMAT_R32_UINT, 0);
+	_context->IASetInputLayout(NULL);
+
+	D3D11_VIEWPORT vp;
+	vp.TopLeftX = 0.0f;
+	vp.TopLeftY = 0.0f;
+	vp.MinDepth = 0.0f;
+	vp.MaxDepth = 1.0f;
+	vp.Width = static_cast<float>(_relightCubemapRT.Width);
+	vp.Height = static_cast<float>(_relightCubemapRT.Height);
+	_context->RSSetViewports(1, &vp);
+
+	_context->VSSetShader(_relightCubemapVS, NULL, 0);
+	_context->PSSetShader(_relightCubemapPS, NULL, 0);
+
+	ID3D11RenderTargetView* rtvs[1] = { _relightCubemapRT.RTView };
+	_context->OMSetRenderTargets(1, rtvs, NULL);
+
+	ID3D11ShaderResourceView* srvs[3] = { 
+		_dirLightDiffuseBufferRT.SRView, 
+		_proxyMeshTexCoordCubemapRT.SRView, 
+		_albedoCubemapRT.SRView
+	};
+
+	ID3D11SamplerState* sampStates[1] = {
+		_samplerStates.Linear(),
+	};
+	_context->PSSetSamplers(0, 1, sampStates);
+	_context->PSSetShaderResources(0, 3, srvs);
+
+	_context->Draw(3, 0);
+
+	srvs[0] = srvs[1] = srvs[2] = NULL;
+	_context->PSSetShaderResources(0, 3, srvs);
+	sampStates[0] = nullptr;
+	_context->PSSetSamplers(0, 1, sampStates);
+
+	_debugRenderer->QueueSprite(_relightCubemapRT.SRView, Float3(0, 256, 0), Float4(1, 1, 1, 1));
 }
 
 void IrradianceVolume::MainRender()
@@ -368,6 +425,7 @@ void IrradianceVolume::MainRender()
 
 	renderProxyMeshShadowMap();
 	renderProxyMeshDirectLighting();
+	renderRelightCubemap();
 }
 
 const IrradianceVolume::CameraStruct IrradianceVolume::_CubemapCameraStruct[6] = 

@@ -314,6 +314,9 @@
     <None Include="SimpleDepthOnly.hlsl">
       <Filter>Shader\GI</Filter>
     </None>
+    <None Include="RelightCubemap.hlsl">
+      <Filter>Shader\GI</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="SampleFramework11">

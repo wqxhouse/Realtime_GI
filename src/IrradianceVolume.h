@@ -81,6 +81,7 @@ private:
 	// ===============================
 	void renderProxyMeshDirectLighting();
 	void renderProxyMeshShadowMap();
+	void renderRelightCubemap();
 
 	RenderTarget2D _relightCubemapRT;
 	RenderTarget2D _dirLightDiffuseBufferRT;
@@ -97,6 +98,9 @@ private:
 
 	VertexShaderPtr _dirLightDiffuseVS;
 	PixelShaderPtr _dirLightDiffusePS;
+
+	VertexShaderPtr _relightCubemapVS;
+	PixelShaderPtr _relightCubemapPS;
 
 	struct DirectDiffuseConstants
 	{
