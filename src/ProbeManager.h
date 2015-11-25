@@ -41,7 +41,7 @@ public:
 	void ClearProbes();
 
 	uint32 GetProbeNums();
-	void GetProbe(CreateCubemap &cubemap, uint32 index);
+	void GetProbe(CreateCubemap **cubemap, uint32 index);
 	void GetNNProbe(CreateCubemap &nearCubemap, Float3 objPos);
 	void GetBlendProbes(std::vector<CreateCubemap> &blendCubemaps, Float3 objPos);
 

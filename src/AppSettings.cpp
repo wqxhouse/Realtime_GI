@@ -192,7 +192,7 @@ namespace AppSettings
         RenderSceneObjectBBox.Initialize(tweakBar, "RenderSceneObjectBBox", "Scene Controls", "Render Scene Object BBox", "", false);
         Settings.AddSetting(&RenderSceneObjectBBox);
 
-        EnableShadows.Initialize(tweakBar, "EnableShadows", "Scene Controls", "Enable Shadows", "", true);
+        EnableShadows.Initialize(tweakBar, "EnableShadows", "Scene Controls", "Enable Shadows", "", false);
         Settings.AddSetting(&EnableShadows);
 
         EnableNormalMaps.Initialize(tweakBar, "EnableNormalMaps", "Scene Controls", "Enable Normal Maps", "", true);

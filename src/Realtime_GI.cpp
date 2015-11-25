@@ -98,7 +98,7 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	scene = &_scenes[_numScenes];
 	scene->Initialize(device, _deviceManager.ImmediateContext());
 
-	for (int i = 0; i < 3; ++i)
+	//for (int i = 0; i < 3; ++i)
 	{
 		_nearClips.push_back(NearClip);
 		_farClips.push_back(FarClip);
@@ -114,7 +114,7 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	
 	//scene->addDynamicOpaqueBoxObject(AppSettings::BoxMaxX - AppSettings::BoxMinX, 
 		//float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ), Quaternion());
-	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 1, 0), Quaternion());
+	scene->addDynamicOpaqueObject(m, 0.1f, Float3(0, 1, 0), Quaternion());
 
 	/*_cameraClip.NearClip = NearClip;
 	_cameraClip.FarClip = FarClip;*/
@@ -271,9 +271,9 @@ void Realtime_GI::SetProbeManager()
 	}
 
 	std::vector<Float3> probePos;
-	probePos.push_back(Float3(0, 5, 0));
-	probePos.push_back(Float3(2, 3, 0));
-	probePos.push_back(Float3(4, 3, 0));
+	probePos.push_back(Float3(0, 0, 0));
+	/*probePos.push_back(Float3(2, 3, 0));
+	probePos.push_back(Float3(4, 3, 0));*/
 
 	/*_probeManager.CreateProbe(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox,
 	float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ), ORIGIN_PROBE);*/
@@ -281,28 +281,28 @@ void Realtime_GI::SetProbeManager()
 	//ProbeManager probeManager = _scenes[AppSettings::CurrentScene].getProbeManager();
 	_scenes[AppSettings::CurrentScene].getProbeManager().CreateProbes(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox, probePos);
 	
-	CreateCubemap cubeMap;
-	_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(cubeMap, 0);
-	cubeMap.SetBoxSize(Float3(0.5f, 0.5f, 0.5f));
-	_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(cubeMap, 1);
-	cubeMap.SetBoxSize(Float3(0.5f, 0.5f, 0.5f));
-	_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(cubeMap, 2);
-	cubeMap.SetBoxSize(Float3(0.5f, 0.5f, 0.5f));
+	CreateCubemap *cubeMap;
+	_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, 0);
+	cubeMap->SetBoxSize(Float3(0.5f, 0.5f, 0.5f));
+	/*_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, 1);
+	cubeMap->SetBoxSize(Float3(0.5f, 0.5f, 0.5f));
+	_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, 2);
+	cubeMap->SetBoxSize(Float3(0.5f, 0.5f, 0.5f));*/
 
 	probePos.clear();
 
-	std::vector<ProbeManager::CameraClips> cameraClips;
+	/*std::vector<ProbeManager::CameraClips> cameraClips;
 	probePos.push_back(Float3(0, 1, 0));
 	probePos.push_back(Float3(0, 0, 0));
 
 	_scenes[AppSettings::CurrentScene].getProbeManager().AddProbes(_deviceManager, &_meshRenderer, _globalTransform,
 		_envMap, _envMapSH, _jitterOffset, &_skybox, probePos, cameraClips);
-	_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(cubeMap, 3);
-	cubeMap.SetBoxSize(Float3(0.5f, 0.5f, 0.5f));
-	_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(cubeMap, 4);
-	cubeMap.SetBoxSize(Float3(0.5f, 0.5f, 0.5f));
+	_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, 3);
+	cubeMap->SetBoxSize(Float3(0.5f, 0.5f, 0.5f));
+	_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, 4);
+	cubeMap->SetBoxSize(Float3(0.5f, 0.5f, 0.5f));
 
-	probePos.clear();
+	probePos.clear();*/
 
 	_meshRenderer.SetInitializeProbes(false);
 }
@@ -549,6 +549,23 @@ void Realtime_GI::Update(const Timer& timer)
 		{
 			BBox &b = _scenes[AppSettings::CurrentScene].getDynamicObjectBBoxPtr()[i];
 			_debugRenderer.QueueBBoxTranslucent(b, Float4(0.3f, 0.7f, 0.3f, 0.1f));
+		}
+
+		for (uint32 i = 0; i < _scenes[AppSettings::CurrentScene].getProbeManager().GetProbeNums(); ++i)
+		{
+			BBox b;
+			CreateCubemap *cubemap;
+			_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubemap, i);
+
+			b.Max.x = cubemap->GetPosition().x + cubemap->GetBoxSize().x;
+			b.Max.y = cubemap->GetPosition().y + cubemap->GetBoxSize().y;
+			b.Max.z = cubemap->GetPosition().z + cubemap->GetBoxSize().z;
+
+			b.Min.x = cubemap->GetPosition().x - cubemap->GetBoxSize().x;
+			b.Min.y = cubemap->GetPosition().y - cubemap->GetBoxSize().y;
+			b.Min.z = cubemap->GetPosition().z - cubemap->GetBoxSize().z;
+
+			_debugRenderer.QueueBBoxTranslucent(b, Float4(0.7f, 0.3f, 0.3f, 0.1f));
 		}
 
 		_debugRenderer.QueueBBoxWire(_scenes[AppSettings::CurrentScene].getSceneBoundingBox(), Float4(0.1f, 0.3f, 0.9f, 1.0f));
@@ -1041,6 +1058,11 @@ void Realtime_GI::RenderHUD()
 		+ ToString(_cubemapGenerator.GetPosition()[2]) + L", ";
 	_spriteRenderer.RenderText(_font, probeText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));
 
+	transform._42 += 25.0f;
+	wstring objText(L"Object Position: ");
+	probeText += ToString(_scenes[0].getDynamicOpaqueObjectsPtr()[0].base->Translation().x) + L", " + ToString(_scenes[0].getDynamicOpaqueObjectsPtr()[0].base->Translation().y) + L", "
+		+ ToString(_scenes[0].getDynamicOpaqueObjectsPtr()[0].base->Translation().z) + L", ";
+	_spriteRenderer.RenderText(_font, probeText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));
 	/*Float3 trans = _scenes[0].getStaticOpaqueObjectsPtr()->base->Translation();
 	transform._42 += 25.0f;
 	wstring objText(L"Object Position: ");

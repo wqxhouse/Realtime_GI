@@ -157,9 +157,9 @@ uint32 ProbeManager::GetProbeNums()
 }
 
 
-void ProbeManager::GetProbe(CreateCubemap &cubemap, uint32 index)
+void ProbeManager::GetProbe(CreateCubemap **cubemap, uint32 index)
 {
-	cubemap = _cubemaps.at(index);
+	*cubemap = &(_cubemaps.at(index));
 }
 
 
