@@ -34,6 +34,8 @@ private:
 		Float4x4 WorldViewProjection;
 	};
 
+	static const int MAX_PROBE_NUM = 16384 / 32; // 16384, texture max height / texcoord height per probe
+
 	ConstantBuffer<ProxyMeshVSContants> _proxyMeshVSConstants;
 	VertexShaderPtr _proxyMeshVS;
 	PixelShaderPtr  _proxyMeshPS;
@@ -68,4 +70,10 @@ private:
 	} _CubemapCameraStruct[6];
 
 	std::vector<Float3> _positionList;
+
+	// ===============================
+	RenderTarget2D _relightCubemapRT;
+	RenderTarget2D _dirLightDiffuseBufferRT;
+	RenderTarget2D _indirectLightDiffuseBufferRT;
+
 };

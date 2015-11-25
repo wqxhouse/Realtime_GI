@@ -80,13 +80,14 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	{
 		// L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\Converted\\sponza.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\Cerberus_by_Andrew_Maximov\\Cerberus_by_Andrew_Maximov\\testfbxascii.fbx",
-		L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
-		L"..\\Content\\Models\\CornellBox\\UVUnwrapped\\cbox_unwrapped.FBX",
-		// L"..\\Content\\Models\\CornellBox\\TestPlane.FBX",
+		//L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
+		 L"..\\Content\\Models\\CornellBox\\TestPlane.FBX",
 		// L"..\\Content\\Models\\CornellBox\\CornellBox_Max.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaNon_PBR\\Converted\\sponza.obj",
 		// L"..\\Content\\Models\\Powerplant\\Powerplant.sdkmesh",
 		// L"..\\Content\\Models\\RoboHand\\RoboHand.meshdata",
+
+		L"..\\Content\\Models\\CornellBox\\UVUnwrapped\\cbox_unwrapped.FBX",
 		// L"",
 	};
 
@@ -99,38 +100,11 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	scene->Initialize(device, _deviceManager.ImmediateContext());
 
 	Model *m = scene->addModel(ModelPaths[0]);
-	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 0, 0), Quaternion());
+	scene->addStaticOpaqueObject(m, 0.5f, Float3(0, 0, 0), Quaternion());
 
 	scene->setProxySceneObject(ModelPaths[1], 0.1f, Float3(0, 0, 0), Quaternion());
-
-	PointLight *pl = scene->addPointLight();
-	pl->cRadius = 10.0f;
-	pl->cColor *= Float3(10, 10, 10);
-
-	PointLight *pl2 = scene->addPointLight();
-	pl2->cRadius = 5.0f;
-	pl2->cPos = Float3(-1, 0, 0);
-	pl2->cColor *= Float3(30, 10, 5);
-
-	PointLight *pl3 = scene->addPointLight();
-	pl3->cRadius = 5.0f;
-	pl3->cPos = Float3(1, 1, 0);
-	pl3->cColor *= Float3(60, 30, 5);
-
-	PointLight *pl4 = scene->addPointLight();
-	pl4->cRadius = 5.0f;
-	pl4->cPos = Float3(-1, -1, 0);
-	pl4->cColor *= Float3(30, 30, 5);
-
-	PointLight *pl5 = scene->addPointLight();
-	pl5->cRadius = 5.0f;
-	pl5->cPos = Float3(1, 0, 1);
-	pl5->cColor *= Float3(5, 30, 30);
-
-	PointLight *pl6 = scene->addPointLight();
-	pl6->cRadius = 5.0f;
-	pl6->cPos = Float3(-1, 0, -1);
-	pl6->cColor *= Float3(5, 50, 30);
+	// scene->fillPointLightsUniformGrid(50.0f, 100.0f);
+	scene->fillPointLightsUniformGrid(10.0f, 2.0f);
 
 	_numScenes++;
 	/// Scene 2 /////////////////////////////////////////////////////////////
@@ -471,6 +445,12 @@ void Realtime_GI::Update(const Timer& timer)
 		}
 	}
 
+	for (int i = 0; i < _scenes[AppSettings::CurrentScene].getNumPointLights(); i++)
+	{
+		Float3 &pos = _scenes[AppSettings::CurrentScene].getPointLightPtr()[i].cPos;
+		_debugRenderer.QueueLightSphere(pos, Float4(1.0f, 1.0f, 1.0f, 0.2f), 0.2f);
+
+	}
 }
 
 void Realtime_GI::RenderAA()
@@ -716,6 +696,8 @@ void Realtime_GI::RenderLightsDeferred()
 	_deferredPassConstants.Data.FarPlane = FarClip;
 	_deferredPassConstants.Data.ProjTermA = FarClip / (FarClip - NearClip);
 	_deferredPassConstants.Data.ProjTermB = (-FarClip * NearClip) / (FarClip - NearClip);
+	_deferredPassConstants.Data.ClusterScale = _lightClusters.getClusterScale();
+	_deferredPassConstants.Data.ClusterBias = _lightClusters.getClusterBias();
 	_deferredPassConstants.ApplyChanges(context);
 	_deferredPassConstants.SetVS(context, 0);
 	_deferredPassConstants.SetPS(context, 0);

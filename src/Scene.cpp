@@ -357,7 +357,7 @@ void Scene::sortSceneObjects(const Float4x4 &viewMatrix)
 
 PointLight *Scene::addPointLight()
 {
-	if (_numLights > MAX_SCENE_LIGHTS) return NULL;
+	if (_numLights >= MAX_SCENE_LIGHTS) return NULL;
 	_pointLights[_numPointLights] = PointLight();
 	_pointLights[_numPointLights].cColor = Float3(0.1f, 0.3f, 0.7f);
 	_pointLights[_numPointLights].cPos = Float3();
@@ -367,6 +367,36 @@ PointLight *Scene::addPointLight()
 	_numLights++;
 
 	return &_pointLights[_numPointLights - 1];
+}
+
+uint32 Scene::fillPointLightsUniformGrid(float unitGridSize, float radius)
+{
+	Float3 diff = Float3(_sceneWSAABB_staticObj.Max) - Float3(_sceneWSAABB_staticObj.Min);
+	Float3 lightNumAxis = diff / (float)unitGridSize;
+	uint32 xnum = (uint32)floorf(Max(lightNumAxis.x, 1.0f));
+	uint32 ynum = (uint32)floorf(Max(lightNumAxis.y, 1.0f));
+	uint32 znum = (uint32)floorf(Max(lightNumAxis.z, 1.0f));
+
+	Float3 inv_scale = diff / Float3((float)xnum, (float)ynum, (float)znum);
+
+	uint32 lightNum = 0;
+	for (uint32 z = 0; z < znum; z++)
+	{
+		for (uint32 y = 0; y < ynum; y++)
+		{
+			for (uint32 x = 0; x < xnum; x++)
+			{
+				PointLight *pl = addPointLight();
+				if (pl == NULL) return lightNum; // reached maximum
+				pl->cRadius = radius;
+				pl->cColor = Float3((float)x / xnum, (float)y / ynum, (float)z / znum);
+				pl->cPos = Float3((float)x, (float)y, (float)z) * inv_scale + Float3(_sceneWSAABB_staticObj.Min);
+				lightNum++;
+			}
+		}
+	}
+
+	return lightNum;
 }
 
 void Scene::genStaticSceneWSAABB()

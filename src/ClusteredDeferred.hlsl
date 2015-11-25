@@ -121,7 +121,7 @@ float4 ClusteredDeferredPS(in PSInput input) : SV_Target0
 		lighting *= sunShadow;
 
 		// Load cluster data	
-		uint4 cluster_coord = int4(surface.posWS * ClusterScale + ClusterBias, 0);
+		uint4 cluster_coord = uint4(surface.posWS * ClusterScale + ClusterBias, 0);
 		ClusterData data = Clusters.Load(cluster_coord);
 
 		uint offset = data.offset;
@@ -136,6 +136,17 @@ float4 ClusteredDeferredPS(in PSInput input) : SV_Target0
 			PointLight pl = PointLights[lightIndex];
 			lighting += CalcPointLight(surface, pl, CameraPosWS);
 		}
+
+		float scaleCount = pointLightCount * (1.0f / 73.0f);
+		lighting = float3(scaleCount, scaleCount, scaleCount);
+
+		// debug
+		//for (uint i = 0; i < 48; i++)
+		//{
+		//	PointLight pl = PointLights[i];
+		//	lighting += CalcPointLight(surface, pl, CameraPosWS);
+		//}
+
 	}
 
 	if(EnableAmbientLighting)

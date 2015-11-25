@@ -19,7 +19,9 @@ void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *con
 
 	_cubemapSizeGBuffer = 16;
 	_cubemapSizeTexcoord = 32;
-	_unitsBetweenProbes = 0.8f; // auto compute this value baesd on texture resource limit 16384
+	//_unitsBetweenProbes = 0.8f; // auto compute this value baesd on texture resource limit 16384
+	//_unitsBetweenProbes = 50.0f; // auto compute this value baesd on texture resource limit 16384
+	_unitsBetweenProbes = 3.0f; // auto compute this value baesd on texture resource limit 16384
 
 	// setup for proxy geometry
 	_proxyMeshVSConstants.Initialize(_device);
@@ -36,6 +38,11 @@ void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *con
 	DXCall(_device->CreateInputLayout(layout, 3,
 		_proxyMeshVS->ByteCode->GetBufferPointer(),
 		_proxyMeshVS->ByteCode->GetBufferSize(), &_proxyMeshInputLayout));
+
+
+	// ========================================================
+	_dirLightDiffuseBufferRT.Initialize(_device, 128, 128, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	_indirectLightDiffuseBufferRT.Initialize(_device, 256, 256, DXGI_FORMAT_R16G16B16A16_FLOAT);
 }
 
 void IrradianceVolume::SetProbeDensity(float unitsBetweenProbes)
@@ -55,16 +62,19 @@ void IrradianceVolume::setupResourcesForScene()
 	BBox &bbox = _scene->getSceneBoundingBox();
 	Float3 diff = Float3(bbox.Max) - Float3(bbox.Min);
 
-	// Set minimum volume
-	diff.x = Max(diff.x, 2.0f);
-	diff.y = Max(diff.y, 2.0f);
-	diff.z = Max(diff.z, 2.0f);
 	Float3 numProbesAxis = diff * (float)(1.0 / _unitsBetweenProbes);
 	uint32 probeNumX = (uint32)ceilf(numProbesAxis.x) - 1;
 	uint32 probeNumY = (uint32)ceilf(numProbesAxis.y) - 1;
 	uint32 probeNumZ = (uint32)ceilf(numProbesAxis.z) - 1;
 
+	probeNumX = Max(probeNumX, (uint32)2);
+	probeNumY = Max(probeNumY, (uint32)2);
+	probeNumZ = Max(probeNumZ, (uint32)2);
+
 	_cubemapNum = probeNumX * probeNumY * probeNumZ;
+
+	// TODO: find better way to calc this
+
 
 	_positionList.clear();
 	_positionList.resize(_cubemapNum);
@@ -96,6 +106,8 @@ void IrradianceVolume::createCubemapAtlasRTs()
 	_proxyMeshTexCoordCubemapRT.Initialize(_device, texcoordAtlasWidth, texcoordAtlasHeight, DXGI_FORMAT_R8G8B8A8_UNORM);
 	_depthBufferGBufferRT.Initialize(_device, gbufferAtlasWidth, gbufferAtlasHeight, DXGI_FORMAT_D32_FLOAT);
 	_depthBufferTexcoordRT.Initialize(_device, texcoordAtlasWidth, texcoordAtlasHeight, DXGI_FORMAT_D32_FLOAT);
+
+	_relightCubemapRT.Initialize(_device, gbufferAtlasWidth, gbufferAtlasHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
 }
 
 void IrradianceVolume::RenderSceneAtlasGBuffer()

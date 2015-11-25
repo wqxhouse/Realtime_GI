@@ -119,6 +119,7 @@ public:
 
 	// Lights
 	PointLight *addPointLight();
+	uint32 fillPointLightsUniformGrid(float unitGridSize, float radius);
 	inline PointLight *getPointLightPtr() { return _pointLights; }
 	inline int getNumPointLights() { return _numPointLights; }
 

@@ -163,7 +163,8 @@ void DebugRenderer::updateConstantBufferCube(bool32 isWire)
 {
 	if (isWire)
 	{
-		for (size_t i = 0; i < _cubeQueueWire.size(); i++)
+		uint64 num = Min(_cubeQueueWire.size(), (uint64)_maxBatchSize);
+		for (size_t i = 0; i < num; i++)
 		{
 			auto t = _cubeQueueWire[i];
 			_shaderConstants.Data.data[i].Transform = Float4x4::Transpose(std::get<0>(t) * _camera->ViewProjectionMatrix());
@@ -172,7 +173,9 @@ void DebugRenderer::updateConstantBufferCube(bool32 isWire)
 	}
 	else
 	{
-		for (size_t i = 0; i < _cubeQueueTranslucent.size(); i++)
+
+		uint64 num = Min(_cubeQueueTranslucent.size(), (uint64)_maxBatchSize);
+		for (size_t i = 0; i < num; i++)
 		{
 			auto t = _cubeQueueTranslucent[i];
 
@@ -187,7 +190,8 @@ void DebugRenderer::updateConstantBufferCube(bool32 isWire)
 
 void DebugRenderer::updateConstantBufferSphere()
 {
-	for (size_t i = 0; i < _sphereQueue.size(); i++)
+	uint64 num = Min(_sphereQueue.size(), (uint64)_maxBatchSize);
+	for (size_t i = 0; i < num; i++)
 	{
 		auto t = _sphereQueue[i];
 		_shaderConstants.Data.data[i].Transform = Float4x4::Transpose(std::get<0>(t) * _camera->ViewProjectionMatrix());
