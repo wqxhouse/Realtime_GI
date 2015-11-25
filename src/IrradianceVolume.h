@@ -22,6 +22,9 @@ public:
 
 	void RenderSceneAtlasGBuffer();
 	void RenderSceneAtlasProxyMeshTexcoord();
+	void RenderProxyMeshDirectLighting();
+
+	void MainRender();
 
 	const std::vector<Float3> &getPositionList() { return _positionList; }
 
@@ -76,4 +79,9 @@ private:
 	RenderTarget2D _dirLightDiffuseBufferRT;
 	RenderTarget2D _indirectLightDiffuseBufferRT;
 
+	VertexShaderPtr _dirLightDiffuseVS;
+	PixelShaderPtr _dirLightDiffusePS;
+
+	uint32 _dirLightMapSize;
+	uint32 _indirectLightMapSize;
 };

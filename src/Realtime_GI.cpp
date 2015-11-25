@@ -80,8 +80,8 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	{
 		// L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\Converted\\sponza.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\Cerberus_by_Andrew_Maximov\\Cerberus_by_Andrew_Maximov\\testfbxascii.fbx",
-		//L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
-		 L"..\\Content\\Models\\CornellBox\\TestPlane.FBX",
+		L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
+		// L"..\\Content\\Models\\CornellBox\\TestPlane.FBX",
 		// L"..\\Content\\Models\\CornellBox\\CornellBox_Max.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaNon_PBR\\Converted\\sponza.obj",
 		// L"..\\Content\\Models\\Powerplant\\Powerplant.sdkmesh",
@@ -100,11 +100,11 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	scene->Initialize(device, _deviceManager.ImmediateContext());
 
 	Model *m = scene->addModel(ModelPaths[0]);
-	scene->addStaticOpaqueObject(m, 0.5f, Float3(0, 0, 0), Quaternion());
+	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 0, 0), Quaternion());
 
 	scene->setProxySceneObject(ModelPaths[1], 0.1f, Float3(0, 0, 0), Quaternion());
 	// scene->fillPointLightsUniformGrid(50.0f, 100.0f);
-	scene->fillPointLightsUniformGrid(10.0f, 10.0f, Float3(0, 1, 0));
+	scene->fillPointLightsUniformGrid(1.3f, 3.0f, Float3(0, 0, 0));
 
 	_numScenes++;
 	/// Scene 2 /////////////////////////////////////////////////////////////
@@ -575,8 +575,11 @@ void Realtime_GI::Render(const Timer& timer)
 	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
 	{
 		RenderSceneGBuffer();
+
 		UploadLights();
 		AssignLightAndUploadClusters();
+
+		_irradianceVolume.MainRender();
 		RenderLightsDeferred();
 	}
 	else if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
@@ -651,6 +654,8 @@ void Realtime_GI::RenderLightsDeferred()
 	PIXEvent event(L"Render Lights Deferred");
 
 	ID3D11DeviceContextPtr context = _deviceManager.ImmediateContext();
+
+	SetViewport(context, _colorTarget.Width, _colorTarget.Height);
 
 	context->IASetInputLayout(_quadInputLayout);
 

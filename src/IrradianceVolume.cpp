@@ -41,8 +41,14 @@ void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *con
 
 
 	// ========================================================
-	_dirLightDiffuseBufferRT.Initialize(_device, 128, 128, DXGI_FORMAT_R16G16B16A16_FLOAT);
-	_indirectLightDiffuseBufferRT.Initialize(_device, 256, 256, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	_dirLightMapSize = 128;
+	_indirectLightMapSize = 256;
+
+	_dirLightDiffuseBufferRT.Initialize(_device, _dirLightMapSize, _dirLightMapSize, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	_indirectLightDiffuseBufferRT.Initialize(_device, _indirectLightMapSize, _indirectLightMapSize, DXGI_FORMAT_R16G16B16A16_FLOAT);
+
+	_dirLightDiffuseVS = CompileVSFromFile(_device, L"DirectDiffuse.hlsl", "VS");
+	_dirLightDiffusePS = CompilePSFromFile(_device, L"DirectDiffuse.hlsl", "PS");
 }
 
 void IrradianceVolume::SetProbeDensity(float unitsBetweenProbes)
@@ -221,7 +227,59 @@ void IrradianceVolume::RenderSceneAtlasProxyMeshTexcoord()
 	_context->OMSetRenderTargets(1, renderTarget, nullptr);
 }
 
+void IrradianceVolume::RenderProxyMeshDirectLighting()
+{
+	PIXEvent event(L"RenderProxyMeshDirectLighting");
 
+	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; // keep blue channel for sky light
+	_context->ClearRenderTargetView(_dirLightDiffuseBufferRT.RTView, clearColor);
+	_context->VSSetShader(_dirLightDiffuseVS, nullptr, 0);
+	_context->PSSetShader(_dirLightDiffusePS, nullptr, 0);
+	_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	_context->IASetInputLayout(_proxyMeshInputLayout);
+
+	SceneObject *proxyObj = _scene->getProxySceneObjectPtr();
+	Model *proxyModel = proxyObj->model;
+
+	ID3D11RenderTargetView *renderTarget[1] = { _dirLightDiffuseBufferRT.RTView };
+	_context->OMSetRenderTargets(1, renderTarget, nullptr);
+
+	D3D11_VIEWPORT viewport;
+	viewport.Width = static_cast<float>(_dirLightMapSize);
+	viewport.Height = static_cast<float>(_dirLightMapSize);
+	viewport.MinDepth = 0.0f;
+	viewport.MaxDepth = 1.0f;
+	viewport.TopLeftX = 0.0f;
+	viewport.TopLeftY = 0.0f;
+	_context->RSSetViewports(1, &viewport);
+
+	// Set the vertices and indices
+	for (size_t i = 0; i < proxyModel->Meshes().size(); i++)
+	{
+		Mesh *proxyMesh = &proxyModel->Meshes()[i];
+
+		ID3D11Buffer* vertexBuffers[1] = { proxyMesh->VertexBuffer() };
+		UINT vertexStrides[1] = { proxyMesh->VertexStride() };
+		UINT offsets[1] = { 0 };
+		_context->IASetVertexBuffers(0, 1, vertexBuffers, vertexStrides, offsets);
+		_context->IASetIndexBuffer(proxyMesh->IndexBuffer(), proxyMesh->IndexBufferFormat(), 0);
+
+		// TODO: frustum culling for proxy object
+		for (size_t j = 0; j < proxyMesh->MeshParts().size(); j++)
+		{
+			const MeshPart& part = proxyMesh->MeshParts()[j];
+			_context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
+		}
+	}
+
+	renderTarget[0] = nullptr;
+	_context->OMSetRenderTargets(1, renderTarget, nullptr);
+}
+
+void IrradianceVolume::MainRender()
+{
+	RenderProxyMeshDirectLighting();
+}
 
 const IrradianceVolume::CameraStruct IrradianceVolume::_CubemapCameraStruct[6] = 
 {

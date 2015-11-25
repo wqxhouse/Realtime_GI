@@ -308,6 +308,9 @@
     <None Include="ProxyMeshTexcoord.hlsl">
       <Filter>Shader\GI</Filter>
     </None>
+    <None Include="DirectDiffuse.hlsl">
+      <Filter>Shader\GI</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="SampleFramework11">
