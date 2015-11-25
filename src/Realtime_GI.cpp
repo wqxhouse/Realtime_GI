@@ -190,7 +190,9 @@ void Realtime_GI::Initialize()
 	_lightClusters.Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext());
 	_lightClusters.SetScene(&_scenes[AppSettings::CurrentScene]);
 
-	_irradianceVolume.Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext(), &_meshRenderer, &_camera, &_debugRenderer);
+	_irradianceVolume.Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext(), 
+		&_meshRenderer, &_camera, &_pointLightBuffer, &_lightClusters, &_debugRenderer);
+
 	_irradianceVolume.SetScene(&_scenes[AppSettings::CurrentScene]);
 }
 

@@ -5,17 +5,20 @@
 #include "BoundUtils.h"
 
 IrradianceVolume::IrradianceVolume()
-	: _cubemapCamera(1.0f, 90.0f * (Pi / 180), 0.01f, 40.0f) // TODO: experiment with far clip plane
+	: _cubemapCamera(1.0f, 90.0f * (Pi / 180), 0.01f, 40.0f), // TODO: experiment with far clip plane
+	_dirLightCam(0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f)
 
 {
 }
 
-void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *context, MeshRenderer *meshRenderer, Camera *camera, DebugRenderer *debugRenderer)
+void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *context, MeshRenderer *meshRenderer, 
+	Camera *camera, StructuredBuffer *pointLightBuffer, LightClusters *clusters, DebugRenderer *debugRenderer)
 {
 	_device = device;
 	_context = context;
 	_meshRenderer = meshRenderer;
 	_mainCamera = camera;
+	_clusters = clusters;
 	_debugRenderer = debugRenderer;
 
 	_cubemapSizeGBuffer = 16;
@@ -60,6 +63,10 @@ void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *con
 
 	_rasterizerStates.Initialize(_device);
 	_depthStencilStates.Initialize(_device);
+
+	_directDiffuseConstants.Initialize(_device);
+	_pointLightBuffer = pointLightBuffer;
+	_samplerStates.Initialize(_device);
 }
 
 void IrradianceVolume::SetProbeDensity(float unitsBetweenProbes)
@@ -267,25 +274,9 @@ void IrradianceVolume::renderProxyMeshShadowMap()
 	viewport.TopLeftY = 0.0f;
 	_context->RSSetViewports(1, &viewport);
 
-	// Shadow camera construction - transform scene aabb to light space aabb
-	BBox &bbox = _scene->getSceneBoundingBox();
-
-	// Create a temporary view matrix for the light
-	Float3 lightCameraPos = Float3(0, 0, 0);
-	Float3 lookAt = lightCameraPos - AppSettings::LightDirection;
-	Float3 upDir = Float3(0.0f, 1.0f, 0.0f);
-	Float4x4 lightView = XMMatrixLookAtLH(lightCameraPos.ToSIMD(), lookAt.ToSIMD(), upDir.ToSIMD());
-	printf("%s\n", lightView.Print().c_str());
-	BBox lightSpaceBBox = GetTransformedBBox(bbox, lightView);
-	Float3 lightMin = lightSpaceBBox.Min;
-	Float3 lightMax = lightSpaceBBox.Max;
-
-	OrthographicCamera shadowCamera(lightMin.x, lightMin.y, lightMax.x,
-		lightMax.y, lightMin.z, lightMax.z);
-	shadowCamera.SetLookAt(lightCameraPos, lookAt, upDir);
-
+	
 	_proxyMeshVSConstants.Data.WorldViewProjection =
-		Float4x4::Transpose(*_scene->getProxySceneObjectPtr()->base * shadowCamera.ViewProjectionMatrix());
+		Float4x4::Transpose(*_scene->getProxySceneObjectPtr()->base * _dirLightCam.ViewProjectionMatrix());
 	_proxyMeshVSConstants.ApplyChanges(_context);
 	_proxyMeshVSConstants.SetVS(_context, 0);
 
@@ -320,16 +311,61 @@ void IrradianceVolume::renderProxyMeshDirectLighting()
 	viewport.TopLeftY = 0.0f;
 	_context->RSSetViewports(1, &viewport);
 
+	// set constant buffer
+	_directDiffuseConstants.Data.ModelToWorld = *_scene->getProxySceneObjectPtr()->base;
+	_directDiffuseConstants.Data.WorldToLightProjection = _dirLightCam.ViewProjectionMatrix();
+	_directDiffuseConstants.Data.ClusterBias = _clusters->getClusterBias();
+	_directDiffuseConstants.Data.ClusterScale = _clusters->getClusterScale();
+	_directDiffuseConstants.ApplyChanges(_context);
+	_directDiffuseConstants.SetVS(_context, 0);
+	_directDiffuseConstants.SetPS(_context, 0);
+
+	// bind SRVs
+	ID3D11ShaderResourceView* srvs[] =
+	{
+		_dirLightProxyMeshShadowMapBuffer.SRView,
+		_pointLightBuffer->SRView,
+		_clusters->getLightIndicesListSRV(), 
+		_clusters->getClusterTexSRV(),
+	};
+
+	_context->PSSetShaderResources(0, _countof(srvs), srvs);
+
+	ID3D11SamplerState* sampStates[1] = {
+		_samplerStates.ShadowMapPCF(),
+	};
+
+	_context->PSSetSamplers(0, 1, sampStates);
+
 	renderProxyModel();
 
+	// claer states
 	renderTarget[0] = nullptr;
 	_context->OMSetRenderTargets(1, renderTarget, nullptr);
+	ID3D11ShaderResourceView* nullSRVs[_countof(srvs)] = { nullptr };
+	_context->PSSetShaderResources(0, _countof(srvs), nullSRVs);
 
 	_debugRenderer->QueueSprite(_dirLightDiffuseBufferRT.SRView, Float3(0, 0, 0), Float4(1, 1, 1, 1));
 }
 
 void IrradianceVolume::MainRender()
 {
+	// update light cam
+	// Shadow camera construction - transform scene aabb to light space aabb
+	BBox &bbox = _scene->getSceneBoundingBox();
+	Float3 lightCameraPos = Float3(0, 0, 0);
+	Float3 lookAt = lightCameraPos - AppSettings::LightDirection;
+	Float3 upDir = Float3(0.0f, 1.0f, 0.0f);
+	Float4x4 lightView = XMMatrixLookAtLH(lightCameraPos.ToSIMD(), lookAt.ToSIMD(), upDir.ToSIMD());
+	BBox lightSpaceBBox = GetTransformedBBox(bbox, lightView);
+	Float3 lightMin = lightSpaceBBox.Min;
+	Float3 lightMax = lightSpaceBBox.Max;
+
+	OrthographicCamera shadowCamera(lightMin.x, lightMin.y, lightMax.x,
+		lightMax.y, lightMin.z, lightMax.z);
+	shadowCamera.SetLookAt(lightCameraPos, lookAt, upDir);
+	_dirLightCam = shadowCamera;
+
 	renderProxyMeshShadowMap();
 	renderProxyMeshDirectLighting();
 }

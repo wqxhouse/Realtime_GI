@@ -23,6 +23,25 @@ float PointLightAttenuation(float radius, float dist)
 	return attenuation;
 }
 
+float3 CalcDirectionalLightLambert(in float3 normal, in float3 lightDir, in float3 lightColor, in float3 positionWS)
+{
+	float3 lighting = (1.0f / 3.14159f);
+	const float nDotL = saturate(dot(normal, lightDir));
+	return lighting * nDotL * lightColor;
+}
+
+float3 CalcPointLightLambert(in float3 normal, in PointLight pointLight, in float3 positionWS)
+{
+	float3 lighting = (1.0f / 3.14159f);
+	float3 lightDir = pointLight.posWS - positionWS;
+	float dist = length(lightDir);
+	lightDir = normalize(lightDir);
+
+	const float att = PointLightAttenuation(pointLight.radius, dist);
+	const float nDotL = saturate(dot(normal, lightDir));
+	return lighting * nDotL * pointLight.color * att;
+}
+
 float3 CalcDirectionalLight(in float3 normal, in float3 lightDir, in float3 lightColor,
 	in float3 diffuseAlbedo, in float3 specularAlbedo, in float roughness,
 	in float3 positionWS, in float3 CameraPosWS)

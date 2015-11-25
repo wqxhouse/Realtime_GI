@@ -6,6 +6,7 @@
 #include <Graphics\\DeviceStates.h>
 #include <Graphics\\Camera.h>
 
+#include "LightClusters.h"
 
 using namespace SampleFramework11;
 
@@ -16,7 +17,8 @@ class IrradianceVolume
 {
 public:
 	IrradianceVolume();
-	void Initialize(ID3D11Device *device, ID3D11DeviceContext *context, MeshRenderer *meshRenderer, Camera *camera, DebugRenderer *debugRenderer);
+	void Initialize(ID3D11Device *device, ID3D11DeviceContext *context, MeshRenderer *meshRenderer, Camera *camera, 
+		StructuredBuffer *_pointLightBuffer, LightClusters *clusters, DebugRenderer *debugRenderer);
 	
 	void SetScene(Scene *scene);
 	void SetProbeDensity(float unitsBetweenProbes);
@@ -89,11 +91,28 @@ private:
 
     RasterizerStates _rasterizerStates;
 	DepthStencilStates _depthStencilStates;
+	SamplerStates _samplerStates;
 	
     VertexShaderPtr _meshDepthVS;
 
 	VertexShaderPtr _dirLightDiffuseVS;
 	PixelShaderPtr _dirLightDiffusePS;
+
+	struct DirectDiffuseConstants
+	{
+		Float4x4 ModelToWorld;
+		Float4x4 WorldToLightProjection;
+
+		Float4Align Float3 ClusterScale;
+		Float4Align Float3 ClusterBias;
+	};
+
+	ConstantBuffer<DirectDiffuseConstants> _directDiffuseConstants;
+
+	OrthographicCamera _dirLightCam;
+
+	LightClusters *_clusters;
+	StructuredBuffer *_pointLightBuffer;
 
 	uint32 _dirLightMapSize;
 	uint32 _indirectLightMapSize;
