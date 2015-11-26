@@ -317,6 +317,9 @@
     <None Include="RelightCubemap.hlsl">
       <Filter>Shader\GI</Filter>
     </None>
+    <None Include="RelightSH.hlsl">
+      <Filter>Shader\GI</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="SampleFramework11">

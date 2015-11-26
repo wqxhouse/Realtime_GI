@@ -6,7 +6,7 @@
 
 IrradianceVolume::IrradianceVolume()
 	: _cubemapCamera(1.0f, 90.0f * (Pi / 180), 0.01f, 40.0f), // TODO: experiment with far clip plane
-	_dirLightCam(0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f)
+	_dirLightCam(0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f), _weightSum(0.0f)
 
 {
 }
@@ -70,6 +70,11 @@ void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *con
 
 	_relightCubemapVS = CompileVSFromFile(_device, L"RelightCubemap.hlsl", "VS");
 	_relightCubemapPS = CompilePSFromFile(_device, L"RelightCubemap.hlsl", "PS");
+
+	CompileOptions opts;
+	opts.Add("CubemapSize_", _cubemapSizeGBuffer);
+	_relightSHIntegrateCS = CompileCSFromFile(_device, L"RelightSH.hlsl", "IntegrateCS", "cs_5_0", opts);
+	// _relightSHReductionCS = CompileCSFromFile(_device, L"RelightSH.hlsl", "");
 }
 
 void IrradianceVolume::SetProbeDensity(float unitsBetweenProbes)
@@ -119,6 +124,63 @@ void IrradianceVolume::setupResourcesForScene()
 
 
 	createCubemapAtlasRTs();
+	createSHComputeBuffers();
+}
+
+void IrradianceVolume::createSHComputeBuffers()
+{
+	_viewToWorldMatrixPalette.Initialize(_device, sizeof(Float4x4), 6 * _cubemapNum, 1);
+	_shIntegrationConstants.Initialize(_device);
+
+	// 3 is #(rgb) channel ; 6 is #cubefaces
+	_integrationBuffer.Initialize(_device, sizeof(PackedSH9), _cubemapSizeGBuffer * 3 * 6 * _cubemapNum, 1, 1);
+	// _integrationBuffer.Initialize(_device, DXGI_FORMAT_R32G32B32A32_FLOAT, sizeof(PackedSH9), _cubemapSizeGBuffer * 3 * 6 * _cubemapNum);
+	// _relightSHBuffer = Initialize()
+
+	// Compute the final weight for integration
+	for (UINT y = 0; y < _cubemapSizeGBuffer; ++y) {
+		for (UINT x = 0; x < _cubemapSizeGBuffer; ++x) {
+
+			const float u = (float(x) / float(_cubemapSizeGBuffer)) * 2.0f - 1.0f;
+			const float v = (float(y) / float(_cubemapSizeGBuffer)) * 2.0f - 1.0f;
+
+			const float temp = 1.0f + u * u + v * v;
+			const float weight = 4.0f / (sqrtf(temp) * temp);
+
+			_weightSum += weight;
+		}
+	}
+
+	_weightSum *= 6.0f;
+
+	// TODO: figure out a way to move this out of rendering loop
+	_shIntegrationConstants.Data.FinalWeight = (4.0f * 3.14159f) / _weightSum;
+	_shIntegrationConstants.ApplyChanges(_context);
+	_shIntegrationConstants.SetCS(_context, 0);
+
+	//===========
+	// Set view matrix palette - TODO: make it calc in the shader to save storage and upload cost
+	Float4x4 palette[6 * MAX_PROBE_NUM];
+	for (uint32 currCubemap = 0; currCubemap < _cubemapNum; currCubemap++)
+	{
+		Float3 &eyePos = _positionList[currCubemap];
+		for (int cubeboxFaceIndex = 0; cubeboxFaceIndex < 6; cubeboxFaceIndex++)
+		{
+			_cubemapCamera.SetLookAt(eyePos,
+				_CubemapCameraStruct[cubeboxFaceIndex].LookAt,
+				_CubemapCameraStruct[cubeboxFaceIndex].Up);
+
+			palette[currCubemap * 6 + cubeboxFaceIndex]
+				= Float4x4::Transpose(_cubemapCamera.WorldMatrix());
+		}
+	}
+
+	D3D11_MAPPED_SUBRESOURCE mappedResource;
+	BYTE* mappedData = NULL;
+	_context->Map(_viewToWorldMatrixPalette.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	mappedData = reinterpret_cast<BYTE*>(mappedResource.pData);
+	memcpy(mappedData, palette, sizeof(Float4x4) * _cubemapNum * 6);
+	_context->Unmap(_viewToWorldMatrixPalette.Buffer, 0);
 }
 
 void IrradianceVolume::createCubemapAtlasRTs()
@@ -134,7 +196,8 @@ void IrradianceVolume::createCubemapAtlasRTs()
 	_depthBufferGBufferRT.Initialize(_device, gbufferAtlasWidth, gbufferAtlasHeight, DXGI_FORMAT_D32_FLOAT);
 	_depthBufferTexcoordRT.Initialize(_device, texcoordAtlasWidth, texcoordAtlasHeight, DXGI_FORMAT_D32_FLOAT);
 
-	_relightCubemapRT.Initialize(_device, gbufferAtlasWidth, gbufferAtlasHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, 0, 1, 1, 0);
+	//_relightCubemapRT.Initialize(_device, gbufferAtlasWidth, gbufferAtlasHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, 1, 1, 0, 0, 1, 1, 0);
+	_relightCubemapRT.Initialize(_device, gbufferAtlasWidth, gbufferAtlasHeight, DXGI_FORMAT_R16G16B16A16_FLOAT);
 }
 
 void IrradianceVolume::RenderSceneAtlasGBuffer()
@@ -401,6 +464,8 @@ void IrradianceVolume::renderRelightCubemap()
 	_context->PSSetShaderResources(0, 3, srvs);
 	sampStates[0] = nullptr;
 	_context->PSSetSamplers(0, 1, sampStates);
+	rtvs[0] = { nullptr };
+	_context->OMSetRenderTargets(1, rtvs, NULL);
 
 	_debugRenderer->QueueSprite(_relightCubemapRT.SRView, Float3(0, 256, 0), Float4(1, 1, 1, 1));
 }
@@ -426,6 +491,52 @@ void IrradianceVolume::MainRender()
 	renderProxyMeshShadowMap();
 	renderProxyMeshDirectLighting();
 	renderRelightCubemap();
+	IntegrateSH();
+}
+
+void IrradianceVolume::IntegrateSH()
+{
+	PIXEvent intEvent(L"SH Integration");
+
+	// Set shaders
+	_context->VSSetShader(NULL, NULL, 0);
+	_context->GSSetShader(NULL, NULL, 0);
+	_context->DSSetShader(NULL, NULL, 0);
+	_context->HSSetShader(NULL, NULL, 0);
+	_context->PSSetShader(NULL, NULL, 0);
+	_context->CSSetShader(_relightSHIntegrateCS, NULL, 0);
+
+	// Set shader resources
+	ID3D11ShaderResourceView* srvs[2] = { _relightCubemapRT.SRView, _viewToWorldMatrixPalette.SRView };
+	_context->CSSetShaderResources(0, 2, srvs);
+
+	// Set the output textures
+	ID3D11UnorderedAccessView* outputBuffer[1] = { _integrationBuffer.UAView };
+	_context->CSSetUnorderedAccessViews(0, 1, outputBuffer, NULL);
+
+	// Do the initial integration + reduction
+	_context->Dispatch(_cubemapNum, _cubemapSizeGBuffer, 6);
+
+	//// Set the shader
+	//context->CSSetShader(reductionCS, NULL, 0);
+
+	//// Set outputs
+	//outputBuffer[0] = meshData.UAView;
+	//context->CSSetUnorderedAccessViews(0, 1, outputBuffer, NULL);
+
+	//// Set shader resources
+	//ID3D11ShaderResourceView* inputBuffer[1] = { reductionBuffer.SRView };
+	//context->CSSetShaderResources(0, 1, inputBuffer);
+
+	//// Do the final reduction
+	//context->Dispatch(1, NumSHTargets, 1);
+
+	// Clear out the SRV's and RT's
+	srvs[0] = srvs[1] = NULL;
+	_context->CSSetShaderResources(0, 2, srvs);
+
+	outputBuffer[0] = NULL;
+	_context->CSSetUnorderedAccessViews(0, 1, outputBuffer, NULL);
 }
 
 const IrradianceVolume::CameraStruct IrradianceVolume::_CubemapCameraStruct[6] = 

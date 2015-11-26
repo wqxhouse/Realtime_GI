@@ -33,6 +33,7 @@ public:
 private:
 	void setupResourcesForScene();
 	void createCubemapAtlasRTs();
+	void createSHComputeBuffers();
 	void renderProxyModel();
 
 	struct ProxyMeshVSContants
@@ -120,4 +121,32 @@ private:
 
 	uint32 _dirLightMapSize;
 	uint32 _indirectLightMapSize;
+
+	// SH /////////////////////
+	void IntegrateSH();
+
+	struct PackedSH9
+	{
+		Float4 chunk0;
+		Float4 chunk1;
+		Float4 chunk2;
+	};
+
+	struct SHIntegrationConstants
+	{
+		Float4Align float FinalWeight;
+	};
+	
+	float _weightSum;
+
+	// TODO: calc actual world matrix in the shader to save upload and memory cost
+	StructuredBuffer _viewToWorldMatrixPalette;
+
+	ConstantBuffer<SHIntegrationConstants> _shIntegrationConstants;
+
+	ComputeShaderPtr _relightSHIntegrateCS;
+	ComputeShaderPtr _relightSHReductionCS;
+
+	StructuredBuffer _integrationBuffer;
+	StructuredBuffer _relightSHBuffer;
 };
