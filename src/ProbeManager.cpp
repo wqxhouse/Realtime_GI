@@ -4,6 +4,7 @@ Date:	2015.11
 Manage the probes created by Cubemap
 */
 
+#include <limits>
 
 #include "ProbeManager.h"
 
@@ -176,7 +177,10 @@ void ProbeManager::GetBlendProbes(std::vector<CreateCubemap> &blendCubemaps, Flo
 	CalTwoNN(objPos, firstIndex, secondIndex);
 
 	blendCubemaps.push_back(_cubemaps.at(firstIndex));
-	blendCubemaps.push_back(_cubemaps.at(secondIndex));
+	if (secondIndex == std::numeric_limits<uint32>::max())
+		blendCubemaps.push_back(_cubemaps.at(firstIndex));
+	else
+		blendCubemaps.push_back(_cubemaps.at(secondIndex));
 }
 
 float ProbeManager::CalDistance(Float3 probePos, Float3 objPos)
@@ -218,25 +222,18 @@ void ProbeManager::CalTwoNN(Float3 objPos, uint32 &first, uint32 &second)
 	for (uint32 probeIndex = 0; probeIndex < _cubemaps.size(); ++probeIndex)
 	{
 		float distance = CalDistance(_cubemaps.at(probeIndex).GetPosition(), objPos);
-		if (probeIndex == 0)
+		
+		if (distance < minDis[0])
 		{
-			minDis[0] = minDis[1] = distance;
-			firstIndex = secondIndex = 0;
+			minDis[1] = minDis[0];
+			minDis[0] = distance;
+			secondIndex = firstIndex;
+			firstIndex = probeIndex;
 		}
-		else{
-			if (distance < minDis[0])
-			{
-				minDis[1] = minDis[0];
-				minDis[0] = distance;
-				secondIndex = firstIndex;
-				firstIndex = probeIndex;
-			}
-			else if (distance <= minDis[1])
-			{
-				minDis[1] = distance;
-				secondIndex = probeIndex;
-			}
-			
+		else if (distance <= minDis[1])
+		{
+			minDis[1] = distance;
+			secondIndex = probeIndex;
 		}
 	}
 

@@ -274,14 +274,15 @@ void Realtime_GI::SetProbeManager()
 		cubeMap->SetPosition(Float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ));
 
 		_meshRenderer.SetInitializeProbes(false);
+		cubeMap = nullptr;
 		return;
 	}
 
 	std::vector<Float3> probePos;
-	//probePos.push_back(Float3(1, 1.2f, 0));
 	probePos.push_back(Float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ));
-	/*probePos.push_back(Float3(2, 3, 0));
-	probePos.push_back(Float3(4, 3, 0));*/
+	/*probePos.push_back(Float3(0, 0, -5));
+	probePos.push_back(Float3(0, 0, -10));*/
+	/*probePos.push_back(Float3(4, 3, 0));*/
 
 	/*_probeManager.CreateProbe(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox,
 	float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ), ORIGIN_PROBE);*/
@@ -289,14 +290,14 @@ void Realtime_GI::SetProbeManager()
 	//ProbeManager probeManager = _scenes[AppSettings::CurrentScene].getProbeManager();
 	_scenes[AppSettings::CurrentScene].getProbeManager().CreateProbes(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox, probePos);
 	
-	CreateCubemap *cubeMap;
-	_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, 0);
-	//cubeMap->SetBoxSize(Float3(2.2f, 2.2f, 2.0f));
-	cubeMap->SetBoxSize(Float3(AppSettings::BoxSizeX, AppSettings::BoxSizeY, AppSettings::BoxSizeZ));
-	/*_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, 1);
-	cubeMap->SetBoxSize(Float3(0.5f, 0.5f, 0.5f));
-	_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, 2);
-	cubeMap->SetBoxSize(Float3(0.5f, 0.5f, 0.5f));*/
+	//CreateCubemap *cubeMap = nullptr;
+	//_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, 0);
+	////cubeMap->SetBoxSize(Float3(2.2f, 2.2f, 2.0f));
+	//cubeMap->SetBoxSize(Float3(AppSettings::BoxSizeX, AppSettings::BoxSizeY, AppSettings::BoxSizeZ));
+	//_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, 1);
+	//cubeMap->SetBoxSize(Float3(2, 2, 2));
+	//_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, 2);
+	//cubeMap->SetBoxSize(Float3(2, 2, 2));
 
 	probePos.clear();
 

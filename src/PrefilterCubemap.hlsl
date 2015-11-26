@@ -156,7 +156,7 @@ PSOutput PS(in PSInput input)
 		lighting = Cubemap.SampleLevel(LinearSampler, float3(-Normal[0], Normal[1], -Normal[2]), MipLevel);
 	#endif
 
-	//lighting *= PrefilterEnvMap(roughness, viewWS);
+	lighting *= PrefilterEnvMap(roughness, viewWS);
 	output.Color = float4(lighting, 1.0f);
 	//output.Color = float4(input.Normal, 1);
 
