@@ -132,6 +132,11 @@ private:
 		Float4 chunk2;
 	};
 
+	struct PaddedSH9Color
+	{
+		Float4 sh9[9];
+	};
+	
 	struct SHIntegrationConstants
 	{
 		Float4Align float FinalWeight;
@@ -147,6 +152,6 @@ private:
 	ComputeShaderPtr _relightSHIntegrateCS;
 	ComputeShaderPtr _relightSHReductionCS;
 
-	StructuredBuffer _integrationBuffer;
+	StructuredBuffer _relightIntegrationBuffer;
 	StructuredBuffer _relightSHBuffer;
 };

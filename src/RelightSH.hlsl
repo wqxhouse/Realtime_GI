@@ -1,4 +1,5 @@
 // Modified from MJP's DX11 Radiosity integration shader - Robin Wu
+#include <SH.hlsl>
 
 //======================================================================================
 // Constant buffers
@@ -22,8 +23,6 @@ Texture2D<float4> RelightMap : register(t0);
 StructuredBuffer<float4x4> ViewToWorldMatrixPalette : register(t1);
 RWStructuredBuffer<PackedSH9> PackedSH9OutputBuffer : register(u0);
 
-RWStructuredBuffer<PackedSH9> InputBuffer : register(u0);
-RWBuffer<float4> SH9OutputBuffer : register(u1);
 
 //-------------------------------------------------------------------------------------------------
 // Projects a direction onto SH and convolves with a cosine kernel to compute irradiance
@@ -70,12 +69,13 @@ void IntegrateCS(uint3 GroupID : SV_GroupID, uint3 DispatchThreadID : SV_Dispatc
 	const uint cubeFace = GroupID.z;
 	const uint columnIndex = GroupThreadID.x;
 
-	const int2 location = int2(cubeFace * CubemapSize_ + columnIndex, cubemapID * CubemapSize_ + rowIndex);
-	float3 radiance = RelightMap.Load(int3(location.xy, 0)).xyz;
+	const uint2 uv = uint2(cubeFace * CubemapSize_ + columnIndex, cubemapID * CubemapSize_ + rowIndex);
+	float3 radiance = RelightMap.Load(uint3(uv, 0)).xyz;
 
 	// Calculate the location in [-1, 1] texture space
-	float u = (location.x / float(CubemapSize_)) * 2.0f - 1.0f;
-	float v = -((location.y / float(CubemapSize_)) * 2.0f - 1.0f);
+	uint2 cubeFaceUV = uint2(columnIndex, rowIndex);
+	float u = (cubeFaceUV.x / float(CubemapSize_)) * 2.0f - 1.0f;
+	float v = -((cubeFaceUV.y / float(CubemapSize_)) * 2.0f - 1.0f);
 
 	// Calculate weight
 	float temp = 1.0f + u * u + v * v;
@@ -129,9 +129,9 @@ void IntegrateCS(uint3 GroupID : SV_GroupID, uint3 DispatchThreadID : SV_Dispatc
 		for(uint i = 0; i < 3; ++i)
 		{
 			PackedSH9 packed;
-			packed.chunk0 = float4(RowSHBasis[0][0][i], RowSHBasis[0][1][i], RowSHBasis[0][2][i], 0.0f); 
-			packed.chunk1 = float4(RowSHBasis[0][3][i], RowSHBasis[0][4][i], RowSHBasis[0][5][i], 0.0f); 
-			packed.chunk2 = float4(RowSHBasis[0][6][i], RowSHBasis[0][7][i], RowSHBasis[0][8][i], 0.0f); 
+			packed.chunk0 = float4(RowSHBasis[0][0][i], RowSHBasis[0][1][i], RowSHBasis[0][2][i], i);
+			packed.chunk1 = float4(RowSHBasis[0][3][i], RowSHBasis[0][4][i], RowSHBasis[0][5][i], i);
+			packed.chunk2 = float4(RowSHBasis[0][6][i], RowSHBasis[0][7][i], RowSHBasis[0][8][i], i);
 
 			PackedSH9OutputBuffer[
 				GroupID.y + 
@@ -142,52 +142,90 @@ void IntegrateCS(uint3 GroupID : SV_GroupID, uint3 DispatchThreadID : SV_Dispatc
 	}
 }
 
+struct PaddedSH9Color 
+{
+	float4 c[9];
+};
+
+RWStructuredBuffer<PackedSH9> InputBuffer : register(u0);
+RWStructuredBuffer<PaddedSH9Color> SH9OutputBuffer : register(u1);
+
 //// Shared memory for reducing H-Basis coefficients
-//groupshared float4 ColumnHBasis[CubemapSize_][3][NumFaces_];
+groupshared PackedSH9 ColumnSHBasis[CubemapSize_][3][6];
 
-////======================================================================================
-//// Reduces to a 1x1 buffer
-////======================================================================================
-//[numthreads(CubemapSize_, 1, NumFaces_)]
-//void ReductionCS(uint3 GroupID : SV_GroupID, uint3 DispatchThreadID : SV_DispatchThreadID,
-//					uint3 GroupThreadID : SV_GroupThreadID, uint GroupIndex : SV_GroupIndex)
-//{
-//	const int3 location = int3(GroupThreadID.x, GroupID.y, GroupThreadID.z);
+//======================================================================================
+// Reduces to a 1x1 buffer
+//======================================================================================
+[numthreads(CubemapSize_, 1, 6)]
+void ReductionCS(uint3 GroupID : SV_GroupID, uint3 DispatchThreadID : SV_DispatchThreadID,
+					uint3 GroupThreadID : SV_GroupThreadID, uint GroupIndex : SV_GroupIndex)
+{
+	const uint3 location = uint3(GroupThreadID.x, GroupID.y, GroupThreadID.z);
 
-//	// Store in shared memory
-//	ColumnHBasis[location.x][location.y][location.z] = InputBuffer[location.x + CubemapSize_ * location.y + CubemapSize_ * 3 * location.z];
-//	GroupMemoryBarrierWithGroupSync();
+	// Store in shared memory
+	ColumnSHBasis[location.x][location.y][location.z] = 
+		InputBuffer[
+			location.x + 
+			CubemapSize_ * location.y + 
+			CubemapSize_ * 3 * location.z + 
+			CubemapSize_ * 3 * 6 * GroupID.x];
 
-//	// Sum the coefficients for the column
-//	[unroll(CubemapSize_)]
-//	for(uint s = CubemapSize_ / 2; s > 0; s >>= 1)
-//	{
-//		if(GroupThreadID.x < s)
-//			ColumnHBasis[location.x][location.y][location.z] += ColumnHBasis[location.x + s][location.y][location.z];
+	GroupMemoryBarrierWithGroupSync();
 
-//		GroupMemoryBarrierWithGroupSync();
-//	}
+	// Sum the coefficients for the column
+	[unroll(CubemapSize_)]
+	for(uint s = CubemapSize_ / 2; s > 0; s >>= 1)
+	{
+		if (GroupThreadID.x < s)
+		{
+			ColumnSHBasis[location.x][location.y][location.z].chunk0 += ColumnSHBasis[location.x + s][location.y][location.z].chunk0;
+			ColumnSHBasis[location.x][location.y][location.z].chunk1 += ColumnSHBasis[location.x + s][location.y][location.z].chunk1;
+			ColumnSHBasis[location.x][location.y][location.z].chunk2 += ColumnSHBasis[location.x + s][location.y][location.z].chunk2;
+		}
 
-//	// Have the first thread write out to the output buffer
-//	if (GroupThreadID.x == 0 && GroupThreadID.z == 0)
-//	{
-//		float4 output = 0.0f;
-//		[unroll(NumFaces_)]
-//		for(uint i = 0; i < NumFaces_; ++i)
-//			output += ColumnHBasis[location.x][location.y][i];
-//		output *= FinalWeight;
-//		OutputBuffer[VertexIndex * 3 + location.y] = output;
-//	}
-//}
+		GroupMemoryBarrierWithGroupSync();
+	}
 
-////======================================================================================
-//// Sums the result of two bounce passes
-////======================================================================================
-//[numthreads(NumBounceSumThreads_, 1, 1)]
-//void SumBouncesCS(uint3 GroupID : SV_GroupID, uint3 DispatchThreadID : SV_DispatchThreadID,
-//					uint3 GroupThreadID : SV_GroupThreadID, uint GroupIndex : SV_GroupIndex)
-//{
-//	const uint index = GroupThreadID.x + GroupID.x * NumBounceSumThreads_;
-//	if(index < NumElements)
-//		OutputBuffer[index] = InputBuffer0[index] + InputBuffer1[index];
-//}
+	// Have the first thread write out to the output buffer
+	if (GroupThreadID.x == 0 && GroupThreadID.z == 0)
+	{
+		PackedSH9 output;
+		output.chunk0 = 0.0;
+		output.chunk1 = 0.0;
+		output.chunk2 = 0.0;
+
+		[unroll(6)]
+		for (uint i = 0; i < 6; ++i)
+		{
+			output.chunk0 += ColumnSHBasis[location.x][location.y][i].chunk0;
+			output.chunk1 += ColumnSHBasis[location.x][location.y][i].chunk1;
+			output.chunk2 += ColumnSHBasis[location.x][location.y][i].chunk2;
+		}
+
+		output.chunk0 *= FinalWeight;
+		output.chunk1 *= FinalWeight;
+		output.chunk2 *= FinalWeight;
+
+		// Not sure if this non-linear write will hit performance
+		[unroll(3)]
+		for (uint a = 0; a < 3; ++a)
+		{
+			SH9OutputBuffer[GroupID.x].c[a][location.y] = output.chunk0[a];
+			// SH9OutputBuffer[GroupID.x * 9 + a * 3 + location.y] = output.chunk0[a];
+		}
+
+		[unroll(3)]
+		for (uint b = 3; b < 6; ++b)
+		{
+			SH9OutputBuffer[GroupID.x].c[b][location.y] = output.chunk1[b - 3];
+			// SH9OutputBuffer[GroupID.x * 9 + b * 3 + location.y] = output.chunk1[b];
+		}
+
+		[unroll(3)]
+		for (uint c = 6; c < 9; ++c)
+		{
+			SH9OutputBuffer[GroupID.x].c[c][location.y] = output.chunk2[c - 6];
+			// SH9OutputBuffer[GroupID.x * 9 + c * 3 + location.y] = output.chunk2[c];
+		}
+	}
+}

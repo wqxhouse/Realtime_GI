@@ -74,7 +74,7 @@ void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *con
 	CompileOptions opts;
 	opts.Add("CubemapSize_", _cubemapSizeGBuffer);
 	_relightSHIntegrateCS = CompileCSFromFile(_device, L"RelightSH.hlsl", "IntegrateCS", "cs_5_0", opts);
-	// _relightSHReductionCS = CompileCSFromFile(_device, L"RelightSH.hlsl", "");
+	_relightSHReductionCS = CompileCSFromFile(_device, L"RelightSH.hlsl", "ReductionCS", "cs_5_0", opts);
 }
 
 void IrradianceVolume::SetProbeDensity(float unitsBetweenProbes)
@@ -133,10 +133,10 @@ void IrradianceVolume::createSHComputeBuffers()
 	_shIntegrationConstants.Initialize(_device);
 
 	// 3 is #(rgb) channel ; 6 is #cubefaces
-	_integrationBuffer.Initialize(_device, sizeof(PackedSH9), _cubemapSizeGBuffer * 3 * 6 * _cubemapNum, 1, 1);
-	// _integrationBuffer.Initialize(_device, DXGI_FORMAT_R32G32B32A32_FLOAT, sizeof(PackedSH9), _cubemapSizeGBuffer * 3 * 6 * _cubemapNum);
-	// _relightSHBuffer = Initialize()
+	_relightIntegrationBuffer.Initialize(_device, sizeof(PackedSH9), _cubemapSizeGBuffer * 3 * 6 * _cubemapNum, 1, 1);
+	_relightSHBuffer.Initialize(_device, sizeof(PaddedSH9Color), _cubemapNum, 1, 1);
 
+	_weightSum = 0.0f;
 	// Compute the final weight for integration
 	for (UINT y = 0; y < _cubemapSizeGBuffer; ++y) {
 		for (UINT x = 0; x < _cubemapSizeGBuffer; ++x) {
@@ -511,32 +511,49 @@ void IrradianceVolume::IntegrateSH()
 	_context->CSSetShaderResources(0, 2, srvs);
 
 	// Set the output textures
-	ID3D11UnorderedAccessView* outputBuffer[1] = { _integrationBuffer.UAView };
+	ID3D11UnorderedAccessView* outputBuffer[1] = { _relightIntegrationBuffer.UAView };
 	_context->CSSetUnorderedAccessViews(0, 1, outputBuffer, NULL);
 
 	// Do the initial integration + reduction
 	_context->Dispatch(_cubemapNum, _cubemapSizeGBuffer, 6);
 
-	//// Set the shader
-	//context->CSSetShader(reductionCS, NULL, 0);
-
-	//// Set outputs
-	//outputBuffer[0] = meshData.UAView;
-	//context->CSSetUnorderedAccessViews(0, 1, outputBuffer, NULL);
-
-	//// Set shader resources
-	//ID3D11ShaderResourceView* inputBuffer[1] = { reductionBuffer.SRView };
-	//context->CSSetShaderResources(0, 1, inputBuffer);
-
-	//// Do the final reduction
-	//context->Dispatch(1, NumSHTargets, 1);
-
-	// Clear out the SRV's and RT's
-	srvs[0] = srvs[1] = NULL;
+	// clear srvs
+	// Set shader resources
+	srvs[0] = nullptr;
+	srvs[1] = nullptr;
 	_context->CSSetShaderResources(0, 2, srvs);
 
-	outputBuffer[0] = NULL;
-	_context->CSSetUnorderedAccessViews(0, 1, outputBuffer, NULL);
+	// ==================================================================
+
+	// Set the shader
+	_context->CSSetShader(_relightSHReductionCS, NULL, 0);
+
+	ID3D11UnorderedAccessView* buffers[2] = {
+		_relightIntegrationBuffer.UAView,
+		_relightSHBuffer.UAView,
+	};
+
+	// Set outputs
+	//outputBuffer[0] = _relightSHBuffer.UAView;
+	_context->CSSetUnorderedAccessViews(0, 2, buffers, NULL);
+
+	_shIntegrationConstants.SetCS(_context, 0);
+
+	// Set shader resources
+	//srvs[0] = _relightIntegrationBuffer.SRView;
+	//srvs[1] = nullptr;
+	//_context->CSSetShaderResources(0, 2, srvs);
+
+	// Do the final reduction
+	_context->Dispatch(_cubemapNum, 3, 1);
+
+	// Clear out the SRV's and RT's
+	//srvs[0] = srvs[1] = NULL;
+	//_context->CSSetShaderResources(0, 1, srvs);
+
+	buffers[0] = buffers[1] = NULL;
+	_context->CSSetUnorderedAccessViews(0, 2, buffers, NULL);
+	_context->CSSetShader(nullptr, NULL, 0);
 }
 
 const IrradianceVolume::CameraStruct IrradianceVolume::_CubemapCameraStruct[6] = 
