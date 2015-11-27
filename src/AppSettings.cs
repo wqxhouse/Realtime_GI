@@ -161,6 +161,13 @@ public class Settings
 
         bool EnableRealtimeCubemap = false;
 
+        [DisplayName("Diffuse GI Bounces")]
+        [HelpText("The bounces of Indirect diffuse from GI")]
+        [MinValue(1)]
+        [MaxValue(10)]
+        [StepSize(1)]
+        int DiffuseGIBounces = 1;
+
         [DisplayName("GI Intensity")]
         [HelpText("The intensity of Indirect diffuse from GI")]
         [MinValue(0.0f)]

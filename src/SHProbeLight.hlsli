@@ -23,6 +23,32 @@ float SHProbeLightFallOff(float radius, float dist)
 	return falloff;
 }
 
+
+float4 CalcSHProbeLight(float3 posWS, float3 normalWS, in SHProbeLight probeLight)
+{
+	float3 lighting = 1.0f / 3.14159f;
+
+	float3 lightDir = probeLight.posWS - posWS;
+	float dist = length(lightDir);
+	lightDir = normalize(lightDir);
+
+	// TODO: optimize att in size lambert test
+	// const float att = PointLightAttenuation(probeLight.radius, dist);
+	const float att = SHProbeLightFallOff(probeLight.radius, dist);
+	const float nDotL = saturate(dot(normalWS, lightDir));
+	float unitIntensity = clamp(pow(att, 1.5) * nDotL, 0.0, 1.0);
+	float3 shColor = 0.0;
+
+	if (nDotL > 0.0f)
+	{
+		PaddedSH9Color sh9 = shProbeCoefficients[probeLight.probeIndex];
+		shColor = max(EvalPaddedSH9Cosine(normalWS, sh9), 0.0) * probeLight.intensity;
+	}
+
+	return float4(lighting * shColor * unitIntensity, unitIntensity);
+}
+
+
 float4 CalcSHProbeLight(in Surface surface, in SHProbeLight probeLight, in float3 CameraPosWS)
 {
 	float3 lighting = surface.diffuse * (1.0f / 3.14159f);

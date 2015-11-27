@@ -19,13 +19,15 @@ class IrradianceVolume
 public:
 	IrradianceVolume();
 	void Initialize(ID3D11Device *device, ID3D11DeviceContext *context, MeshRenderer *meshRenderer, Camera *camera, 
-		StructuredBuffer *_pointLightBuffer, LightClusters *clusters, DebugRenderer *debugRenderer);
+		StructuredBuffer *_pointLightBuffer, LightClusters *clusters, DebugRenderer *debugRenderer, StructuredBuffer *shProbeLightsBuffer);
 	
 	void SetScene(Scene *scene);
 	void SetProbeDensity(float unitsBetweenProbes);
 
 	void RenderSceneAtlasGBuffer();
 	void RenderSceneAtlasProxyMeshTexcoord();
+
+	inline void SetNumOfBounces(int i)  { _numBounces = i; }
 
 	void Update();
 	void MainRender();
@@ -162,4 +164,24 @@ private:
 	StructuredBuffer _relightSHBuffer;
 
 	std::vector<SHProbeLight> _probeLights;
+
+	VertexShaderPtr _indirectLightBounceVS;
+	PixelShaderPtr _indirectLightBouncePS;
+
+	// Indirect bounces //////////////////////////////////
+	void renderIndirectBounces();
+
+	struct InDirectDiffuseConstants
+	{
+		Float4x4 ModelToWorld;
+
+		Float4Align Float3 ClusterScale;
+		Float4Align Float3 ClusterBias;
+	};
+
+	ConstantBuffer<InDirectDiffuseConstants> _indirectDiffuseConstants;
+	BlendStates _blendStates;
+
+	StructuredBuffer *_shProbeLightsBuffer;
+	int _numBounces;
 };

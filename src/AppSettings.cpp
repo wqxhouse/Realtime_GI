@@ -81,6 +81,7 @@ namespace AppSettings
     BoolSetting EnableShadows;
     BoolSetting EnableNormalMaps;
     BoolSetting EnableRealtimeCubemap;
+    IntSetting DiffuseGIBounces;
     FloatSetting DiffuseGI_Intensity;
     FloatSetting NormalMapIntensity;
     FloatSetting DiffuseIntensity;
@@ -201,6 +202,9 @@ namespace AppSettings
         EnableRealtimeCubemap.Initialize(tweakBar, "EnableRealtimeCubemap", "Scene Controls", "Enable Realtime Cubemap", "", false);
         Settings.AddSetting(&EnableRealtimeCubemap);
 
+        DiffuseGIBounces.Initialize(tweakBar, "DiffuseGIBounces", "Scene Controls", "Diffuse GI Bounces", "The bounces of Indirect diffuse from GI", 1, 1, 10);
+        Settings.AddSetting(&DiffuseGIBounces);
+
         DiffuseGI_Intensity.Initialize(tweakBar, "DiffuseGI_Intensity", "Scene Controls", "GI Intensity", "The intensity of Indirect diffuse from GI", 1.0000f, 0.0000f, 10.0000f, 0.1000f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&DiffuseGI_Intensity);
 
@@ -289,6 +293,7 @@ namespace AppSettings
         CBuffer.Data.EnableShadows = EnableShadows;
         CBuffer.Data.EnableNormalMaps = EnableNormalMaps;
         CBuffer.Data.EnableRealtimeCubemap = EnableRealtimeCubemap;
+        CBuffer.Data.DiffuseGIBounces = DiffuseGIBounces;
         CBuffer.Data.DiffuseGI_Intensity = DiffuseGI_Intensity;
         CBuffer.Data.NormalMapIntensity = NormalMapIntensity;
         CBuffer.Data.DiffuseIntensity = DiffuseIntensity;

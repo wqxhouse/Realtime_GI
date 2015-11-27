@@ -6,13 +6,13 @@
 
 IrradianceVolume::IrradianceVolume()
 	: _cubemapCamera(1.0f, 90.0f * (Pi / 180), 0.01f, 40.0f), // TODO: experiment with far clip plane
-	_dirLightCam(0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f), _weightSum(0.0f)
+	_dirLightCam(0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f), _weightSum(0.0f), _numBounces(1)
 
 {
 }
 
 void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *context, MeshRenderer *meshRenderer, 
-	Camera *camera, StructuredBuffer *pointLightBuffer, LightClusters *clusters, DebugRenderer *debugRenderer)
+	Camera *camera, StructuredBuffer *pointLightBuffer, LightClusters *clusters, DebugRenderer *debugRenderer, StructuredBuffer *shProbeLightsBuffer)
 {
 	_device = device;
 	_context = context;
@@ -20,6 +20,8 @@ void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *con
 	_mainCamera = camera;
 	_clusters = clusters;
 	_debugRenderer = debugRenderer;
+
+	_shProbeLightsBuffer = shProbeLightsBuffer;
 
 	_cubemapSizeGBuffer = 16;
 	_cubemapSizeTexcoord = 32;
@@ -75,6 +77,12 @@ void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *con
 	opts.Add("CubemapSize_", _cubemapSizeGBuffer);
 	_relightSHIntegrateCS = CompileCSFromFile(_device, L"RelightSH.hlsl", "IntegrateCS", "cs_5_0", opts);
 	_relightSHReductionCS = CompileCSFromFile(_device, L"RelightSH.hlsl", "ReductionCS", "cs_5_0", opts);
+
+	_indirectLightBounceVS = CompileVSFromFile(_device, L"IndirectDiffuse.hlsl", "VS");
+	_indirectLightBouncePS = CompilePSFromFile(_device, L"IndirectDiffuse.hlsl", "PS");
+
+	_blendStates.Initialize(_device);
+	_indirectDiffuseConstants.Initialize(_device);
 }
 
 void IrradianceVolume::SetProbeDensity(float unitsBetweenProbes)
@@ -392,7 +400,7 @@ void IrradianceVolume::renderProxyMeshDirectLighting()
 	_context->RSSetState(_rasterizerStates.NoCull());
 	_context->OMSetDepthStencilState(_depthStencilStates.DepthDisabled(), 0);
 
-	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; // keep blue channel for sky light
+	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; 
 	_context->ClearRenderTargetView(_dirLightDiffuseBufferRT.RTView, clearColor);
 	_context->VSSetShader(_dirLightDiffuseVS, nullptr, 0);
 	_context->PSSetShader(_dirLightDiffusePS, nullptr, 0);
@@ -480,22 +488,23 @@ void IrradianceVolume::renderRelightCubemap()
 	ID3D11RenderTargetView* rtvs[1] = { _relightCubemapRT.RTView };
 	_context->OMSetRenderTargets(1, rtvs, NULL);
 
-	ID3D11ShaderResourceView* srvs[3] = { 
+	ID3D11ShaderResourceView* srvs[4] = { 
 		_dirLightDiffuseBufferRT.SRView, 
 		_proxyMeshTexCoordCubemapRT.SRView, 
-		_albedoCubemapRT.SRView
+		_albedoCubemapRT.SRView, 
+		_indirectLightDiffuseBufferRT.SRView,
 	};
+	_context->PSSetShaderResources(0, 4, srvs);
 
 	ID3D11SamplerState* sampStates[1] = {
 		_samplerStates.Linear(),
 	};
 	_context->PSSetSamplers(0, 1, sampStates);
-	_context->PSSetShaderResources(0, 3, srvs);
 
 	_context->Draw(3, 0);
 
-	srvs[0] = srvs[1] = srvs[2] = NULL;
-	_context->PSSetShaderResources(0, 3, srvs);
+	srvs[0] = srvs[1] = srvs[2] = srvs[3] = NULL;
+	_context->PSSetShaderResources(0, 4, srvs);
 	sampStates[0] = nullptr;
 	_context->PSSetSamplers(0, 1, sampStates);
 	rtvs[0] = { nullptr };
@@ -534,10 +543,88 @@ void IrradianceVolume::Update()
 
 void IrradianceVolume::MainRender()
 {
+	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	_context->ClearRenderTargetView(_indirectLightDiffuseBufferRT.RTView, clearColor);
+
 	renderProxyMeshShadowMap();
 	renderProxyMeshDirectLighting();
 	renderRelightCubemap();
 	IntegrateSH();
+
+	for (int i = 1; i < _numBounces; i++)
+	{
+		renderIndirectBounces();
+		renderProxyMeshShadowMap();
+		renderProxyMeshDirectLighting();
+		renderRelightCubemap();
+		IntegrateSH();
+	}
+}
+
+void IrradianceVolume::renderIndirectBounces()
+{
+	PIXEvent indirectEvent(L"RenderIndirectBounces");
+
+	_context->RSSetState(_rasterizerStates.NoCull());
+	_context->OMSetDepthStencilState(_depthStencilStates.DepthDisabled(), 0);
+
+	float blendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	_context->OMSetBlendState(_blendStates.AdditiveBlend(), blendFactor, 0xFFFFFFFF);
+
+	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+	_context->ClearRenderTargetView(_indirectLightDiffuseBufferRT.RTView, clearColor);
+
+	_context->VSSetShader(_indirectLightBounceVS, nullptr, 0);
+	_context->PSSetShader(_indirectLightBouncePS, nullptr, 0);
+	_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	_context->IASetInputLayout(_proxyMeshInputLayout);
+
+	ID3D11RenderTargetView *renderTarget[1] = { _indirectLightDiffuseBufferRT.RTView };
+	_context->OMSetRenderTargets(1, renderTarget, nullptr);
+
+	D3D11_VIEWPORT viewport;
+	viewport.Width = static_cast<float>(_indirectLightMapSize);
+	viewport.Height = static_cast<float>(_indirectLightMapSize);
+	viewport.MinDepth = 0.0f;
+	viewport.MaxDepth = 1.0f;
+	viewport.TopLeftX = 0.0f;
+	viewport.TopLeftY = 0.0f;
+	_context->RSSetViewports(1, &viewport);
+
+	// set constant buffer
+	// TODO: move this out; this is not updated across frames
+	_indirectDiffuseConstants.Data.ModelToWorld = Float4x4::Transpose(*_scene->getProxySceneObjectPtr()->base);
+	_indirectDiffuseConstants.Data.ClusterBias = _clusters->getClusterBias();
+	_indirectDiffuseConstants.Data.ClusterScale = _clusters->getClusterScale();
+	_indirectDiffuseConstants.ApplyChanges(_context);
+	_indirectDiffuseConstants.SetVS(_context, 0);
+	_indirectDiffuseConstants.SetPS(_context, 0);
+
+	// bind SRVs
+	ID3D11ShaderResourceView* srvs[] =
+	{
+		_shProbeLightsBuffer->SRView,
+		_clusters->getLightIndicesListSRV(),
+		_clusters->getClusterTexSRV(),
+	};
+
+	_context->PSSetShaderResources(0, _countof(srvs), srvs);
+	
+	ID3D11ShaderResourceView *shProbeLightSrv[] = { _relightSHBuffer.SRView };
+	_context->PSSetShaderResources(11, 1, shProbeLightSrv); // t11 is defined in SHProbeLight.hlsli
+
+	renderProxyModel();
+
+	// clear states
+	renderTarget[0] = nullptr;
+	_context->OMSetRenderTargets(1, renderTarget, nullptr);
+
+	ID3D11ShaderResourceView* nullSRVs[_countof(srvs)] = { nullptr };
+	_context->PSSetShaderResources(0, _countof(srvs), nullSRVs);
+	_context->PSSetShaderResources(11, 1, nullSRVs);
+	_context->OMSetBlendState(_blendStates.BlendDisabled(), blendFactor, 0xFFFFFFFF);
+
+	_debugRenderer->QueueSprite(_indirectLightDiffuseBufferRT.SRView, Float3(128, 0, 0), Float4(1, 1, 1, 1));
 }
 
 void IrradianceVolume::IntegrateSH()

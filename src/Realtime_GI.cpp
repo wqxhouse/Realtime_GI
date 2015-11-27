@@ -191,7 +191,7 @@ void Realtime_GI::Initialize()
 	_lightClusters.SetScene(&_scenes[AppSettings::CurrentScene]);
 
 	_irradianceVolume.Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext(), 
-		&_meshRenderer, &_camera, &_pointLightBuffer, &_lightClusters, &_debugRenderer);
+		&_meshRenderer, &_camera, &_pointLightBuffer, &_lightClusters, &_debugRenderer, &_shProbeLightBuffer);
 
 	_irradianceVolume.SetScene(&_scenes[AppSettings::CurrentScene]);
 }
@@ -432,6 +432,11 @@ void Realtime_GI::Update(const Timer& timer)
 	if (AppSettings::CentroidSampling.Changed())
 	{
 		_meshRenderer.ReMapMeshShaders();
+	}
+
+	if (AppSettings::DiffuseGIBounces.Changed())
+	{
+		_irradianceVolume.SetNumOfBounces(AppSettings::DiffuseGIBounces);
 	}
 
     // Toggle VSYNC

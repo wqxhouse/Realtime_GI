@@ -323,6 +323,9 @@
     <None Include="SHProbeLight.hlsli">
       <Filter>Shader\GI</Filter>
     </None>
+    <None Include="IndirectDiffuse.hlsl">
+      <Filter>Shader\GI</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="SampleFramework11">

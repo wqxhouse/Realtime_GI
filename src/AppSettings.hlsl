@@ -31,6 +31,7 @@ cbuffer AppSettings : register(b7)
     bool EnableShadows;
     bool EnableNormalMaps;
     bool EnableRealtimeCubemap;
+    int DiffuseGIBounces;
     float DiffuseGI_Intensity;
     float NormalMapIntensity;
     float DiffuseIntensity;

@@ -1,6 +1,7 @@
 Texture2D DirectDiffuseMap : register(t0);
 Texture2D ProxyMeshTexcoordAtlas :register(t1);
 Texture2D AlbedoMapAtlas : register(t2);
+Texture2D IndirectBouncesMap : register(t3);
 
 SamplerState LinearSampler : register(s0);
 
@@ -44,8 +45,10 @@ float3 sampleScene(float2 offset, float2 posSS, float3 albedoDiffuse, uint2 texc
 	}
 	else 
 	{
-		float3 directDiffuse = DirectDiffuseMap.Sample(LinearSampler, cubeToLightmap.xy).xyz; 
-		return albedoDiffuse * directDiffuse;
+		float3 directDiffuse = DirectDiffuseMap.Sample(LinearSampler, cubeToLightmap.xy).xyz;
+		float4 indirectDiffuse = IndirectBouncesMap.Sample(LinearSampler, cubeToLightmap.xy);
+		indirectDiffuse /= indirectDiffuse.a;
+		return albedoDiffuse * (directDiffuse + indirectDiffuse.rgb);
 	}
 }
 

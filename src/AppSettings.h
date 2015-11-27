@@ -107,6 +107,7 @@ namespace AppSettings
     extern BoolSetting EnableShadows;
     extern BoolSetting EnableNormalMaps;
     extern BoolSetting EnableRealtimeCubemap;
+    extern IntSetting DiffuseGIBounces;
     extern FloatSetting DiffuseGI_Intensity;
     extern FloatSetting NormalMapIntensity;
     extern FloatSetting DiffuseIntensity;
@@ -155,6 +156,7 @@ namespace AppSettings
         bool32 EnableShadows;
         bool32 EnableNormalMaps;
         bool32 EnableRealtimeCubemap;
+        int32 DiffuseGIBounces;
         float DiffuseGI_Intensity;
         float NormalMapIntensity;
         float DiffuseIntensity;
