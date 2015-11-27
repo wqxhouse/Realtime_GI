@@ -95,32 +95,62 @@ void IrradianceVolume::setupResourcesForScene()
 	Float3 diff = Float3(bbox.Max) - Float3(bbox.Min);
 
 	Float3 numProbesAxis = diff * (float)(1.0 / _unitsBetweenProbes);
-	uint32 probeNumX = (uint32)ceilf(numProbesAxis.x) - 1;
-	uint32 probeNumY = (uint32)ceilf(numProbesAxis.y) - 1;
-	uint32 probeNumZ = (uint32)ceilf(numProbesAxis.z) - 1;
+	//uint32 probeNumX = (uint32)ceilf(numProbesAxis.x) - 1;
+	//uint32 probeNumY = (uint32)ceilf(numProbesAxis.y) - 1;
+	//uint32 probeNumZ = (uint32)ceilf(numProbesAxis.z) - 1;
 
-	probeNumX = Max(probeNumX, (uint32)2);
-	probeNumY = Max(probeNumY, (uint32)2);
-	probeNumZ = Max(probeNumZ, (uint32)2);
+	//probeNumX = Max(probeNumX, (uint32)2);
+	//probeNumY = Max(probeNumY, (uint32)2);
+	//probeNumZ = Max(probeNumZ, (uint32)2);
 
-	_cubemapNum = probeNumX * probeNumY * probeNumZ;
+	//_cubemapNum = probeNumX * probeNumY * probeNumZ;
 
-	// TODO: find better way to calc this
+	//// TODO: find better way to calc this
 
+
+	//_positionList.clear();
+	//_positionList.resize(_cubemapNum);
+	//for (uint32 z = 0; z < probeNumZ; z++) {
+	//for (uint32 y = 0; y < probeNumY; y++) {
+	//for (uint32 x = 0; x < probeNumX; x++) {
+	//	uint32 index = z * probeNumY * probeNumX + y * probeNumX + x;
+	//	float posX = _unitsBetweenProbes * (1 + x);
+	//	float posY = _unitsBetweenProbes * (1 + y);
+	//	float posZ = _unitsBetweenProbes * (1 + z);
+
+	//	Float3 positionWS = Float3(posX, posY, posZ) + Float3(bbox.Min);
+	//	_positionList[index] = positionWS;
+	//}}}
+
+	uint32 numProbesX = (uint32)floorf(numProbesAxis.x);
+	uint32 numProbesY = (uint32)floorf(numProbesAxis.y);
+	uint32 numProbesZ = (uint32)floorf(numProbesAxis.z);
+
+	numProbesX = Max(numProbesX, (uint32)2);
+	numProbesY = Max(numProbesY, (uint32)2);
+	numProbesZ = Max(numProbesZ, (uint32)2);
+
+	_cubemapNum = numProbesX * numProbesY * numProbesZ;
+
+	float calcUnitDistX = diff.x / (numProbesX+1);
+	float calcUnitDistY = diff.y / (numProbesY+1);
+	float calcUnitDistZ = diff.z / (numProbesZ+1);
 
 	_positionList.clear();
 	_positionList.resize(_cubemapNum);
-	for (uint32 z = 0; z < probeNumZ; z++) {
-	for (uint32 y = 0; y < probeNumY; y++) {
-	for (uint32 x = 0; x < probeNumX; x++) {
-		uint32 index = z * probeNumY * probeNumX + y * probeNumX + x;
-		float posX = _unitsBetweenProbes * (1 + x);
-		float posY = _unitsBetweenProbes * (1 + y);
-		float posZ = _unitsBetweenProbes * (1 + z);
+	for (uint32 z = 0; z < numProbesZ; z++) {
+		for (uint32 y = 0; y < numProbesY; y++) {
+			for (uint32 x = 0; x < numProbesX; x++) {
+				uint32 index = z * numProbesY * numProbesX + y * numProbesX + x;
+				float posX = calcUnitDistX * (1 + x);
+				float posY = calcUnitDistX  * (1 + y);
+				float posZ = calcUnitDistX  * (1 + z);
 
-		Float3 positionWS = Float3(posX, posY, posZ) + Float3(bbox.Min);
-		_positionList[index] = positionWS;
-	}}}
+				Float3 positionWS = Float3(posX, posY, posZ) + Float3(bbox.Min);
+				_positionList[index] = positionWS;
+			}
+		}
+	}
 
 
 	createCubemapAtlasRTs();

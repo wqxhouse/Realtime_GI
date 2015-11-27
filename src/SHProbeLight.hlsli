@@ -37,7 +37,7 @@ float4 CalcSHProbeLight(in Surface surface, in SHProbeLight probeLight, in float
 	// const float att = PointLightAttenuation(probeLight.radius, dist);
 	const float att = SHProbeLightFallOff(probeLight.radius, dist);
 	const float nDotL = saturate(dot(surface.normalWS, lightDir));
-	float intensity = intensity = att * probeLight.intensity;
+	float unitIntensity = clamp(pow(att, 1.5) * nDotL, 0.0, 1.0);
 	float3 shColor = 0.0;
 
 	if (nDotL > 0.0f)
@@ -51,10 +51,10 @@ float4 CalcSHProbeLight(in Surface surface, in SHProbeLight probeLight, in float
 		lighting += specular * fresnel*/;
 
 		PaddedSH9Color sh9 = shProbeCoefficients[probeLight.probeIndex];
-		shColor = max(EvalPaddedSH9Cosine(surface.normalWS, sh9), 0.0);
+		shColor = max(EvalPaddedSH9Cosine(surface.normalWS, sh9), 0.0) * probeLight.intensity;
 	}
 
-	return float4(lighting * nDotL * shColor * intensity, intensity);
+	return float4(lighting * shColor * unitIntensity, unitIntensity);
 }
 
 
