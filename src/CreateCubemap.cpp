@@ -1,7 +1,9 @@
 /*
 	Author : bxs3514
 	Date   : 2015.11
+	
 	Create environment cube map from a specific position of the world.
+	Pre-filter the cubemap.
 */
 
 #include "CreateCubemap.h"
@@ -83,7 +85,7 @@ void CreateCubemap::SetPosition(Float3 newPosition)
 		CubemapCameraStruct[faceIndex] = 
 		{	newPosition,
 			newPosition + DefaultCubemapCameraStruct[faceIndex].LookAt,
-			newPosition + DefaultCubemapCameraStruct[faceIndex].Up
+			DefaultCubemapCameraStruct[faceIndex].Up
 		};
 	}
 }
