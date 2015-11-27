@@ -80,8 +80,8 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 	{
 		// L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\Converted\\sponza.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\Cerberus_by_Andrew_Maximov\\Cerberus_by_Andrew_Maximov\\testfbxascii.fbx",
-		L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
-		//L"..\\Content\\Models\\CornellBox\\CornellBox2.FBX",
+		//L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
+		L"..\\Content\\Models\\CornellBox\\CornellBox2.FBX",
 		// L"..\\Content\\Models\\CornellBox\\CornellBox_Max.obj",
 		//L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaNon_PBR\\Converted\\sponza.obj",
 		// L"..\\Content\\Models\\Powerplant\\Powerplant.sdkmesh",
@@ -89,6 +89,7 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 		// L"",
 		//L"..\\Content\\Models\\sphere\\sphere.obj",
 		//L"..\\Content\\Models\\3DScan\\model.obj",
+		//L"..\\Content\\Models\\Corridor\\Corridor.FBX",
 	};
 
 	Scene *scene = nullptr;
@@ -268,10 +269,18 @@ void Realtime_GI::SetProbeManager()
 	{
 		//TODO Refresh
 		CreateCubemap *cubeMap;
+		RenderTarget2D renderTarget;
+
 		_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, 0);
 		//cubeMap->SetBoxSize(Float3(2.2f, 2.2f, 2.0f));
 		cubeMap->SetBoxSize(Float3(AppSettings::BoxSizeX, AppSettings::BoxSizeY, AppSettings::BoxSizeZ));
 		cubeMap->SetPosition(Float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ));
+		cubeMap->Create(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox);
+		cubeMap->GetTargetViews(renderTarget);
+		_deviceManager.ImmediateContext()->GenerateMips(renderTarget.SRView);
+		cubeMap->RenderPrefilterCubebox(_deviceManager, _globalTransform);
+		cubeMap->GetPreFilterTargetViews(renderTarget);
+		_deviceManager.ImmediateContext()->GenerateMips(renderTarget.SRView);
 
 		_meshRenderer.SetInitializeProbes(false);
 		cubeMap = nullptr;
@@ -279,7 +288,8 @@ void Realtime_GI::SetProbeManager()
 	}
 
 	std::vector<Float3> probePos;
-	probePos.push_back(Float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ));
+	probePos.push_back(Float3(1, 1.2f, 0.1f));
+	//probePos.push_back(Float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ));
 	/*probePos.push_back(Float3(0, 0, -5));
 	probePos.push_back(Float3(0, 0, -10));*/
 	/*probePos.push_back(Float3(4, 3, 0));*/
@@ -290,9 +300,9 @@ void Realtime_GI::SetProbeManager()
 	//ProbeManager probeManager = _scenes[AppSettings::CurrentScene].getProbeManager();
 	_scenes[AppSettings::CurrentScene].getProbeManager().CreateProbes(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox, probePos);
 	
-	//CreateCubemap *cubeMap = nullptr;
-	//_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, 0);
-	////cubeMap->SetBoxSize(Float3(2.2f, 2.2f, 2.0f));
+	CreateCubemap *cubeMap = nullptr;
+	_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, 0);
+	cubeMap->SetBoxSize(Float3(2.3f, 1.9f, 2.3f));
 	//cubeMap->SetBoxSize(Float3(AppSettings::BoxSizeX, AppSettings::BoxSizeY, AppSettings::BoxSizeZ));
 	//_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, 1);
 	//cubeMap->SetBoxSize(Float3(2, 2, 2));

@@ -499,8 +499,11 @@ PSOutput PS(in PSInput input)
 				lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;
 			else
 			{
-				lighting += SpecularCubemapArray1.SampleLevel(LinearSampler, reflectWS, mipLevel) +
-					SpecularCubemapArray2.SampleLevel(LinearSampler, reflectWS, mipLevel);
+				if (weight1 == 0) lighting += SpecularCubemapArray2.SampleLevel(LinearSampler, reflectWS, mipLevel) * weight2;
+				else if (weight2 == 0) lighting += SpecularCubemapArray1.SampleLevel(LinearSampler, reflectWS, mipLevel) * weight1;
+				else
+					lighting += SpecularCubemapArray1.SampleLevel(LinearSampler, reflectWS, mipLevel) +
+						SpecularCubemapArray2.SampleLevel(LinearSampler, reflectWS, mipLevel);
 			}
 		}
 	
