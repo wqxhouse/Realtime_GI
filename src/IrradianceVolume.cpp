@@ -6,7 +6,7 @@
 
 IrradianceVolume::IrradianceVolume()
 	: _cubemapCamera(1.0f, 90.0f * (Pi / 180), 0.01f, 40.0f), // TODO: experiment with far clip plane
-	_dirLightCam(0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f), _weightSum(0.0f)
+	_dirLightCam(0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f), _weightSum(0.0f), _calculatedUnitsBetweenProbes(0.0f)
 
 {
 }
@@ -25,7 +25,7 @@ void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *con
 	_cubemapSizeTexcoord = 32;
 	//_unitsBetweenProbes = 0.8f; // auto compute this value baesd on texture resource limit 16384
 	//_unitsBetweenProbes = 50.0f; // auto compute this value baesd on texture resource limit 16384
-	_unitsBetweenProbes = 1.0f; // auto compute this value based on texture resource limit 16384
+	_refUnitsBetweenProbes = 1.0f; // auto compute this value based on texture resource limit 16384
 
 	// setup for proxy geometry
 	_proxyMeshVSConstants.Initialize(_device);
@@ -79,7 +79,7 @@ void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *con
 
 void IrradianceVolume::SetProbeDensity(float unitsBetweenProbes)
 {
-	_unitsBetweenProbes = unitsBetweenProbes;
+	_refUnitsBetweenProbes = unitsBetweenProbes;
 	setupResourcesForScene();
 }
 
@@ -94,7 +94,7 @@ void IrradianceVolume::setupResourcesForScene()
 	BBox &bbox = _scene->getSceneBoundingBox();
 	Float3 diff = Float3(bbox.Max) - Float3(bbox.Min);
 
-	Float3 numProbesAxis = diff * (float)(1.0 / _unitsBetweenProbes);
+	Float3 numProbesAxis = diff * (float)(1.0 / _refUnitsBetweenProbes);
 	//uint32 probeNumX = (uint32)ceilf(numProbesAxis.x) - 1;
 	//uint32 probeNumY = (uint32)ceilf(numProbesAxis.y) - 1;
 	//uint32 probeNumZ = (uint32)ceilf(numProbesAxis.z) - 1;
@@ -136,6 +136,7 @@ void IrradianceVolume::setupResourcesForScene()
 	float calcUnitDistY = diff.y / (numProbesY+1);
 	float calcUnitDistZ = diff.z / (numProbesZ+1);
 
+	_calculatedUnitsBetweenProbes = Max(Max(calcUnitDistX, calcUnitDistY), calcUnitDistZ); 
 	_positionList.clear();
 	_positionList.resize(_cubemapNum);
 	for (uint32 z = 0; z < numProbesZ; z++) {
@@ -526,7 +527,7 @@ void IrradianceVolume::Update()
 	for (uint32 i = 0; i < _cubemapNum; i++)
 	{
 		_probeLights[i].cPos = _positionList[i];
-		_probeLights[i].cRadius = _unitsBetweenProbes * 2.0f;
+		_probeLights[i].cRadius = _calculatedUnitsBetweenProbes * 2.0f;
 		_probeLights[i].cProbeIndex = i;
 		_probeLights[i].cIntensity = AppSettings::DiffuseGI_Intensity;
 	}

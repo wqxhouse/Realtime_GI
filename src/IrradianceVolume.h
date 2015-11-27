@@ -61,7 +61,8 @@ private:
 	uint32 _cubemapSizeTexcoord;
 	uint32 _cubemapNum;
 
-	float _unitsBetweenProbes;
+	float _refUnitsBetweenProbes;
+	float _calculatedUnitsBetweenProbes;
 
 	RenderTarget2D _albedoCubemapRT;
 	RenderTarget2D _normalCubemapRT;
