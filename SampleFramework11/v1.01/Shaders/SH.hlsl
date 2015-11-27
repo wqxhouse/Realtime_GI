@@ -6,6 +6,8 @@
 //  All code licensed under the MIT license
 //
 //=================================================================================================
+#ifndef SH_HLSL
+#define SH_HLSL
 
 #include <Constants.hlsl>
 
@@ -27,6 +29,11 @@ struct SH9
 struct SH9Color
 {
 	float3 c[9];
+};
+
+struct PaddedSH9Color
+{
+	float4 c[9];
 };
 
 typedef float4 H4;
@@ -413,6 +420,18 @@ float3 SHDotProduct(in SH9Color a, in SH9Color b)
 	return result;
 }
 
+float3 SHDotProduct(in SH9Color a, in PaddedSH9Color b)
+{
+	float3 result = 0.0f;
+
+	[unroll]
+	for(uint i = 0; i < 9; ++i)
+		result += a.c[i] * b.c[i].xyz;
+
+	return result;
+}
+
+
 //-------------------------------------------------------------------------------------------------
 // Projects a direction onto SH9 and dots it with another SH9 vector
 //-------------------------------------------------------------------------------------------------
@@ -439,6 +458,12 @@ float EvalSH9Cosine(in float3 dir, in SH9 sh)
 }
 
 float3 EvalSH9Cosine(in float3 dir, in SH9Color sh)
+{
+	SH9Color dirSH = ProjectOntoSH9Color(dir, 1.0f, CosineA0, CosineA1, CosineA2);
+	return SHDotProduct(dirSH, sh);
+}
+
+float3 EvalPaddedSH9Cosine(in float3 dir, in PaddedSH9Color sh)
 {
 	SH9Color dirSH = ProjectOntoSH9Color(dir, 1.0f, CosineA0, CosineA1, CosineA2);
 	return SHDotProduct(dirSH, sh);
@@ -993,3 +1018,5 @@ float3 HDotProduct(in H6Color a, in H6Color b)
 
 	return result;
 }
+
+#endif

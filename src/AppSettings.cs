@@ -143,11 +143,11 @@ public class Settings
         [HDR(true)]
         Color LightColor = new Color(20.0f, 16.0f, 10.0f);
 
-        [HelpText("Enables direct lighting")]
         bool EnableDirectLighting = true;
 
-        [HelpText("Enables ambient lighting from the environment")]
-        bool EnableAmbientLighting = true;
+        bool EnableIndirectDiffuseLighting = true;
+
+        bool EnableIndirectSpecularLighting = true;
 
         bool RenderBackground = true;
 
@@ -160,6 +160,13 @@ public class Settings
         bool EnableNormalMaps = true;
 
         bool EnableRealtimeCubemap = false;
+
+        [DisplayName("GI Intensity")]
+        [HelpText("The intensity of Indirect diffuse from GI")]
+        [MinValue(0.0f)]
+        [MaxValue(10.0f)]
+        [StepSize(0.1f)]
+        float DiffuseGI_Intensity = 1.0f;
 
         [MinValue(0.0f)]
         [MaxValue(1.0f)]

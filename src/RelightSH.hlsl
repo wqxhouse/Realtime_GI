@@ -142,11 +142,6 @@ void IntegrateCS(uint3 GroupID : SV_GroupID, uint3 DispatchThreadID : SV_Dispatc
 	}
 }
 
-struct PaddedSH9Color 
-{
-	float4 c[9];
-};
-
 RWStructuredBuffer<PackedSH9> InputBuffer : register(u0);
 RWStructuredBuffer<PaddedSH9Color> SH9OutputBuffer : register(u1);
 

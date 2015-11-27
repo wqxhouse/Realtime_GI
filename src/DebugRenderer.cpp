@@ -76,7 +76,7 @@ void DebugRenderer::QueueLightSphere(const Float3 &pos, const Float4 &color, flo
 
 void DebugRenderer::FlushDrawQueued()
 {
-	if (_cubeQueueWire.empty() && _cubeQueueTranslucent.empty() && _sphereQueue.empty())
+	if (_cubeQueueWire.empty() && _cubeQueueTranslucent.empty() && _sphereQueue.empty() && _spriteData.empty())
 	{
 		return;
 	}

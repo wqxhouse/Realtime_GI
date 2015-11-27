@@ -125,6 +125,9 @@ void IrradianceVolume::setupResourcesForScene()
 
 	createCubemapAtlasRTs();
 	createSHComputeBuffers();
+
+	_probeLights.clear();
+	_probeLights.resize(_cubemapNum);
 }
 
 void IrradianceVolume::createSHComputeBuffers()
@@ -470,7 +473,7 @@ void IrradianceVolume::renderRelightCubemap()
 	_debugRenderer->QueueSprite(_relightCubemapRT.SRView, Float3(0, 256, 0), Float4(1, 1, 1, 1));
 }
 
-void IrradianceVolume::MainRender()
+void IrradianceVolume::Update()
 {
 	// update light cam
 	// Shadow camera construction - transform scene aabb to light space aabb
@@ -488,6 +491,18 @@ void IrradianceVolume::MainRender()
 	shadowCamera.SetLookAt(lightCameraPos, lookAt, upDir);
 	_dirLightCam = shadowCamera;
 
+	// update probe lights
+	for (uint32 i = 0; i < _cubemapNum; i++)
+	{
+		_probeLights[i].cPos = _positionList[i];
+		_probeLights[i].cRadius = _unitsBetweenProbes * 2.0f;
+		_probeLights[i].cProbeIndex = i;
+		_probeLights[i].cIntensity = AppSettings::DiffuseGI_Intensity;
+	}
+}
+
+void IrradianceVolume::MainRender()
+{
 	renderProxyMeshShadowMap();
 	renderProxyMeshDirectLighting();
 	renderRelightCubemap();

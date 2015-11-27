@@ -6,12 +6,13 @@
 
 using namespace SampleFramework11;
 
+class IrradianceVolume;
 class Scene;
 class LightClusters
 {
 public:
 
-	void Initialize(ID3D11Device *device, ID3D11DeviceContext *context);
+	void Initialize(ID3D11Device *device, ID3D11DeviceContext *context, IrradianceVolume *irradianceVolume);
 	void SetScene(Scene *scene);
 	void AssignLightToClusters();
 	void UploadClustersData();
@@ -33,6 +34,9 @@ private:
 
 private:
 	void genClusterResources();
+	void assignPointLightToCluster(int index, bool isSHProbeLight, const Float3 &pos, float radius, 
+		uint16 *pointLightIndexInCluster, uint16 *shProbeLightIndexInCluster, 
+		uint16 *numPointLightsInCluster, uint16 *numSHProbeLightInCluster, Float3 &inv_scale);
 
 	struct ClusterData
 	{
@@ -67,4 +71,6 @@ private:
 	Scene *_scene;
 	Float3 _clusterScale;
 	Float3 _clusterBias;
+
+	IrradianceVolume *_irradianceVolume;
 };

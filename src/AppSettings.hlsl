@@ -23,13 +23,15 @@ cbuffer AppSettings : register(b7)
     float3 LightDirection;
     float3 LightColor;
     bool EnableDirectLighting;
-    bool EnableAmbientLighting;
+    bool EnableIndirectDiffuseLighting;
+    bool EnableIndirectSpecularLighting;
     bool RenderBackground;
     bool RenderSceneObjectBBox;
     bool RenderIrradianceVolumeProbes;
     bool EnableShadows;
     bool EnableNormalMaps;
     bool EnableRealtimeCubemap;
+    float DiffuseGI_Intensity;
     float NormalMapIntensity;
     float DiffuseIntensity;
     float Roughness;

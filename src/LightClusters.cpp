@@ -1,6 +1,7 @@
 #include "LightClusters.h"
 #include "Scene.h"
 #include "BoundUtils.h"
+#include "IrradianceVolume.h"
 
 LightClusters::~LightClusters()
 {
@@ -8,11 +9,12 @@ LightClusters::~LightClusters()
 	_lightIndices != nullptr ? free(_lightIndices) : 0;
 }
 
-void LightClusters::Initialize(ID3D11Device *device, ID3D11DeviceContext *context)
+void LightClusters::Initialize(ID3D11Device *device, ID3D11DeviceContext *context, IrradianceVolume *irradianceVolume)
 {
 	_context = context;
 	_device = device;
 	_scene = nullptr;
+	_irradianceVolume = irradianceVolume;
 
 	_referenceScale = 0.05f;
 	_referenceNumLightIndices = 32 * 8 * 32 * 128;
@@ -88,77 +90,59 @@ void LightClusters::SetScene(Scene *scene)
 	genClusterResources();
 }
 
-void LightClusters::AssignLightToClusters()
+void LightClusters::assignPointLightToCluster(int index, bool isSHProbeLight, const Float3 &pos, float radius, 
+	uint16 *pointLightIndexInCluster, uint16 *shProbeLightIndexInCluster, 
+	uint16 *numPointLightsInCluster, uint16 *numSHProbeLightInCluster, Float3 &inv_scale)
 {
-	if (_scene == nullptr) return;
+	Float3 posBoundCoord = (pos - _clustersWSAABB.Min);
 
-	int dim = _cx * _cy * _cz;
-
-	// Reset clusters and indices
-	memset(&_clusters[0], 0, sizeof(ClusterData) * dim);
-	memset(&_lightIndices[0], 0, sizeof(uint32) * _referenceNumLightIndices);
-	_numLightIndices = 0;
-
-	// PointLights - // [CZ][CY][CX][NUM_LIGHTS_PER_CLUSTER_MAX];
-	uint16 *pointLightIndexInCluster = (uint16 *)calloc(dim * _maxNumLightIndicesPerCluster, sizeof(uint16));
-	uint16 *numPointLightsInCluster = (uint16 *)calloc(dim, sizeof(uint16)); // [CZ][CY][CX]; // TODO: chekc uint16 is enough
-	//memset(pointLightIndexInCluster, 0, sizeof(pointLightIndexInCluster));
-	//memset(numPointLightsInCluster, 0, sizeof(numPointLightsInCluster));
-
-	Float3 inv_scale = Float3(1.0f) / _clusterScale;
-
-	// Point light assignment
-	for (int i = 0; i < _scene->getNumPointLights(); i++)
+	// Assert_(posBoundCoord.x >= 0.0f && posBoundCoord.y >= 0.0f && posBoundCoord.z >= 0.0f);
+	if (posBoundCoord.x < 0.0f && posBoundCoord.y < 0.0f && posBoundCoord.z < 0.0f)
 	{
-		PointLight *pl = &_scene->getPointLightPtr()[i];
+		return; // skip lights that are out of bounds
+	}
 
-		Float3 posBoundCoord = (pl->cPos - _clustersWSAABB.Min);
-	
-		// Assert_(posBoundCoord.x >= 0.0f && posBoundCoord.y >= 0.0f && posBoundCoord.z >= 0.0f);
-		if (posBoundCoord.x < 0.0f && posBoundCoord.y < 0.0f && posBoundCoord.z < 0.0f)
+	Float3 posClusterCoord = posBoundCoord * _clusterScale;
+	Float3 minPosClusterCoord = (posBoundCoord - radius) * _clusterScale;
+	Float3 maxPosClusterCoord = (posBoundCoord + radius) * _clusterScale;
+
+	Uint3 posClusterIntCoord = Uint3((uint32)floorf(posClusterCoord.x), (uint32)floorf(posClusterCoord.y), (uint32)floorf(posClusterCoord.z));
+
+	uint32 posXClusterIntCoordMin = (uint32)floorf(Max(minPosClusterCoord.x, 0.0f));
+	uint32 posXClusterIntCoordMax = (uint32)ceilf(Min(maxPosClusterCoord.x, (float)_cx));
+	uint32 posYClusterIntCoordMin = (uint32)floorf(Max(minPosClusterCoord.y, 0.0f));
+	uint32 posYClusterIntCoordMax = (uint32)ceilf(Min(maxPosClusterCoord.y, (float)_cy));
+	uint32 posZClusterIntCoordMin = (uint32)floorf(Max(minPosClusterCoord.z, 0.0f));
+	uint32 posZClusterIntCoordMax = (uint32)ceilf(Min(maxPosClusterCoord.z, (float)_cz));
+
+	Uint3 minPosClusterIntCoord = Uint3(posXClusterIntCoordMin, posYClusterIntCoordMin, posZClusterIntCoordMin);
+	Uint3 maxPosClusterIntCoord = Uint3(posXClusterIntCoordMax, posYClusterIntCoordMax, posZClusterIntCoordMax);
+
+	const float radius_sqr = radius * radius;
+
+	for (uint32 z = minPosClusterIntCoord.z; z < maxPosClusterIntCoord.z; z++)
+	{
+		float dz = (posClusterIntCoord.z == z) ? 0.0f : _clustersWSAABB.Min.z + (posClusterIntCoord.z < z ? z : z + 1) * inv_scale.z - pos.z;
+		dz *= dz;
+
+		for (uint32 y = minPosClusterIntCoord.y; y < maxPosClusterIntCoord.y; y++)
 		{
-			continue; // skip lights that are out of bounds
-		}
+			float dy = (posClusterIntCoord.y == y) ? 0.0f : _clustersWSAABB.Min.y + (posClusterIntCoord.y < y ? y : y + 1) * inv_scale.y - pos.y;
+			dy *= dy;
+			dy += dz;
 
-		Float3 posClusterCoord = posBoundCoord * _clusterScale;
-		Float3 minPosClusterCoord = (posBoundCoord - pl->cRadius) * _clusterScale;
-		Float3 maxPosClusterCoord = (posBoundCoord + pl->cRadius) * _clusterScale;
-		
-		Uint3 posClusterIntCoord = Uint3((uint32)floorf(posClusterCoord.x), (uint32)floorf(posClusterCoord.y), (uint32)floorf(posClusterCoord.z));
-
-		uint32 posXClusterIntCoordMin = (uint32)floorf(Max(minPosClusterCoord.x, 0.0f));
-		uint32 posXClusterIntCoordMax = (uint32)ceilf(Min(maxPosClusterCoord.x, (float)_cx));
-		uint32 posYClusterIntCoordMin = (uint32)floorf(Max(minPosClusterCoord.y, 0.0f));
-		uint32 posYClusterIntCoordMax = (uint32)ceilf(Min(maxPosClusterCoord.y, (float)_cy));
-		uint32 posZClusterIntCoordMin = (uint32)floorf(Max(minPosClusterCoord.z, 0.0f));
-		uint32 posZClusterIntCoordMax = (uint32)ceilf(Min(maxPosClusterCoord.z, (float)_cz));
-
-		Uint3 minPosClusterIntCoord = Uint3(posXClusterIntCoordMin, posYClusterIntCoordMin, posZClusterIntCoordMin);
-		Uint3 maxPosClusterIntCoord = Uint3(posXClusterIntCoordMax, posYClusterIntCoordMax, posZClusterIntCoordMax);
-
-		const float radius_sqr = pl->cRadius * pl->cRadius;
-
-		for (uint32 z = minPosClusterIntCoord.z; z < maxPosClusterIntCoord.z; z++)
-		{
-			float dz = (posClusterIntCoord.z == z) ? 0.0f : _clustersWSAABB.Min.z + (posClusterIntCoord.z < z ? z : z + 1) * inv_scale.z - pl->cPos.z;
-			dz *= dz;
-
-			for (uint32 y = minPosClusterIntCoord.y; y < maxPosClusterIntCoord.y; y++)
+			for (uint32 x = minPosClusterIntCoord.x; x < maxPosClusterIntCoord.x; x++)
 			{
-				float dy = (posClusterIntCoord.y == y) ? 0.0f : _clustersWSAABB.Min.y + (posClusterIntCoord.y < y ? y : y + 1) * inv_scale.y - pl->cPos.y;
-				dy *= dy;
-				dy += dz;
+				float dx = (posClusterIntCoord.x == x) ? 0.0f : _clustersWSAABB.Min.x + (posClusterIntCoord.x < x ? x : x + 1) * inv_scale.x - pos.x;
+				dx *= dx;
+				dx += dy;
 
-				for (uint32 x = minPosClusterIntCoord.x; x < maxPosClusterIntCoord.x; x++)
+				if (dx < radius_sqr)
 				{
-					float dx = (posClusterIntCoord.x == x) ? 0.0f : _clustersWSAABB.Min.x + (posClusterIntCoord.x < x ? x : x + 1) * inv_scale.x - pl->cPos.x;
-					dx *= dx;
-					dx += dy;
-
-					if (dx < radius_sqr)
+					int clusterIndex = z * _cy * _cx + y * _cx + x;
+					
+					if (!isSHProbeLight)
 					{
-						int clusterIndex = z * _cy * _cx + y * _cx + x;
-
 						// Assert_(numPointLightsInCluster[z][y][x] < NUM_LIGHTS_PER_CLUSTER_MAX);
 						// if (numPointLightsInCluster[z][y][x] >= _maxNumLightIndicesPerCluster)
 						if (numPointLightsInCluster[clusterIndex] >= _maxNumLightIndicesPerCluster)
@@ -182,16 +166,82 @@ void LightClusters::AssignLightToClusters()
 
 						int numPt = numPointLightsInCluster[clusterIndex]++;
 
-						int pointLightIndexInClusterIndex = 
+						int pointLightIndexInClusterIndex =
 							z * _cy * _cx * _maxNumLightIndicesPerCluster +
-							y * _cx * _maxNumLightIndicesPerCluster + 
+							y * _cx * _maxNumLightIndicesPerCluster +
 							x * _maxNumLightIndicesPerCluster + numPt;
 						// pointLightIndexInCluster[z][y][x][numPointLightsInCluster[z][y][x]++] = i;
-						pointLightIndexInCluster[pointLightIndexInClusterIndex] = i;
+						pointLightIndexInCluster[pointLightIndexInClusterIndex] = index;
+					}
+					else
+					{
+						// Assert_(numPointLightsInCluster[z][y][x] < NUM_LIGHTS_PER_CLUSTER_MAX);
+						// if (numPointLightsInCluster[z][y][x] >= _maxNumLightIndicesPerCluster)
+						if (numSHProbeLightInCluster[clusterIndex] >= _maxNumLightIndicesPerCluster)
+						{
+							printf("numPointLightInCluster reached maximum\n");
+							continue;
+						}
+
+						int curPtCount = _clusters[clusterIndex].counts >> 16;
+						//int curPtCount = _clusters[z][y][x].counts >> 16;
+						curPtCount++;
+
+						// clear original 
+						//_clusters[z][y][x].counts &= 0xFFFF;
+						//_clusters[z][y][x].counts |= (curPtCount << 16);
+
+						_clusters[clusterIndex].counts &= 0xFFFF;
+						_clusters[clusterIndex].counts |= (curPtCount << 16);
+
+						int numPt = numSHProbeLightInCluster[clusterIndex]++;
+
+						int shProbleLightIndexInClusterIndex =
+							z * _cy * _cx * _maxNumLightIndicesPerCluster +
+							y * _cx * _maxNumLightIndicesPerCluster +
+							x * _maxNumLightIndicesPerCluster + numPt;
+						// pointLightIndexInCluster[z][y][x][numPointLightsInCluster[z][y][x]++] = i;
+						shProbeLightIndexInCluster[shProbleLightIndexInClusterIndex] = index;
 					}
 				}
 			}
 		}
+	}
+}
+
+void LightClusters::AssignLightToClusters()
+{
+	if (_scene == nullptr) return;
+
+	int dim = _cx * _cy * _cz;
+
+	// Reset clusters and indices
+	memset(&_clusters[0], 0, sizeof(ClusterData) * dim);
+	memset(&_lightIndices[0], 0, sizeof(uint32) * _referenceNumLightIndices);
+	_numLightIndices = 0;
+
+	// PointLights - // [CZ][CY][CX][NUM_LIGHTS_PER_CLUSTER_MAX];
+	uint16 *pointLightIndexInCluster = (uint16 *)calloc(dim * _maxNumLightIndicesPerCluster, sizeof(uint16));
+	uint16 *shProbeLightIndexInCluster = (uint16 *)calloc(dim * _maxNumLightIndicesPerCluster, sizeof(uint16)); // TODO: make the size right
+	uint16 *numPointLightsInCluster = (uint16 *)calloc(dim, sizeof(uint16)); // [CZ][CY][CX]; // TODO: check uint16 is enough
+	uint16 *numShProbeLightsInCluster = (uint16 *)calloc(dim, sizeof(uint16)); // [CZ][CY][CX]; // TODO: check uint16 is enough
+	//memset(pointLightIndexInCluster, 0, sizeof(pointLightIndexInCluster));
+	//memset(numPointLightsInCluster, 0, sizeof(numPointLightsInCluster));
+
+	Float3 inv_scale = Float3(1.0f) / _clusterScale;
+
+	// Point light assignment
+	for (int i = 0; i < _scene->getNumPointLights(); i++)
+	{
+		PointLight *pl = &_scene->getPointLightPtr()[i];
+		assignPointLightToCluster(i, false, pl->cPos, pl->cRadius, pointLightIndexInCluster, shProbeLightIndexInCluster, numPointLightsInCluster, numShProbeLightsInCluster, inv_scale);
+	}
+
+	// sh probe light assignment - same as point light
+	for (size_t i = 0; i < _irradianceVolume->getSHProbeLights().size(); i++)
+	{
+		const SHProbeLight *sl = &_irradianceVolume->getSHProbeLights()[i];
+		assignPointLightToCluster((int)i, true, sl->cPos, sl->cRadius, pointLightIndexInCluster, shProbeLightIndexInCluster, numPointLightsInCluster, numShProbeLightsInCluster, inv_scale);
 	}
 
 	int curLightIndicesArrIndex = 0;
@@ -218,6 +268,18 @@ void LightClusters::AssignLightToClusters()
 					// _lightIndices[curLightIndicesArrIndex++] = pointLightIndexInCluster[z][y][x][k];
 					_lightIndices[curLightIndicesArrIndex++] = pointLightIndexInCluster[pointLightIndexInClusterIndex];
 				}
+
+				// probe light
+				for (int k = 0; k < numShProbeLightsInCluster[clusterIndex]; k++)
+				{
+					int shProbeLightIndexInClusterIndex = z * _cy * _cx * _maxNumLightIndicesPerCluster
+						+ y * _cx * _maxNumLightIndicesPerCluster
+						+ x * _maxNumLightIndicesPerCluster
+						+ k;
+
+					// _lightIndices[curLightIndicesArrIndex++] = pointLightIndexInCluster[z][y][x][k];
+					_lightIndices[curLightIndicesArrIndex++] = shProbeLightIndexInCluster[shProbeLightIndexInClusterIndex];
+				}
 			}
 		}
 	}
@@ -225,7 +287,9 @@ void LightClusters::AssignLightToClusters()
 	_numLightIndices = curLightIndicesArrIndex;
 
 	free(numPointLightsInCluster);
+	free(numShProbeLightsInCluster);
 	free(pointLightIndexInCluster);
+	free(shProbeLightIndexInCluster);
 }
 
 void LightClusters::UploadClustersData()

@@ -6,6 +6,7 @@
 #include <Graphics\\DeviceStates.h>
 #include <Graphics\\Camera.h>
 
+#include "Light.h"
 #include "LightClusters.h"
 
 using namespace SampleFramework11;
@@ -26,9 +27,16 @@ public:
 	void RenderSceneAtlasGBuffer();
 	void RenderSceneAtlasProxyMeshTexcoord();
 
+	void Update();
 	void MainRender();
 
+	const std::vector<SHProbeLight> &getSHProbeLights() { return _probeLights; }
+
 	const std::vector<Float3> &getPositionList() { return _positionList; }
+
+	StructuredBuffer *getRelightSHStructuredBufferPtr() { return &_relightSHBuffer; }
+
+	static const int MAX_PROBE_NUM = 16384 / 32; // 16384, texture max height / texcoord height per probe
 
 private:
 	void setupResourcesForScene();
@@ -40,8 +48,6 @@ private:
 	{
 		Float4x4 WorldViewProjection;
 	};
-
-	static const int MAX_PROBE_NUM = 16384 / 32; // 16384, texture max height / texcoord height per probe
 
 	ConstantBuffer<ProxyMeshVSContants> _proxyMeshVSConstants;
 	VertexShaderPtr _proxyMeshVS;
@@ -154,4 +160,6 @@ private:
 
 	StructuredBuffer _relightIntegrationBuffer;
 	StructuredBuffer _relightSHBuffer;
+
+	std::vector<SHProbeLight> _probeLights;
 };

@@ -144,6 +144,7 @@ protected:
 	ConstantBuffer<DeferredPassConstants> _deferredPassConstants;
 
 	StructuredBuffer _pointLightBuffer;
+	StructuredBuffer _shProbeLightBuffer;
 
 	SamplerStates _samplerStates;
 
@@ -173,6 +174,7 @@ protected:
 	void AssignLightAndUploadClusters();
 
 	void ApplyMomentum(float &prevVal, float &val, float deltaTime);
+	void QueueDebugCommands();
 
 	CreateCubemap _cubemapGenerator;
 	DebugRenderer _debugRenderer;

@@ -3,6 +3,8 @@
 
 #include "Surface.hlsli"
 #include "BRDF.hlsli"
+#include <SH.hlsl>
+
 
 struct PointLight
 {
@@ -11,6 +13,7 @@ struct PointLight
 	float3 color;
 	float padding;
 };
+
 
 float PointLightAttenuation(float radius, float dist)
 {

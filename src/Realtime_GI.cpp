@@ -104,7 +104,7 @@ void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
 
 	scene->setProxySceneObject(ModelPaths[1], 0.1f, Float3(0, 0, 0), Quaternion());
 	// scene->fillPointLightsUniformGrid(50.0f, 100.0f);
-	scene->fillPointLightsUniformGrid(1.3f, 3.0f, Float3(0, 0, 0));
+	// scene->fillPointLightsUniformGrid(1.3f, 3.0f, Float3(0, 0, 0));
 
 	_numScenes++;
 	/// Scene 2 /////////////////////////////////////////////////////////////
@@ -187,7 +187,7 @@ void Realtime_GI::Initialize()
 	CreateLightBuffers();
 	CreateQuadBuffers();
 
-	_lightClusters.Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext());
+	_lightClusters.Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext(), &_irradianceVolume);
 	_lightClusters.SetScene(&_scenes[AppSettings::CurrentScene]);
 
 	_irradianceVolume.Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext(), 
@@ -290,6 +290,7 @@ void Realtime_GI::CreateQuadBuffers()
 void Realtime_GI::CreateLightBuffers()
 {
 	_pointLightBuffer.Initialize(_deviceManager.Device(), sizeof(PointLight), Scene::MAX_SCENE_LIGHTS, true);
+	_shProbeLightBuffer.Initialize(_deviceManager.Device(), sizeof(SHProbeLight), IrradianceVolume::MAX_PROBE_NUM, true);
 }
 
 void Realtime_GI::ApplyMomentum(float &prevVal, float &val, float deltaTime)
@@ -301,6 +302,44 @@ void Realtime_GI::ApplyMomentum(float &prevVal, float &val, float deltaTime)
 		blendedValue = Lerp(val, prevVal, pow(0.8f, deltaTime * 60.0f));
 	prevVal = blendedValue;
 	val = blendedValue;
+}
+
+void Realtime_GI::QueueDebugCommands()
+{
+	// Debug renders
+	if (AppSettings::RenderSceneObjectBBox)
+	{
+		for (int i = 0; i < _scenes[AppSettings::CurrentScene].getNumStaticOpaqueObjects(); i++)
+		{
+			BBox &b = _scenes[AppSettings::CurrentScene].getStaticObjectBBoxPtr()[i];
+			_debugRenderer.QueueBBoxTranslucent(b, Float4(0.7f, 0.3f, 0.3f, 0.1f));
+		}
+
+		for (int i = 0; i < _scenes[AppSettings::CurrentScene].getNumDynamicOpaueObjects(); i++)
+		{
+			BBox &b = _scenes[AppSettings::CurrentScene].getDynamicObjectBBoxPtr()[i];
+			_debugRenderer.QueueBBoxTranslucent(b, Float4(0.3f, 0.7f, 0.3f, 0.1f));
+		}
+
+		_debugRenderer.QueueBBoxWire(_scenes[AppSettings::CurrentScene].getSceneBoundingBox(), Float4(0.1f, 0.3f, 0.9f, 1.0f));
+	}
+
+	if (AppSettings::RenderIrradianceVolumeProbes)
+	{
+		const std::vector<Float3> posList = _irradianceVolume.getPositionList();
+		for (size_t i = 0; i < posList.size(); i++)
+		{
+			const Float3 &pos = posList[i];
+			_debugRenderer.QueueLightSphere(pos, Float4(1.0f, 1.0f, 1.0f, 0.3f), 0.2f);
+		}
+	}
+
+	for (int i = 0; i < _scenes[AppSettings::CurrentScene].getNumPointLights(); i++)
+	{
+		Float3 &pos = _scenes[AppSettings::CurrentScene].getPointLightPtr()[i].cPos;
+		_debugRenderer.QueueLightSphere(pos, Float4(1.0f, 1.0f, 1.0f, 0.2f), 0.2f);
+
+	}
 }
 
 void Realtime_GI::Update(const Timer& timer)
@@ -419,40 +458,9 @@ void Realtime_GI::Update(const Timer& timer)
 		Float4x4::ScaleMatrix(_scenes[AppSettings::CurrentScene].getSceneScale()) *
 		Float4x4::TranslationMatrix(_scenes[AppSettings::CurrentScene].getSceneTranslation());
 
+	_irradianceVolume.Update();
 
-	if (AppSettings::RenderSceneObjectBBox)
-	{
-		for (int i = 0; i < _scenes[AppSettings::CurrentScene].getNumStaticOpaqueObjects(); i++)
-		{
-			BBox &b = _scenes[AppSettings::CurrentScene].getStaticObjectBBoxPtr()[i];
-			_debugRenderer.QueueBBoxTranslucent(b, Float4(0.7f, 0.3f, 0.3f, 0.1f));
-		}
-
-		for (int i = 0; i < _scenes[AppSettings::CurrentScene].getNumDynamicOpaueObjects(); i++)
-		{
-			BBox &b = _scenes[AppSettings::CurrentScene].getDynamicObjectBBoxPtr()[i];
-			_debugRenderer.QueueBBoxTranslucent(b, Float4(0.3f, 0.7f, 0.3f, 0.1f));
-		}
-
-		_debugRenderer.QueueBBoxWire(_scenes[AppSettings::CurrentScene].getSceneBoundingBox(), Float4(0.1f, 0.3f, 0.9f, 1.0f));
-	}
-
-	if (AppSettings::RenderIrradianceVolumeProbes)
-	{
-		const std::vector<Float3> posList = _irradianceVolume.getPositionList();
-		for (size_t i = 0; i < posList.size(); i++)
-		{
-			const Float3 &pos = posList[i];
-			_debugRenderer.QueueLightSphere(pos, Float4(1.0f, 1.0f, 1.0f, 0.3f), 0.2f);
-		}
-	}
-
-	for (int i = 0; i < _scenes[AppSettings::CurrentScene].getNumPointLights(); i++)
-	{
-		Float3 &pos = _scenes[AppSettings::CurrentScene].getPointLightPtr()[i].cPos;
-		_debugRenderer.QueueLightSphere(pos, Float4(1.0f, 1.0f, 1.0f, 0.2f), 0.2f);
-
-	}
+	QueueDebugCommands();
 }
 
 void Realtime_GI::RenderAA()
@@ -722,6 +730,8 @@ void Realtime_GI::RenderLightsDeferred()
 		_meshRenderer.GetSpecularLookupTexturePtr(),
 		_lightClusters.getLightIndicesListSRV(),
 		_lightClusters.getClusterTexSRV(),
+		_shProbeLightBuffer.SRView,
+		_irradianceVolume.getRelightSHStructuredBufferPtr()->SRView
 	};
 
 	ID3D11SamplerState* sampStates[2] = {
@@ -920,6 +930,8 @@ void Realtime_GI::RenderHUD()
 void Realtime_GI::UploadLights()
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
+
+	// pointlights
 	_deviceManager.ImmediateContext()->Map(_pointLightBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	PointLight *pointLightGPUBufferPtr = static_cast<PointLight *>(mappedResource.pData);
 
@@ -927,6 +939,13 @@ void Realtime_GI::UploadLights()
 	PointLight *pointLightPtr = curScene->getPointLightPtr();
 	memcpy(pointLightGPUBufferPtr, pointLightPtr, sizeof(PointLight) * curScene->getNumPointLights());
 	_deviceManager.ImmediateContext()->Unmap(_pointLightBuffer.Buffer, 0);
+
+	// sh probe lights
+	_deviceManager.ImmediateContext()->Map(_shProbeLightBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	SHProbeLight *shProbeLightGPUBufferPtr = static_cast<SHProbeLight *>(mappedResource.pData);
+	const std::vector<SHProbeLight> &shProbeLights = _irradianceVolume.getSHProbeLights();
+	memcpy(shProbeLightGPUBufferPtr, &shProbeLights[0], sizeof(SHProbeLight) * shProbeLights.size());
+	_deviceManager.ImmediateContext()->Unmap(_shProbeLightBuffer.Buffer, 0);
 }
 
 void Realtime_GI::AssignLightAndUploadClusters()
