@@ -55,7 +55,9 @@ struct PSInput
 VSOutput VS(in VSInput input)
 {
 	VSOutput output;
-    output.PositionCS = float4(input.UV * 2.0 - 1.0, 0.0, 1.0); 
+	float2 uuvv = input.UV;
+	uuvv.y = 1 - uuvv.y;
+    output.PositionCS = float4(uuvv * 2.0 - 1.0, 0.0, 1.0); 
 	output.PosWS = mul(float4(input.PositionOS, 1.0), ModelToWorld).xyz;
 	output.NormalWS = mul(input.NormalOS, (float3x3)ModelToWorld);
     return output;

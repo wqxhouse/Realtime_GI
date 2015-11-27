@@ -218,7 +218,7 @@ void IrradianceVolume::RenderSceneAtlasGBuffer()
 		for (int cubeboxFaceIndex = 0; cubeboxFaceIndex < 6; cubeboxFaceIndex++)
 		{
 			_cubemapCamera.SetLookAt(eyePos,
-				_CubemapCameraStruct[cubeboxFaceIndex].LookAt,
+				_CubemapCameraStruct[cubeboxFaceIndex].LookAt + eyePos,
 				_CubemapCameraStruct[cubeboxFaceIndex].Up);
 
 			D3D11_VIEWPORT viewport;
@@ -266,7 +266,7 @@ void IrradianceVolume::RenderSceneAtlasProxyMeshTexcoord()
 		{
 			Float3 &eyePos = _positionList[currCubemap];
 			_cubemapCamera.SetLookAt(eyePos,
-				_CubemapCameraStruct[cubeboxFaceIndex].LookAt,
+				_CubemapCameraStruct[cubeboxFaceIndex].LookAt + eyePos,
 				_CubemapCameraStruct[cubeboxFaceIndex].Up);
 
 			_proxyMeshVSConstants.Data.WorldViewProjection =
@@ -323,7 +323,8 @@ void IrradianceVolume::renderProxyMeshShadowMap()
 	PIXEvent event(L"RenderProxyMeshShadowMap");
 
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; // keep blue channel for sky light
-	_context->RSSetState(_rasterizerStates.BackFaceCull());
+	//_context->RSSetState(_rasterizerStates.BackFaceCull());
+	_context->RSSetState(_rasterizerStates.NoCull());
 	_context->OMSetDepthStencilState(_depthStencilStates.DepthWriteEnabled(), 0);
 	ID3D11RenderTargetView* renderTargets[1] = { nullptr };
 	_context->OMSetRenderTargets(0, renderTargets, _dirLightProxyMeshShadowMapBuffer.DSView);
@@ -381,8 +382,8 @@ void IrradianceVolume::renderProxyMeshDirectLighting()
 	_context->RSSetViewports(1, &viewport);
 
 	// set constant buffer
-	_directDiffuseConstants.Data.ModelToWorld = *_scene->getProxySceneObjectPtr()->base;
-	_directDiffuseConstants.Data.WorldToLightProjection = _dirLightCam.ViewProjectionMatrix();
+	_directDiffuseConstants.Data.ModelToWorld = Float4x4::Transpose(*_scene->getProxySceneObjectPtr()->base);
+	_directDiffuseConstants.Data.WorldToLightProjection = Float4x4::Transpose(_dirLightCam.ViewProjectionMatrix());
 	_directDiffuseConstants.Data.ClusterBias = _clusters->getClusterBias();
 	_directDiffuseConstants.Data.ClusterScale = _clusters->getClusterScale();
 	_directDiffuseConstants.ApplyChanges(_context);
