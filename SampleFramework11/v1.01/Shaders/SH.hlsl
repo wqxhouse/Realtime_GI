@@ -54,9 +54,10 @@ struct H6Color
 };
 
 // Cosine kernel for SH
-static const float CosineA0 = 1.0f;
-static const float CosineA1 = 2.0f / 3.0f;
-static const float CosineA2 = 0.25f;
+// Modified according to http://www.gamedev.net/topic/671562-spherical-harmonics-cubemap/
+static const float CosineA0 = 1.0f * Pi;
+static const float CosineA1 = 2.0f * Pi / 3.0f;
+static const float CosineA2 = 0.25f * Pi;
 
 // == SH4 =========================================================================================
 
