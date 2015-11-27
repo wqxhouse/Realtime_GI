@@ -6,7 +6,7 @@
 struct SHProbeLight
 {
 	float3 posWS;
-	float probeIndex;
+	uint probeIndex;
 
 	float radius;
 	float intensity;
