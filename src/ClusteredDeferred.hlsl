@@ -6,6 +6,8 @@
 #include "LightCommon.hlsli"
 #include <SH.hlsl>
 
+#include "SHProbeLight.hlsli"
+
 static const uint NumCascades = 4;
 
 ////////////////////////////////////////////////////////////
@@ -55,8 +57,12 @@ Texture2D<float2> SpecularCubemapLookup : register(t7);
 StructuredBuffer<uint> LightIndices : register(t8);
 Texture3D<ClusterData> Clusters : register(t9);
 
+StructuredBuffer<SHProbeLight> SHProbeLights: register(t10);
+// RWStructuredBuffer<SH9Color> SHProbeCoefficients: register(u0);
+
 SamplerState EVSMSampler : register(s0);
 SamplerState LinearSampler : register(s1);
+
 
 #include "Shadow.hlsli"
 
@@ -111,6 +117,15 @@ float4 ClusteredDeferredPS(in PSInput input) : SV_Target0
 
 	float3 lighting = float3(0.0f, 0.0f, 0.0f);
 
+	// Load cluster data	
+	uint4 cluster_coord = uint4(surface.posWS * ClusterScale + ClusterBias, 0);
+	ClusterData data = Clusters.Load(cluster_coord);
+
+	uint offset = data.offset;
+	uint counts = data.counts;
+	uint pointLightCount = counts & 0xFFFF;
+	uint shProbeLightCount = counts >> 16;
+
 	if(EnableDirectLighting)
 	{
 		// Do Sun lighting
@@ -120,15 +135,6 @@ float4 ClusteredDeferredPS(in PSInput input) : SV_Target0
 		float sunShadow = EnableShadows ? ShadowVisibility(surface.posWS, surface.depthVS) : 1.0f;
 		lighting *= sunShadow;
 
-		// Load cluster data	
-		uint4 cluster_coord = int4(surface.posWS * ClusterScale + ClusterBias, 0);
-		ClusterData data = Clusters.Load(cluster_coord);
-
-		uint offset = data.offset;
-		uint counts = data.counts;
-		uint pointLightCount = counts >> 16;
-		uint spotLightCount  = counts & 0xFFFF;
-
 		// Point light
 		for (uint i = 0; i < pointLightCount; i++)
 		{
@@ -136,9 +142,37 @@ float4 ClusteredDeferredPS(in PSInput input) : SV_Target0
 			PointLight pl = PointLights[lightIndex];
 			lighting += CalcPointLight(surface, pl, CameraPosWS);
 		}
+
+		//float scaleCount = pointLightCount * (1.0f / 73.0f);
+		//lighting = float3(scaleCount, scaleCount, scaleCount);
+
+		// debug
+		//for (uint j = 0; j < 16; j++)
+		//{
+		//	PointLight pl = PointLights[j];
+		//	lighting += CalcPointLight(surface, pl, CameraPosWS);
+		//}
+		// lighting = float3(1, 1, 1);
+		//lighting *= 100;
+
 	}
 
-	if(EnableAmbientLighting)
+	if (EnableIndirectDiffuseLighting)
+	{
+		float4 probeLighting = float4(0, 0, 0, 0);
+		uint shProbeLightOffset = offset + pointLightCount;
+		for (uint i = 0; i < shProbeLightCount; i++)
+		{
+			uint shLightIndex = LightIndices[shProbeLightOffset + i];
+			SHProbeLight sl = SHProbeLights[shLightIndex];
+			probeLighting += CalcSHProbeLight(surface, sl, CameraPosWS);
+		}
+
+		probeLighting *= (1.0 / max(probeLighting.w, 1.0));
+		lighting += probeLighting.xyz;
+	}
+
+	if (EnableIndirectSpecularLighting)
 	{
 		float3 viewWS = normalize(CameraPosWS - surface.posWS); // TODO: this can be reused in several places
 		

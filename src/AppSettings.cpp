@@ -73,13 +73,16 @@ namespace AppSettings
     DirectionSetting LightDirection;
     ColorSetting LightColor;
     BoolSetting EnableDirectLighting;
-    BoolSetting EnableAmbientLighting;
+    BoolSetting EnableIndirectDiffuseLighting;
+    BoolSetting EnableIndirectSpecularLighting;
     BoolSetting RenderBackground;
     BoolSetting RenderSceneObjectBBox;
     BoolSetting RenderIrradianceVolumeProbes;
     BoolSetting EnableShadows;
     BoolSetting EnableNormalMaps;
     BoolSetting EnableRealtimeCubemap;
+    IntSetting DiffuseGIBounces;
+    FloatSetting DiffuseGI_Intensity;
     FloatSetting NormalMapIntensity;
     FloatSetting DiffuseIntensity;
     FloatSetting Roughness;
@@ -172,11 +175,14 @@ namespace AppSettings
         LightColor.Initialize(tweakBar, "LightColor", "Scene Controls", "Light Color", "The color of the light", Float3(20.0000f, 16.0000f, 10.0000f), true, 0.0000f, 20.0000f, 0.1000f, ColorUnit::None);
         Settings.AddSetting(&LightColor);
 
-        EnableDirectLighting.Initialize(tweakBar, "EnableDirectLighting", "Scene Controls", "Enable Direct Lighting", "Enables direct lighting", true);
+        EnableDirectLighting.Initialize(tweakBar, "EnableDirectLighting", "Scene Controls", "Enable Direct Lighting", "", true);
         Settings.AddSetting(&EnableDirectLighting);
 
-        EnableAmbientLighting.Initialize(tweakBar, "EnableAmbientLighting", "Scene Controls", "Enable Ambient Lighting", "Enables ambient lighting from the environment", true);
-        Settings.AddSetting(&EnableAmbientLighting);
+        EnableIndirectDiffuseLighting.Initialize(tweakBar, "EnableIndirectDiffuseLighting", "Scene Controls", "Enable Indirect Diffuse Lighting", "", true);
+        Settings.AddSetting(&EnableIndirectDiffuseLighting);
+
+        EnableIndirectSpecularLighting.Initialize(tweakBar, "EnableIndirectSpecularLighting", "Scene Controls", "Enable Indirect Specular Lighting", "", true);
+        Settings.AddSetting(&EnableIndirectSpecularLighting);
 
         RenderBackground.Initialize(tweakBar, "RenderBackground", "Scene Controls", "Render Background", "", true);
         Settings.AddSetting(&RenderBackground);
@@ -195,6 +201,12 @@ namespace AppSettings
 
         EnableRealtimeCubemap.Initialize(tweakBar, "EnableRealtimeCubemap", "Scene Controls", "Enable Realtime Cubemap", "", false);
         Settings.AddSetting(&EnableRealtimeCubemap);
+
+        DiffuseGIBounces.Initialize(tweakBar, "DiffuseGIBounces", "Scene Controls", "Diffuse GI Bounces", "The bounces of Indirect diffuse from GI", 1, 1, 10);
+        Settings.AddSetting(&DiffuseGIBounces);
+
+        DiffuseGI_Intensity.Initialize(tweakBar, "DiffuseGI_Intensity", "Scene Controls", "GI Intensity", "The intensity of Indirect diffuse from GI", 1.0000f, 0.0000f, 10.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&DiffuseGI_Intensity);
 
         NormalMapIntensity.Initialize(tweakBar, "NormalMapIntensity", "Scene Controls", "Normal Map Intensity", "", 1.0000f, 0.0000f, 1.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&NormalMapIntensity);
@@ -273,13 +285,16 @@ namespace AppSettings
         CBuffer.Data.LightDirection = LightDirection;
         CBuffer.Data.LightColor = LightColor;
         CBuffer.Data.EnableDirectLighting = EnableDirectLighting;
-        CBuffer.Data.EnableAmbientLighting = EnableAmbientLighting;
+        CBuffer.Data.EnableIndirectDiffuseLighting = EnableIndirectDiffuseLighting;
+        CBuffer.Data.EnableIndirectSpecularLighting = EnableIndirectSpecularLighting;
         CBuffer.Data.RenderBackground = RenderBackground;
         CBuffer.Data.RenderSceneObjectBBox = RenderSceneObjectBBox;
         CBuffer.Data.RenderIrradianceVolumeProbes = RenderIrradianceVolumeProbes;
         CBuffer.Data.EnableShadows = EnableShadows;
         CBuffer.Data.EnableNormalMaps = EnableNormalMaps;
         CBuffer.Data.EnableRealtimeCubemap = EnableRealtimeCubemap;
+        CBuffer.Data.DiffuseGIBounces = DiffuseGIBounces;
+        CBuffer.Data.DiffuseGI_Intensity = DiffuseGI_Intensity;
         CBuffer.Data.NormalMapIntensity = NormalMapIntensity;
         CBuffer.Data.DiffuseIntensity = DiffuseIntensity;
         CBuffer.Data.Roughness = Roughness;

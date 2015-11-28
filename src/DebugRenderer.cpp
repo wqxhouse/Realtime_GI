@@ -58,14 +58,14 @@ void DebugRenderer::QueueBBoxTranslucent(const BBox &bbox, const Float4 &color)
 	_cubeQueueTranslucent.push_back(std::make_tuple(mat, color));
 }
 
-void DebugRenderer::QueueSprite(const Float3 &pos, const Float4 &color)
+void DebugRenderer::QueueSprite(ID3D11ShaderResourceView *texture, const Float3 &pos, const Float4 &color)
 {
-	// TODO: finish this
-	/*SpriteRenderer::SpriteDrawData drawData;
+	if (!texture) return;
+
+	SpriteRenderer::SpriteDrawData drawData;
 	drawData.Transform = Float4x4::TranslationMatrix(pos);
 	drawData.Color = color;
-	drawData.DrawRect =
-	_spriteData.push_back()*/
+	_spriteData.push_back(std::make_tuple(texture, drawData));
 }
 
 void DebugRenderer::QueueLightSphere(const Float3 &pos, const Float4 &color, float radius)
@@ -76,7 +76,7 @@ void DebugRenderer::QueueLightSphere(const Float3 &pos, const Float4 &color, flo
 
 void DebugRenderer::FlushDrawQueued()
 {
-	if (_cubeQueueWire.empty() && _cubeQueueTranslucent.empty() && _sphereQueue.empty())
+	if (_cubeQueueWire.empty() && _cubeQueueTranslucent.empty() && _sphereQueue.empty() && _spriteData.empty())
 	{
 		return;
 	}
@@ -140,6 +140,15 @@ void DebugRenderer::FlushDrawQueued()
 		_context->DrawIndexedInstanced(m.IndexCount, (UINT)_sphereQueue.size(), 0, 0, 0);
 	}
 
+	_spriteRenderer.Begin(_context);
+	for (size_t i = 0; i < _spriteData.size(); i++)
+	{
+		SpriteRenderer::SpriteDrawData &drawData = std::get<1>(_spriteData[i]);
+		ID3D11ShaderResourceView *srv = std::get<0>(_spriteData[i]);
+		_spriteRenderer.Render(srv, drawData.Transform, drawData.Color);
+	}
+	_spriteRenderer.End();
+
 	// flush
 	_cubeQueueWire.clear();
 	_cubeQueueTranslucent.clear();
@@ -163,7 +172,8 @@ void DebugRenderer::updateConstantBufferCube(bool32 isWire)
 {
 	if (isWire)
 	{
-		for (size_t i = 0; i < _cubeQueueWire.size(); i++)
+		uint64 num = Min(_cubeQueueWire.size(), (uint64)_maxBatchSize);
+		for (size_t i = 0; i < num; i++)
 		{
 			auto t = _cubeQueueWire[i];
 			_shaderConstants.Data.data[i].Transform = Float4x4::Transpose(std::get<0>(t) * _camera->ViewProjectionMatrix());
@@ -172,7 +182,9 @@ void DebugRenderer::updateConstantBufferCube(bool32 isWire)
 	}
 	else
 	{
-		for (size_t i = 0; i < _cubeQueueTranslucent.size(); i++)
+
+		uint64 num = Min(_cubeQueueTranslucent.size(), (uint64)_maxBatchSize);
+		for (size_t i = 0; i < num; i++)
 		{
 			auto t = _cubeQueueTranslucent[i];
 
@@ -187,7 +199,8 @@ void DebugRenderer::updateConstantBufferCube(bool32 isWire)
 
 void DebugRenderer::updateConstantBufferSphere()
 {
-	for (size_t i = 0; i < _sphereQueue.size(); i++)
+	uint64 num = Min(_sphereQueue.size(), (uint64)_maxBatchSize);
+	for (size_t i = 0; i < num; i++)
 	{
 		auto t = _sphereQueue[i];
 		_shaderConstants.Data.data[i].Transform = Float4x4::Transpose(std::get<0>(t) * _camera->ViewProjectionMatrix());

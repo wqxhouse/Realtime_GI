@@ -431,7 +431,7 @@ PSOutput PS(in PSInput input)
 									 roughness, positionWS);
 
 		// Add in the ambient
-		if(EnableAmbientLighting)
+		if (EnableIndirectSpecularLighting)
 		{
 			float3 indirectDiffuse = EvalSH9Cosine(normalWS, EnvironmentSH);
 

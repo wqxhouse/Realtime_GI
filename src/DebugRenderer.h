@@ -21,7 +21,7 @@ public:
 	void QueueCubeTranslucent(const Float3 &pos, const Float3 &halfLength, const Float4 &color);
 	void QueueBBoxWire(const BBox &bbox, const Float4 &color);
 	void QueueBBoxTranslucent(const BBox &bbox, const Float4 &color);
-	void QueueSprite(const Float3 &pos, const Float4 &color);
+	void QueueSprite(ID3D11ShaderResourceView *texture, const Float3 &pos, const Float4 &color);
 	void QueueLightSphere(const Float3 &pos, const Float4 &color, float radius);
 
 	void FlushDrawQueued();
@@ -47,7 +47,7 @@ private:
 	std::vector<std::tuple<Float4x4, Float4> > _cubeQueueWire;
 	std::vector<std::tuple<Float4x4, Float4> > _cubeQueueTranslucent;
 
-	std::vector<SpriteRenderer::SpriteDrawData> _spriteData;
+	std::vector<std::tuple<ID3D11ShaderResourceView *, SpriteRenderer::SpriteDrawData> > _spriteData;
 	std::vector<std::tuple<Float4x4, Float4> > _sphereQueue;
 
 	Float4x4 matModelToWorldFromBBox(const BBox &bbox);
