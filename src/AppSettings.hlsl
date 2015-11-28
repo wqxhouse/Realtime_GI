@@ -34,6 +34,7 @@ cbuffer AppSettings : register(b7)
     float Roughness;
     float SpecularIntensity;
     float EmissiveIntensity;
+    float ProbeIndex;
     float ProbeX;
     float ProbeY;
     float ProbeZ;

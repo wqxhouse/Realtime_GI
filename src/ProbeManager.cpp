@@ -33,13 +33,14 @@ void ProbeManager::Initialize(ID3D11Device *device, const std::vector<CameraClip
 
 
 void ProbeManager::CreateProbe(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
-	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, Float3 position, uint32 index = 0)
+	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, Float3 position, Float3 boxSize, uint32 index = 0)
 {
 	//if (probeNum == 0) return;
 	CreateCubemap *selectedCubemap = &_cubemaps.at(index);
 	RenderTarget2D cubemapRenderTarget;
 
 	selectedCubemap->SetPosition(position);
+	selectedCubemap->SetBoxSize(boxSize);
 
 	selectedCubemap->Create(deviceManager, meshRenderer, sceneTransform, environmentMap,
 		environmentMapSH, jitterOffset, skybox);
@@ -55,7 +56,7 @@ void ProbeManager::CreateProbe(const DeviceManager &deviceManager, MeshRenderer 
 }
 
 void ProbeManager::CreateProbes(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
-	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, std::vector<Float3> positions)
+	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, std::vector<Float3> positions, std::vector<Float3> boxSizes)
 {
 	if (positions.size() == 0) return;
 
@@ -68,6 +69,7 @@ void ProbeManager::CreateProbes(const DeviceManager &deviceManager, MeshRenderer
 		selectedCubemap = &_cubemaps.at(probeIndex);
 
 		selectedCubemap->SetPosition(positions.at(probeIndex));
+		selectedCubemap->SetBoxSize(boxSizes.at(probeIndex));
 
 		selectedCubemap->Create(deviceManager, meshRenderer, sceneTransform, environmentMap,
 			environmentMapSH, jitterOffset, skybox);
@@ -83,13 +85,14 @@ void ProbeManager::CreateProbes(const DeviceManager &deviceManager, MeshRenderer
 }
 
 void ProbeManager::AddProbe(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
-	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, Float3 position, const CameraClips cameraClips)
+	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, Float3 position, Float3 boxSize, const CameraClips cameraClips)
 {
 	CreateCubemap newCubemap = CreateCubemap(cameraClips.NearClip, cameraClips.FarClip);
 	newCubemap.Initialize(deviceManager.Device());
 
 	RenderTarget2D cubemapRenderTarget;
 	newCubemap.SetPosition(position);
+	newCubemap.SetPosition(boxSize);
 
 	newCubemap.Create(deviceManager, meshRenderer, sceneTransform, environmentMap,
 		environmentMapSH, jitterOffset, skybox);
@@ -106,7 +109,7 @@ void ProbeManager::AddProbe(const DeviceManager &deviceManager, MeshRenderer *me
 
 
 void ProbeManager::AddProbes(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
-	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, std::vector<Float3> positions, const std::vector<CameraClips> cameraClips)
+	const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, std::vector<Float3> positions, std::vector<Float3> boxSizes, const std::vector<CameraClips> cameraClips)
 {
 	size_t posSize = positions.size();
 	size_t clipsSize = cameraClips.size();
@@ -114,13 +117,15 @@ void ProbeManager::AddProbes(const DeviceManager &deviceManager, MeshRenderer *m
 	for (size_t probeIndex = 0; probeIndex < posSize; ++probeIndex)
 	{
 		if (probeIndex < clipsSize)
-			AddProbe(deviceManager, meshRenderer, sceneTransform, environmentMap, environmentMapSH, jitterOffset, skybox, positions.at(probeIndex), cameraClips.at(probeIndex));
+			AddProbe(deviceManager, meshRenderer, sceneTransform, environmentMap, environmentMapSH, jitterOffset, skybox, 
+			positions.at(probeIndex), boxSizes.at(probeIndex), cameraClips.at(probeIndex));
 		else
 		{
 			CameraClips tempCameraClips;
 			tempCameraClips.NearClip = DefaultNearClip;
 			tempCameraClips.FarClip = DefaultFarClip;
-			AddProbe(deviceManager, meshRenderer, sceneTransform, environmentMap, environmentMapSH, jitterOffset, skybox, positions.at(probeIndex), tempCameraClips);
+			AddProbe(deviceManager, meshRenderer, sceneTransform, environmentMap, environmentMapSH, jitterOffset, skybox, 
+				positions.at(probeIndex), boxSizes.at(probeIndex), tempCameraClips);
 		}
 
 	}

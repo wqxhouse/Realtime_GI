@@ -191,6 +191,12 @@ public class Settings
         [HelpText("Emissive parameter for the material")]
         float EmissiveIntensity = 0.00f;
 
+        [DisplayName("Probe Index")]
+        [MinValue(0.0f)]
+        [MaxValue(50.0f)]
+        [StepSize(1.0f)]
+        float ProbeIndex = 0.0f;
+
         [DisplayName("ProbeX")]
         [MinValue(-100.0f)]
         [MaxValue(100.0f)]

@@ -84,6 +84,7 @@ namespace AppSettings
     FloatSetting Roughness;
     FloatSetting SpecularIntensity;
     FloatSetting EmissiveIntensity;
+    FloatSetting ProbeIndex;
     FloatSetting ProbeX;
     FloatSetting ProbeY;
     FloatSetting ProbeZ;
@@ -189,7 +190,7 @@ namespace AppSettings
         RenderSceneObjectBBox.Initialize(tweakBar, "RenderSceneObjectBBox", "Scene Controls", "Render Scene Object BBox", "", false);
         Settings.AddSetting(&RenderSceneObjectBBox);
 
-        EnableShadows.Initialize(tweakBar, "EnableShadows", "Scene Controls", "Enable Shadows", "", false);
+        EnableShadows.Initialize(tweakBar, "EnableShadows", "Scene Controls", "Enable Shadows", "", true);
         Settings.AddSetting(&EnableShadows);
 
         EnableNormalMaps.Initialize(tweakBar, "EnableNormalMaps", "Scene Controls", "Enable Normal Maps", "", true);
@@ -212,6 +213,9 @@ namespace AppSettings
 
         EmissiveIntensity.Initialize(tweakBar, "EmissiveIntensity", "Scene Controls", "Emissive Intensity", "Emissive parameter for the material", 0.0000f, 0.0000f, 1.0000f, 0.0010f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&EmissiveIntensity);
+
+        ProbeIndex.Initialize(tweakBar, "ProbeIndex", "Scene Controls", "Probe Index", "", 0.0000f, 0.0000f, 50.0000f, 1.0000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&ProbeIndex);
 
         ProbeX.Initialize(tweakBar, "ProbeX", "Scene Controls", "ProbeX", "", 0.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&ProbeX);
@@ -304,6 +308,7 @@ namespace AppSettings
         CBuffer.Data.Roughness = Roughness;
         CBuffer.Data.SpecularIntensity = SpecularIntensity;
         CBuffer.Data.EmissiveIntensity = EmissiveIntensity;
+        CBuffer.Data.ProbeIndex = ProbeIndex;
         CBuffer.Data.ProbeX = ProbeX;
         CBuffer.Data.ProbeY = ProbeY;
         CBuffer.Data.ProbeZ = ProbeZ;

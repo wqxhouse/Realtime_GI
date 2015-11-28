@@ -110,6 +110,7 @@ namespace AppSettings
     extern FloatSetting Roughness;
     extern FloatSetting SpecularIntensity;
     extern FloatSetting EmissiveIntensity;
+    extern FloatSetting ProbeIndex;
     extern FloatSetting ProbeX;
     extern FloatSetting ProbeY;
     extern FloatSetting ProbeZ;
@@ -161,6 +162,7 @@ namespace AppSettings
         float Roughness;
         float SpecularIntensity;
         float EmissiveIntensity;
+        float ProbeIndex;
         float ProbeX;
         float ProbeY;
         float ProbeZ;
