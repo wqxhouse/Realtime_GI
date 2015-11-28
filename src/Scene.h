@@ -2,6 +2,7 @@
 #include "PCH.h"
 
 #include <Graphics\\Model.h>
+#include <Graphics\\Camera.h>
 #include <SF11_Math.h>
 #include <Timer.h>
 
@@ -69,16 +70,18 @@ struct TransparentObjectDepthCompare
 
 // TODO: implement scene graph - currently flat structure
 // TODO: support instancing
-
+class SceneScript;
 class Scene
 {
 public:
 	Scene();
 	~Scene();
 
-	void Initialize(ID3D11Device *device, ID3D11DeviceContext *context);
+	void Initialize(ID3D11Device *device, ID3D11DeviceContext *context, SceneScript *sceneScript, FirstPersonCamera *globalCamera);
 	void Update(const Timer& timer);
-	void SetUpdateFunction(void(*update)(Scene *scene, const Timer &timer));
+	// void SetUpdateFunction(void(*update)(Scene *scene, const Timer &timer));
+
+	void OnSceneChange();
 
 	Model *addModel(const std::wstring &modelPath);
 	Model *addBoxModel();
@@ -116,6 +119,9 @@ public:
 
 	inline BBox *getDynamicObjectBBoxPtr() { return _dynamicOpaqueObjectsBBoxes; }
 	inline BBox *getStaticObjectBBoxPtr() { return _staticOpaqueObjectsBBoxes; }
+
+	inline FirstPersonCamera *getSceneCameraSavedPtr() { return &_sceneCamSaved; }
+	inline FirstPersonCamera *getGlobalCameraPtr() { return _globalCam; }
 
 	// Lights
 	PointLight *addPointLight();
@@ -170,7 +176,7 @@ private:
 	bool _sceneBoundGenerated;
 
 	// TODO: refactor so that a controlled set of scene api is exposed
-	void(*_updateFunc)(Scene *scene, const Timer &timer);
+	// void(*_updateFunc)(Scene *scene, const Timer &timer);
 
 	bool32 _hasProxySceneObject;
 	SceneObject _proxySceneObject;
@@ -196,6 +202,11 @@ private:
 	Float4x4 _prevWVPs[MAX_OBJECT_MATRICES];
 
 	PointLight _pointLights[MAX_SCENE_LIGHTS];
+
+	SceneScript *_sceneScript;
+
+	FirstPersonCamera _sceneCamSaved;
+	FirstPersonCamera *_globalCam;
 
 private:
 

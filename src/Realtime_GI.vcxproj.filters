@@ -252,6 +252,15 @@
     <ClInclude Include="IrradianceVolume.h">
       <Filter>GI</Filter>
     </ClInclude>
+    <ClInclude Include="SceneScriptBase.h">
+      <Filter>SceneScripts</Filter>
+    </ClInclude>
+    <ClInclude Include="LoadScenes.h">
+      <Filter>SceneScripts</Filter>
+    </ClInclude>
+    <ClInclude Include="CornellBoxScript.h">
+      <Filter>SceneScripts</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="AppSettings.hlsl">
@@ -360,6 +369,9 @@
     </Filter>
     <Filter Include="Shader\GI">
       <UniqueIdentifier>{115b12d1-2327-4838-8358-50c93587849a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SceneScripts">
+      <UniqueIdentifier>{25308ff5-b679-4ffb-98fa-ca45b98a4ec6}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

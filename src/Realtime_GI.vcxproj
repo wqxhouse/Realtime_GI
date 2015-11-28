@@ -190,17 +190,20 @@
     <ClInclude Include="..\SampleFramework11\v1.01\Window.h" />
     <ClInclude Include="AppPCH.h" />
     <ClInclude Include="BoundUtils.h" />
+    <ClInclude Include="CornellBoxScript.h" />
     <ClInclude Include="CreateCubemap.h" />
     <ClInclude Include="IrradianceVolume.h" />
     <ClInclude Include="DebugRenderer.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="LightClusters.h" />
+    <ClInclude Include="LoadScenes.h" />
     <ClInclude Include="MeshRenderer.h" />
     <ClInclude Include="AppSettings.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="PostProcessor.h" />
     <ClInclude Include="Realtime_GI.h" />
+    <ClInclude Include="SceneScriptBase.h" />
     <ClInclude Include="ShadowMapSettings.h" />
     <ClInclude Include="SharedConstants.h" />
   </ItemGroup>

@@ -32,9 +32,10 @@
 #include "DebugRenderer.h"
 
 using namespace SampleFramework11;
-
 class Realtime_GI : public App
 {
+public:
+	void AddScene(SceneScript *sceneScript);
 
 protected:
 
@@ -65,6 +66,7 @@ protected:
 
 	Scene _scenes[MAX_SCENES];
 	uint32 _numScenes;
+	Scene *_prevScene;
 
     MeshRenderer _meshRenderer;
 
@@ -148,8 +150,10 @@ protected:
 
 	SamplerStates _samplerStates;
 
+	// Defined outside of the class;
+	void LoadScenes();
+
     virtual void Initialize() override;
-	void LoadScenes(ID3D11DevicePtr device);
 	void LoadShaders(ID3D11DevicePtr device);
 
     virtual void Render(const Timer& timer) override;
@@ -175,6 +179,7 @@ protected:
 
 	void ApplyMomentum(float &prevVal, float &val, float deltaTime);
 	void QueueDebugCommands();
+
 
 	CreateCubemap _cubemapGenerator;
 	DebugRenderer _debugRenderer;

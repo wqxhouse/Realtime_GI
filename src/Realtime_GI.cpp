@@ -30,6 +30,8 @@
 #include "Light.h"
 #include "ShadowMapSettings.h"
 
+#include "LoadScenes.h"
+
 using namespace SampleFramework11;
 using std::wstring;
 
@@ -73,58 +75,66 @@ void Realtime_GI::AfterReset()
 	_postProcessor.AfterReset(_deviceManager.BackBufferWidth(), _deviceManager.BackBufferHeight());
 }
 
-void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
+void Realtime_GI::AddScene(SceneScript *sceneScript)
 {
-	// TODO: put the following in json
-	static const wstring ModelPaths[uint64(Scenes::NumValues)] =
-	{
-		// L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\Converted\\sponza.obj",
-		//L"C:\\Users\\wqxho_000\\Downloads\\Cerberus_by_Andrew_Maximov\\Cerberus_by_Andrew_Maximov\\testfbxascii.fbx",
-		L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
-		// L"..\\Content\\Models\\CornellBox\\TestPlane.FBX",
-		// L"..\\Content\\Models\\CornellBox\\CornellBox_Max.obj",
-		//L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaNon_PBR\\Converted\\sponza.obj",
-		// L"..\\Content\\Models\\Powerplant\\Powerplant.sdkmesh",
-		// L"..\\Content\\Models\\RoboHand\\RoboHand.meshdata",
-
-		L"..\\Content\\Models\\CornellBox\\UVUnwrapped\\cbox_unwrapped.FBX",
-		// L"",
-	};
-
-	Scene *scene = nullptr;
-
-
-	/// Scene 1 /////////////////////////////////////////////////////////////
 	_scenes[_numScenes] = Scene();
-	scene = &_scenes[_numScenes];
-	scene->Initialize(device, _deviceManager.ImmediateContext());
-
-	Model *m = scene->addModel(ModelPaths[0]);
-	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 0, 0), Quaternion());
-
-	scene->setProxySceneObject(ModelPaths[1], 0.1f, Float3(0, 0, 0), Quaternion());
-	// scene->fillPointLightsUniformGrid(50.0f, 100.0f);
-	// scene->fillPointLightsUniformGrid(1.3f, 3.0f, Float3(0, 0, 0));
-
-	_numScenes++;
-	/// Scene 2 /////////////////////////////////////////////////////////////
-	_scenes[_numScenes] = Scene();
-	scene = &_scenes[_numScenes];
-	scene->Initialize(device, _deviceManager.ImmediateContext());
-
-	scene->addDynamicOpaqueBoxObject(1.0f, Float3(-1.0f, 0.0f, 0.0f), Quaternion(0.0f, 1.0f, 0.0f, 0.3f));
-	scene->addDynamicOpaqueBoxObject(1.5f, Float3(0.0f, 0.0f, 0.0f), Quaternion(-0.7f, 1.0f, 0.0f, 0.3f));
-	scene->addDynamicOpaqueBoxObject(2.0f, Float3(1.0f, 0.0f, 0.0f), Quaternion(0.0f, 1.0f, 0.7f, 0.3f));
-	_numScenes++;
-
-	/// Scene 3 /////////////////////////////////////////////////////////////
-	_scenes[_numScenes] = Scene();
-	scene = &_scenes[_numScenes];
-	scene->Initialize(device, _deviceManager.ImmediateContext());
-
-	scene->addDynamicOpaquePlaneObject(10.0f, Float3(0.0f, 0.0f, 0.0f), Quaternion(0.0f, 0.0f, 0.0f, 1.0f));
+	Scene *scene = &_scenes[_numScenes];
+	scene->Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext(), sceneScript, &_camera);
 	_numScenes++;
 }
+//
+//void Realtime_GI::LoadScenes(ID3D11DevicePtr device)
+//{
+//	// TODO: put the following in json
+//	static const wstring ModelPaths[uint64(Scenes::NumValues)] =
+//	{
+//		// L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\Converted\\sponza.obj",
+//		//L"C:\\Users\\wqxho_000\\Downloads\\Cerberus_by_Andrew_Maximov\\Cerberus_by_Andrew_Maximov\\testfbxascii.fbx",
+//		L"..\\Content\\Models\\CornellBox\\CornellBox_fbx.FBX",
+//		// L"..\\Content\\Models\\CornellBox\\TestPlane.FBX",
+//		// L"..\\Content\\Models\\CornellBox\\CornellBox_Max.obj",
+//		//L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaNon_PBR\\Converted\\sponza.obj",
+//		// L"..\\Content\\Models\\Powerplant\\Powerplant.sdkmesh",
+//		// L"..\\Content\\Models\\RoboHand\\RoboHand.meshdata",
+//
+//		L"..\\Content\\Models\\CornellBox\\UVUnwrapped\\cbox_unwrapped.FBX",
+//		// L"",
+//	};
+//
+//	Scene *scene = nullptr;
+//
+//
+//	/// Scene 1 /////////////////////////////////////////////////////////////
+//	_scenes[_numScenes] = Scene();
+//	scene = &_scenes[_numScenes];
+//	scene->Initialize(device, _deviceManager.ImmediateContext());
+//
+//	Model *m = scene->addModel(ModelPaths[0]);
+//	scene->addStaticOpaqueObject(m, 0.1f, Float3(0, 0, 0), Quaternion());
+//
+//	scene->setProxySceneObject(ModelPaths[1], 0.1f, Float3(0, 0, 0), Quaternion());
+//	// scene->fillPointLightsUniformGrid(50.0f, 100.0f);
+//	// scene->fillPointLightsUniformGrid(1.3f, 3.0f, Float3(0, 0, 0));
+//
+//	_numScenes++;
+//	/// Scene 2 /////////////////////////////////////////////////////////////
+//	_scenes[_numScenes] = Scene();
+//	scene = &_scenes[_numScenes];
+//	scene->Initialize(device, _deviceManager.ImmediateContext());
+//
+//	scene->addDynamicOpaqueBoxObject(1.0f, Float3(-1.0f, 0.0f, 0.0f), Quaternion(0.0f, 1.0f, 0.0f, 0.3f));
+//	scene->addDynamicOpaqueBoxObject(1.5f, Float3(0.0f, 0.0f, 0.0f), Quaternion(-0.7f, 1.0f, 0.0f, 0.3f));
+//	scene->addDynamicOpaqueBoxObject(2.0f, Float3(1.0f, 0.0f, 0.0f), Quaternion(0.0f, 1.0f, 0.7f, 0.3f));
+//	_numScenes++;
+//
+//	/// Scene 3 /////////////////////////////////////////////////////////////
+//	_scenes[_numScenes] = Scene();
+//	scene = &_scenes[_numScenes];
+//	scene->Initialize(device, _deviceManager.ImmediateContext());
+//
+//	scene->addDynamicOpaquePlaneObject(10.0f, Float3(0.0f, 0.0f, 0.0f), Quaternion(0.0f, 0.0f, 0.0f, 1.0f));
+//	_numScenes++;
+//}
 
 void Realtime_GI::LoadShaders(ID3D11DevicePtr device)
 {
@@ -162,7 +172,9 @@ void Realtime_GI::Initialize()
     // Camera setup
     _camera.SetPosition(Float3(0.0f, 2.5f, -10.0f));
 
-	LoadScenes(device);
+	LoadScenes();
+
+	_prevScene = &_scenes[AppSettings::CurrentScene];
 
     _meshRenderer.Initialize(device, _deviceManager.ImmediateContext());
     _meshRenderer.SetScene(&_scenes[AppSettings::CurrentScene]);
@@ -447,11 +459,17 @@ void Realtime_GI::Update(const Timer& timer)
 
     if(AppSettings::CurrentScene.Changed())
     {
+		_prevScene->OnSceneChange();
+
 		Scene *currScene = &_scenes[AppSettings::CurrentScene];
+		_camera = *currScene->getSceneCameraSavedPtr();
+
 		_meshRenderer.SetScene(currScene);
         AppSettings::SceneOrientation.SetValue(currScene->getSceneOrientation());
 		_lightClusters.SetScene(currScene);
 		_irradianceVolume.SetScene(currScene);
+
+		_prevScene = &_scenes[AppSettings::CurrentScene];
     }
 
 	Quaternion orientation = AppSettings::SceneOrientation;
