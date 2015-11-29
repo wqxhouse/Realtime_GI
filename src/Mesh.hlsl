@@ -489,11 +489,8 @@ PSOutput PS(in PSInput input)
 			float fresnel = metallic * AB.x + AB.y;
 			fresnel *= saturate(metallic * 100.0f);
 
-			float weight1 = probeWeightCalculate(ProbePositionWS[0], ObjPositionWS, BoxSize[0]);
-			float weight2 = probeWeightCalculate(ProbePositionWS[1], ObjPositionWS, BoxSize[1]);
-
-			//Test
-			//weight1 = weight2 = 0;
+			float weight1 = probeWeightCalculate(ProbePositionWS[0], positionWS, BoxSize[0]);//Bug
+			float weight2 = probeWeightCalculate(ProbePositionWS[1], positionWS, BoxSize[1]);//Bug
 
 			if (weight1 == 0 && weight2 == 0)
 				lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;
@@ -505,6 +502,8 @@ PSOutput PS(in PSInput input)
 					lighting += SpecularCubemapArray1.SampleLevel(LinearSampler, reflectWS, mipLevel) +
 						SpecularCubemapArray2.SampleLevel(LinearSampler, reflectWS, mipLevel);
 			}
+
+			//lighting = weight1;
 		}
 	
 		// Emissive term

@@ -535,17 +535,36 @@ void Realtime_GI::Update(const Timer& timer)
 		_scenes[0].getStaticOpaqueObjectsPtr()->base->SetTranslation(Float3(0, trans[1] + 1, 0));
 	}*/
 
-    Float3 camPos = _camera.Position();
+
+	Float3 camPos = _camera.Position();
 
 	ApplyMomentum(_prevForward, forward, deltaSec);
 	ApplyMomentum(_prevStrafe, strafe, deltaSec);
 	ApplyMomentum(_prevAscend, ascend, deltaSec);
 
-	camPos += _camera.Forward() * forward;
-	camPos += _camera.Left() * strafe;
-	camPos += _camera.Up() * ascend;
+	if (AppSettings::ProbeIndex.Changed() && 
+		AppSettings::ProbeIndex < _scenes[AppSettings::CurrentScene].getProbeManager().GetProbeNums())
+	{
+		CreateCubemap *cubeMap;
+		_scenes[AppSettings::CurrentScene].getProbeManager().GetProbe(&cubeMap, (uint32)AppSettings::ProbeIndex);
+		Float3 pos = cubeMap->GetPosition();
+		Float3 boxSize = cubeMap->GetBoxSize();
 
-    _camera.SetPosition(camPos);
+		_camera.SetLookAt(pos + boxSize * 2, pos, Float3(0, 1, 0));
+		_camera.SetPosition(pos + boxSize * 2);
+		_camera.SetXRotation(45 * Pi / 180);
+		_camera.SetYRotation(-135 * Pi / 180);
+
+		cubeMap = nullptr;
+	}
+	else
+	{
+		camPos += _camera.Forward() * forward;
+		camPos += _camera.Left() * strafe;
+		camPos += _camera.Up() * ascend;
+
+		_camera.SetPosition(camPos);
+	}
 
     // Rotate the camera with the mouse
     if(mouseState.RButton.Pressed && mouseState.IsOverWindow)
