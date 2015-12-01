@@ -36,6 +36,9 @@ cbuffer ClusteredDeferredConstants : register(b0)
 	float ProjTermA;
 	float3 ClusterBias;
 	float ProjTermB;
+
+	float4x4 WorldToView;
+	float4 invNDCToWorldZ;
 }
 
 struct ClusterData
@@ -112,7 +115,7 @@ float4 ClusteredDeferredPS(in PSInput input) : SV_Target0
 	
 	Surface surface = GetSurfaceFromGBuffer(
 		rt0, rt1, rt2, ndcZ, input.ViewRay, ViewToWorld, 
-		CameraPosWS, CameraZAxisWS, ProjTermA, ProjTermB);
+		CameraPosWS, CameraZAxisWS, ProjTermA, ProjTermB, WorldToView, invNDCToWorldZ);
 
 
 	float3 lighting = float3(0.0f, 0.0f, 0.0f);

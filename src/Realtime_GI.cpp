@@ -174,9 +174,11 @@ void Realtime_GI::Initialize()
 
 	LoadScenes();
 
+	_debugRenderer.Initialize(&_deviceManager, _deviceManager.Device(), _deviceManager.ImmediateContext(), &_camera);
+
 	_prevScene = &_scenes[AppSettings::CurrentScene];
 
-    _meshRenderer.Initialize(device, _deviceManager.ImmediateContext());
+    _meshRenderer.Initialize(device, _deviceManager.ImmediateContext(), &_debugRenderer);
     _meshRenderer.SetScene(&_scenes[AppSettings::CurrentScene]);
 
     _skybox.Initialize(device);
@@ -194,7 +196,6 @@ void Realtime_GI::Initialize()
 
     // Init the post processor
     _postProcessor.Initialize(device);
-	_debugRenderer.Initialize(&_deviceManager, _deviceManager.Device(), _deviceManager.ImmediateContext(), &_camera);
 
 	CreateLightBuffers();
 	CreateQuadBuffers();
@@ -855,6 +856,50 @@ void Realtime_GI::RenderSceneGBuffer()
 	context->OMSetRenderTargets(3, renderTargets, nullptr);
 }
 
+Float4 CreateInvDeviceZToWorldZTransform(Float4x4 const & ProjMatrix)
+{
+	// The depth projection comes from the the following projection matrix:
+	//
+	// | 1  0  0  0 |
+	// | 0  1  0  0 |
+	// | 0  0  A  1 |
+	// | 0  0  B  0 |
+	//
+	// Z' = (Z * A + B) / Z
+	// Z' = A + B / Z
+	//
+	// So to get Z from Z' is just:
+	// Z = B / (Z' - A)
+	// 
+	// Note a reversed Z projection matrix will have A=0. 
+	//
+	// Done in shader as:
+	// Z = 1 / (Z' * C1 - C2)   --- Where C1 = 1/B, C2 = A/B
+	//
+
+	float DepthMul = ProjMatrix.m[2][2];
+	float DepthAdd = ProjMatrix.m[3][2];
+
+	if (DepthAdd == 0.f)
+	{
+		// Avoid dividing by 0 in this case
+		DepthAdd = 0.00000001f;
+	}
+
+	float SubtractValue = DepthMul / DepthAdd;
+
+	// Subtract a tiny number to avoid divide by 0 errors in the shader when a very far distance is decided from the depth buffer.
+	// This fixes fog not being applied to the black background in the editor.
+	SubtractValue -= 0.00000001f;
+
+	return Float4(
+		0.0f,			// Unused
+		0.0f,			// Unused
+		1.f / DepthAdd,
+		SubtractValue
+		);
+}
+
 void Realtime_GI::RenderLightsDeferred()
 {
 	PIXEvent event(L"Render Lights Deferred");
@@ -908,6 +953,8 @@ void Realtime_GI::RenderLightsDeferred()
 	_deferredPassConstants.Data.ProjTermB = (-FarClip * NearClip) / (FarClip - NearClip);
 	_deferredPassConstants.Data.ClusterScale = _lightClusters.getClusterScale();
 	_deferredPassConstants.Data.ClusterBias = _lightClusters.getClusterBias();
+	_deferredPassConstants.Data.WorldToView = Float4x4::Transpose(_camera.ViewMatrix());
+	_deferredPassConstants.Data.invNDCToWorldZ = CreateInvDeviceZToWorldZTransform(_camera.ProjectionMatrix());
 	_deferredPassConstants.ApplyChanges(context);
 	_deferredPassConstants.SetVS(context, 0);
 	_deferredPassConstants.SetPS(context, 0);
