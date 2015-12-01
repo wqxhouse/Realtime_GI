@@ -670,7 +670,6 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 		_meshPSConstants.Data.RTSize.x = float(GlobalApp->DeviceManager().BackBufferWidth());
 		_meshPSConstants.Data.RTSize.y = float(GlobalApp->DeviceManager().BackBufferHeight());
 		_meshPSConstants.Data.JitterOffset = jitterOffset;
-		
 	}
 
     // Set shaders

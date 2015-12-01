@@ -13,12 +13,6 @@ class ProbeManager
 public:
 	ProbeManager();
 
-	struct CameraClips
-	{
-		float NearClip;
-		float FarClip;
-	};
-
 	void Initialize(ID3D11Device *device, ID3D11DeviceContext *context);
 
 	void AddProbe(const Float3 &pos, const Float3 &boxSize);

@@ -8,10 +8,6 @@ Manage the probes created by Cubemap
 
 #include "ProbeManager.h"
 
-#define DefaultNearClip 0.01f
-#define DefaultFarClip 300.0f
-
-
 ProbeManager::ProbeManager()
 {
 }

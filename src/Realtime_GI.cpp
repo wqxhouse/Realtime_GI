@@ -935,11 +935,6 @@ void Realtime_GI::RenderLightsDeferred()
 	context->VSSetShader(nullptr, nullptr, 0);
 	context->PSSetShader(nullptr, nullptr, 0);
 
-	/*rtvs[0] = _colorTarget.RTView;
-	context->OMSetRenderTargets(1, rtvs, _depthBuffer.DSView);
-
-	_meshRenderer.Render(context, _camera, _globalTransform, cubemapRenderTarget.SRView, _envMapSH, _jitterOffset);*/
-
 	// Skybox
 	context->OMSetRenderTargets(1, rtvs, _depthBuffer.DSView);
 	if (AppSettings::RenderBackground)
@@ -963,7 +958,6 @@ void Realtime_GI::RenderSceneForward()
     SetViewport(context, _colorTarget.Width, _colorTarget.Height);
 
 	//_cubemapGenerator.GetTargetViews(cubemapRenderTarget)
-
 	//_cubemapGenerator.GetPreFilterTargetViews(cubemapRenderTarget);
 
     float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
