@@ -114,6 +114,13 @@ namespace AppSettings
     extern FloatSetting Roughness;
     extern FloatSetting SpecularIntensity;
     extern FloatSetting EmissiveIntensity;
+    extern FloatSetting ProbeIndex;
+    extern FloatSetting ProbeX;
+    extern FloatSetting ProbeY;
+    extern FloatSetting ProbeZ;
+    extern FloatSetting BoxSizeX;
+    extern FloatSetting BoxSizeY;
+    extern FloatSetting BoxSizeZ;
     extern OrientationSetting SceneOrientation;
     extern FloatSetting ModelRotationSpeed;
     extern BoolSetting DoubleSyncInterval;
@@ -163,6 +170,13 @@ namespace AppSettings
         float Roughness;
         float SpecularIntensity;
         float EmissiveIntensity;
+        float ProbeIndex;
+        float ProbeX;
+        float ProbeY;
+        float ProbeZ;
+        float BoxSizeX;
+        float BoxSizeY;
+        float BoxSizeZ;
         Float4Align Quaternion SceneOrientation;
         float ModelRotationSpeed;
         bool32 DoubleSyncInterval;

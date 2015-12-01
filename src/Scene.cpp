@@ -1,5 +1,6 @@
 #include "Scene.h"
 #include "FileIO.h"
+#include "ProbeManager.h"
 
 #include "SceneScriptBase.h"
 
@@ -22,9 +23,6 @@ Scene::Scene()
 	_sceneWSAABB_staticObj.Min = XMFLOAT3(0, 0, 0);
 
 	_sceneScript = NULL;
-
-	// _updateFunc = NULL;
-
 	_hasProxySceneObject = false;
 }
 
@@ -41,6 +39,8 @@ void Scene::Initialize(ID3D11Device *device, ID3D11DeviceContext *context, Scene
 	_globalCam = globalCamera;
 
 	_sceneScript->InitScene(this);
+
+	_probeManager.Initialize(_device, _context);
 }
 
 void Scene::Update(const Timer& timer)
@@ -50,15 +50,8 @@ void Scene::Update(const Timer& timer)
 		genStaticSceneWSAABB();
 		_sceneBoundGenerated = true;
 	}
-
-	/*if (_updateFunc)
-	{
-	_updateFunc(this, timer);
-	}
-	*/
 	
 	_sceneScript->Update(this, &timer);
-
 	updateDynamicSceneObjectBounds();
 }
 

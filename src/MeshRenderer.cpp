@@ -22,6 +22,8 @@
 #include "SharedConstants.h"
 #include "ShadowMapSettings.h"
 
+#include "ProbeManager.h"
+
 
 // Renders a text string indicating the current progress for compiling shaders
 static bool32 RenderShaderProgress(uint32 currShader, uint32 numShaders)
@@ -220,6 +222,20 @@ void MeshRenderer::SetDrawGBuffer(bool32 tf)
 	ReMapMeshShaders();
 }
 
+void MeshRenderer::SetInitializeProbes(bool32 tf)
+{
+	_initializeProbes = tf;
+}
+
+void MeshRenderer::SetParallaxCorrection(Float3 probePosWS[2], Float3 boxSize[2], Float3 objPosWS[2]){
+	for (int i = 0; i < 1; i++)
+	{
+		_probePosWS[i] = probePosWS[i];
+		_boxSize[i] = boxSize[i];
+		_objPosWS[i] = objPosWS[i];
+	}
+}
+
 void MeshRenderer::ReMapMeshShaders()
 {
 	_meshVertexShadersMap.clear();
@@ -278,6 +294,7 @@ void MeshRenderer::GenMeshShaderMap(const Model *model)
 		// TODO: the following case somehow defeats the purpose of the design
 		_drawingCubemap ? arr[5] = true : arr[5] = false;
 		AppSettings::CentroidSampling ? arr[6] = true : arr[6] = false;
+
 		_drawingGBuffer ? arr[7] = true : arr[7] = false;
 
 		uint32 vsbits = boolArrToUint32(arr, 5);
@@ -321,11 +338,15 @@ void MeshRenderer::GenAndCacheMeshInputLayout(const Model* model)
 void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
 {
     this->_device = device;
+
 	_drawingCubemap = false;
 	_drawingGBuffer = false;
+	_initializeProbes = true;
 
-    _blendStates.Initialize(device);
+	_blendStates.Initialize(device);
+	_rasterizerStates.Wireframe();
     _rasterizerStates.Initialize(device);
+
     _depthStencilStates.Initialize(device);
     _samplerStates.Initialize(device);
 
@@ -606,6 +627,8 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 {
     PIXEvent event(L"Mesh Rendering");
 
+	//Set Cubemap
+
 	DoSceneObjectsFrustumTests(camera, false);
 
     // Set states
@@ -648,6 +671,9 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 		_meshPSConstants.Data.JitterOffset = jitterOffset;
 		_meshPSConstants.ApplyChanges(context);
 		_meshPSConstants.SetPS(context, 0);
+		/*_meshPSConstants.Data.ProbePosWS = probePosWS;
+		_meshPSConstants.Data.MaxBox = maxbox;
+		_meshPSConstants.Data.MinBox = minbox;*/
 	}
 
     // Set shaders
@@ -690,6 +716,48 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 
 		*sceneObjectsArr[objIndex].prevWVP = _meshVSConstants.Data.WorldViewProjection;
 
+		ID3D11ShaderResourceView *chosenEnvMap = nullptr;
+
+		//if (!_initializeProbes)
+		// {	
+			//Get cubemap
+			Float3 objPos = sceneObjectsArr[objIndex].base->Translation();
+			RenderTarget2D cubemapRT;
+			CreateCubemap *cubeMap = nullptr;
+			// RenderTarget2D blendRenderTargetViews[2];
+			// ID3D11ShaderResourceViewPtr blendCubeMaps[2];
+
+			ProbeManager &probeManager = *_scene->getProbeManagerPtr();
+			probeManager.GetNNProbe(&cubeMap, objPos);
+
+			if (cubeMap == nullptr)
+			{
+				chosenEnvMap = envMap;
+			}
+			else
+			{
+				cubeMap->GetPreFilterRT(cubemapRT);
+				chosenEnvMap = cubemapRT.SRView;
+			}
+
+			/*	std::vector<CreateCubemap> blendCubeMapsVec;
+				probeManager.GetBlendProbes(blendCubeMapsVec, objPos);
+				CreateCubemap &blendCubemap1 = blendCubeMapsVec.at(0);
+				CreateCubemap &blendCubemap2 = blendCubeMapsVec.at(1);
+
+				blendCubemap1.GetPreFilterTargetViews(blendRenderTargetViews[0]);
+				blendCubemap2.GetPreFilterTargetViews(blendRenderTargetViews[1]);
+
+				blendCubeMaps[0] = blendRenderTargetViews[0].SRView;
+				blendCubeMaps[1] = blendRenderTargetViews[1].SRView;
+
+				_meshPSConstants.Data.ProbePosWS[0] = blendCubemap1.GetPosition();
+				_meshPSConstants.Data.ProbePosWS[1] = blendCubemap2.GetPosition();
+				_meshPSConstants.Data.BoxSize[0] = blendCubemap1.GetBoxSize();
+				_meshPSConstants.Data.BoxSize[1] = blendCubemap2.GetBoxSize();
+				_meshPSConstants.Data.ObjPos = objPos;*/
+		// }
+
 		// Draw all meshes
 		uint32 partCount = 0;
 		for (uint64 meshIdx = 0; meshIdx < model->Meshes().size(); ++meshIdx)
@@ -725,6 +793,9 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 			// Draw all parts
 			for (uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
 			{
+				const MeshPart& part = mesh.MeshParts()[partIdx];
+				const MeshMaterial& material = model->Materials()[part.MaterialIdx];
+
 				// Frustum culling on parts
 				if (partsBound->FrustumTests[partCount++])
 				{
@@ -738,11 +809,13 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 						material.DiffuseMap,
 						material.NormalMap,
 						_varianceShadowMap.SRView,
-						envMap,
+						envMap, 
 						_specularLookupTexture,
 						material.RoughnessMap, 
 						material.MetallicMap, 
-						material.EmissiveMap
+						material.EmissiveMap,
+						/*blendCubeMaps[0],
+						blendCubeMaps[1]*/
 					};
 
 					context->PSSetShaderResources(0, _countof(psTextures), psTextures);

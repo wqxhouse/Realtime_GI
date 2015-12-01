@@ -111,6 +111,7 @@
     <ClCompile Include="IrradianceVolume.cpp">
       <Filter>GI</Filter>
     </ClCompile>
+    <ClCompile Include="ProbeManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PostProcessor.h" />
@@ -261,6 +262,7 @@
     <ClInclude Include="CornellBoxScript.h">
       <Filter>SceneScripts</Filter>
     </ClInclude>
+    <ClInclude Include="ProbeManager.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="AppSettings.hlsl">
@@ -433,5 +435,10 @@
     <Image Include="Debug\x64\t1.dds">
       <Filter>Misc</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="PrefilterCubemap.hlsl">
+      <Filter>Shader</Filter>
+    </Text>
   </ItemGroup>
 </Project>

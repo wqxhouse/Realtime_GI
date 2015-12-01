@@ -9,6 +9,9 @@
 #include "Light.h"
 #include "BoundUtils.h"
 
+#include "ProbeManager.h"
+//#include "CreateCubemap.h"
+
 using namespace SampleFramework11;
 
 struct ModelPartsBound
@@ -79,7 +82,6 @@ public:
 
 	void Initialize(ID3D11Device *device, ID3D11DeviceContext *context, SceneScript *sceneScript, FirstPersonCamera *globalCamera);
 	void Update(const Timer& timer);
-	// void SetUpdateFunction(void(*update)(Scene *scene, const Timer &timer));
 
 	void OnSceneChange();
 
@@ -128,9 +130,9 @@ public:
 	uint32 fillPointLightsUniformGrid(float unitGridSize, float radius, Float3 offset=Float3());
 	inline PointLight *getPointLightPtr() { return _pointLights; }
 	inline int getNumPointLights() { return _numPointLights; }
-
-	// std::wstring getSceneBoundInfo();
 	BBox getSceneBoundingBox();
+
+	inline ProbeManager *Scene::getProbeManagerPtr() { return &_probeManager; }
 
 	// Caution: too large will stack overflow
 	static const int MAX_STATIC_OBJECTS = 32;
@@ -208,6 +210,7 @@ private:
 	FirstPersonCamera _sceneCamSaved;
 	FirstPersonCamera *_globalCam;
 
+	ProbeManager _probeManager;
 private:
 
 	// TODO: justify the usefulness of object id
