@@ -96,6 +96,7 @@ void IrradianceVolume::SetScene(Scene *scene)
 {
 	_scene = scene;
 	if (!_scene->hasProxySceneObject()) return;
+	_unitsBetweenProbes = _scene->getProbeLength();
 	setupResourcesForScene();
 }
 

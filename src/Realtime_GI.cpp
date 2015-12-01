@@ -456,10 +456,10 @@ void Realtime_GI::QueueDebugCommands()
 		Float3 &pos = _scenes[AppSettings::CurrentScene].getPointLightPtr()[i].cPos;
 		_debugRenderer.QueueLightSphere(pos, Float4(1.0f, 1.0f, 1.0f, 0.2f), 0.2f);
 	}
+	/*
 
-
-	for (uint32 i = 0; i < _scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeNums(); ++i)
-	{
+		for (uint32 i = 0; i < _scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeNums(); ++i)
+		{
 		BBox b;
 		CreateCubemap *cubemap;
 		_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbe(&cubemap, i);
@@ -473,10 +473,10 @@ void Realtime_GI::QueueDebugCommands()
 		b.Min.z = cubemap->GetPosition().z - cubemap->GetBoxSize().z;
 
 		if (i == AppSettings::ProbeIndex)
-			_debugRenderer.QueueBBoxTranslucent(b, Float4(0.3f, 0.3f, 0.7f, 0.1f));
+		_debugRenderer.QueueBBoxTranslucent(b, Float4(0.3f, 0.3f, 0.7f, 0.1f));
 		else
-			_debugRenderer.QueueBBoxTranslucent(b, Float4(0.7f, 0.3f, 0.3f, 0.1f));
-	}
+		_debugRenderer.QueueBBoxTranslucent(b, Float4(0.7f, 0.3f, 0.3f, 0.1f));
+		}*/
 }
 
 void Realtime_GI::Update(const Timer& timer)
