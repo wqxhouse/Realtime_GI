@@ -471,7 +471,6 @@ void Realtime_GI::QueueDebugCommands()
 		_debugRenderer.QueueLightSphere(pos, Float4(1.0f, 1.0f, 1.0f, 0.2f), 0.2f);
 	}
 
-
 	if (AppSettings::RenderProbeBBox)
 	{
 		for (uint32 i = 0; i < _scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeNums(); ++i)
@@ -503,7 +502,7 @@ void Realtime_GI::Update(const Timer& timer)
 
 	if (!AppSettings::PauseSceneScript)
 	{
-		//_scenes[AppSettings::CurrentScene].Update(timer);
+		_scenes[AppSettings::CurrentScene].Update(timer);
 	}
 
     MouseState mouseState = MouseState::GetMouseState(_window);
@@ -737,7 +736,6 @@ void Realtime_GI::RenderAA()
 
 void Realtime_GI::RenderSceneCubemaps(ID3D11DeviceContext *context)
 {
-	ProbeManager probeManager;
 	_meshRenderer.SetCubemapCapture(true);
 	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
 	{
@@ -760,13 +758,15 @@ void Realtime_GI::RenderSceneCubemaps(ID3D11DeviceContext *context)
 			_meshRenderer.SetCubemapCapture(false);
 		}
 	}
+	Scene *curScene = &_scenes[AppSettings::CurrentScene];
+	if (curScene->getProbeManagerPtr()->GetProbeNums() == 0) return;
 
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 
 	_deviceManager.ImmediateContext()->Map(_probeStructBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	Probe *probePtr = static_cast<Probe*>(mappedResource.pData);
 
-	Scene *curScene = &_scenes[AppSettings::CurrentScene];
+	
 	memcpy(probePtr, &(curScene->getProbeManagerPtr()->_probes[0]), 
 		sizeof(Probe) * curScene->getProbeManagerPtr()->GetProbeNums());
 	_deviceManager.ImmediateContext()->Unmap(_probeStructBuffer.Buffer, 0);
@@ -1213,21 +1213,27 @@ void Realtime_GI::UploadLights()
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 
-	// pointlights
-	_deviceManager.ImmediateContext()->Map(_pointLightBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	PointLight *pointLightGPUBufferPtr = static_cast<PointLight *>(mappedResource.pData);
-
 	Scene *curScene = &_scenes[AppSettings::CurrentScene];
-	PointLight *pointLightPtr = curScene->getPointLightPtr();
-	memcpy(pointLightGPUBufferPtr, pointLightPtr, sizeof(PointLight) * curScene->getNumPointLights());
-	_deviceManager.ImmediateContext()->Unmap(_pointLightBuffer.Buffer, 0);//!
+	// pointlights
+	if (curScene->getNumPointLights() > 0)
+	{
+		_deviceManager.ImmediateContext()->Map(_pointLightBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+		PointLight *pointLightGPUBufferPtr = static_cast<PointLight *>(mappedResource.pData);
+
+		PointLight *pointLightPtr = curScene->getPointLightPtr();
+		memcpy(pointLightGPUBufferPtr, pointLightPtr, sizeof(PointLight) * curScene->getNumPointLights());
+		_deviceManager.ImmediateContext()->Unmap(_pointLightBuffer.Buffer, 0);//!
+	}
 
 	// sh probe lights
-	_deviceManager.ImmediateContext()->Map(_shProbeLightBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	SHProbeLight *shProbeLightGPUBufferPtr = static_cast<SHProbeLight *>(mappedResource.pData);
-	const std::vector<SHProbeLight> &shProbeLights = _irradianceVolume.getSHProbeLights();
-	memcpy(shProbeLightGPUBufferPtr, &shProbeLights[0], sizeof(SHProbeLight) * shProbeLights.size());
-	_deviceManager.ImmediateContext()->Unmap(_shProbeLightBuffer.Buffer, 0);
+	if (_irradianceVolume.getSHProbeLights().size() > 0)
+	{
+		_deviceManager.ImmediateContext()->Map(_shProbeLightBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+		SHProbeLight *shProbeLightGPUBufferPtr = static_cast<SHProbeLight *>(mappedResource.pData);
+		const std::vector<SHProbeLight> &shProbeLights = _irradianceVolume.getSHProbeLights();
+		memcpy(shProbeLightGPUBufferPtr, &shProbeLights[0], sizeof(SHProbeLight) * shProbeLights.size());
+		_deviceManager.ImmediateContext()->Unmap(_shProbeLightBuffer.Buffer, 0);
+	}
 }
 
 void Realtime_GI::AssignLightAndUploadClusters()

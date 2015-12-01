@@ -24,6 +24,7 @@ Scene::Scene()
 
 	_sceneScript = NULL;
 	_hasProxySceneObject = false;
+	_unitProbeLength = 1.0f;
 }
 
 Scene::~Scene()

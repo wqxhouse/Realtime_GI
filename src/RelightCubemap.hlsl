@@ -1,3 +1,5 @@
+#include "AppSettings.hlsl"
+
 Texture2D DirectDiffuseMap : register(t0);
 Texture2D ProxyMeshTexcoordAtlas :register(t1);
 Texture2D AlbedoMapAtlas : register(t2);
@@ -41,7 +43,8 @@ float3 sampleScene(float2 offset, float2 posSS, float3 albedoDiffuse, uint2 texc
 
 	if(cubeToLightmap.z > 0.0)
 	{
-		return float3(0.1, 0.3, 0.7);
+		// return float3(0.1, 0.3, 0.7);
+		return SkyColor;
 	}
 	else 
 	{

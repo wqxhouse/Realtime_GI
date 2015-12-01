@@ -96,6 +96,7 @@ void IrradianceVolume::SetScene(Scene *scene)
 {
 	_scene = scene;
 	if (!_scene->hasProxySceneObject()) return;
+	_unitsBetweenProbes = _scene->getProbeLength();
 	setupResourcesForScene();
 }
 
@@ -517,6 +518,7 @@ void IrradianceVolume::renderRelightCubemap()
 
 void IrradianceVolume::Update()
 {
+	if (!_scene->hasProxySceneObject()) return;
 	// update light cam
 	// Shadow camera construction - transform scene aabb to light space aabb
 	BBox &bbox = _scene->getSceneBoundingBox();

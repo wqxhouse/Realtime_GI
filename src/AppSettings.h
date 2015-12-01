@@ -98,6 +98,7 @@ namespace AppSettings
     extern ShadingTechSetting CurrentShadingTech;
     extern DirectionSetting LightDirection;
     extern ColorSetting LightColor;
+    extern ColorSetting SkyColor;
     extern BoolSetting EnableSSR;
     extern BoolSetting PauseSceneScript;
     extern BoolSetting EnableDirectLighting;
@@ -157,6 +158,7 @@ namespace AppSettings
         int32 CurrentShadingTech;
         Float3 LightDirection;
         Float4Align Float3 LightColor;
+        Float4Align Float3 SkyColor;
         bool32 EnableSSR;
         bool32 PauseSceneScript;
         bool32 EnableDirectLighting;

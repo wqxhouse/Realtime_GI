@@ -138,14 +138,22 @@ public class Settings
         [DisplayName("Light Color")]
         [HelpText("The color of the light")]
         [MinValue(0.0f)]
-        [MaxValue(20.0f)]
+        [MaxValue(50.0f)]
         [StepSize(0.1f)]
         [HDR(true)]
         Color LightColor = new Color(20.0f, 16.0f, 10.0f);
 
-        bool EnableSSR = false;
+       
 
-        //bool ClearingBoxes = false;
+        [DisplayName("Sky Color")]
+        [HelpText("The color of the sky")]
+        [MinValue(0.0f)]
+        [MaxValue(20.0f)]
+        [StepSize(0.1f)]
+        [HDR(true)]
+        Color SkyColor = new Color(0.1f, 0.3f, 0.7f);
+
+        bool EnableSSR = false;
 
         bool PauseSceneScript = false;
 

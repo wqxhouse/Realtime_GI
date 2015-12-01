@@ -22,6 +22,7 @@ cbuffer AppSettings : register(b7)
     int CurrentShadingTech;
     float3 LightDirection;
     float3 LightColor;
+    float3 SkyColor;
     bool EnableSSR;
     bool PauseSceneScript;
     bool EnableDirectLighting;

@@ -7,7 +7,7 @@ std::vector<q3Body *> bodylist;
 std::vector<SceneObject *> meshlist;
 
 std::vector<PointLight *> scenePointLight;
-
+std::vector<Model *> modelcubes;
 
 class DropBoxesScript: public SceneScript
 {
@@ -15,9 +15,15 @@ public:
 	virtual void InitScene(Scene *scene)
 	{
 		std::wstring proxyModelPath = L"..\\Content\\Models\\CornellBox\\UVUnwrapped\\cbox_unwrapped.FBX";
-		std::wstring cubePath = L"..\\Content\\Models\\Cube\\cube.FBX";
-		modelcube = scene->addModel(cubePath);
-		scene->setProxySceneObject(proxyModelPath, 0.1f, Float3(0, 0, 0), Quaternion());
+		std::wstring cubePath = L"..\\Content\\Models\\boxtexture\\box1_new.FBX";
+		std::wstring cubePath1 = L"..\\Content\\Models\\boxtexture\\box2.FBX";
+		std::wstring cubePath2 = L"..\\Content\\Models\\boxtexture\\box3.FBX";
+		//std::wstring cubePath3 = L"..\\Content\\Models\\boxtexture\\box4.FBX";
+		modelcubes.push_back(scene->addModel(cubePath));
+		modelcubes.push_back(scene->addModel(cubePath1));
+		modelcubes.push_back(scene->addModel(cubePath2));
+		//modelcubes.push_back(scene->addModel(cubePath3));
+		//scene->setProxySceneObject(proxyModelPath, 0.1f, Float3(0, 0, 0), Quaternion());
 		
 		/*for (int i = 0; i < 4; i++)
 		{
@@ -103,7 +109,7 @@ public:
 			bodylist.push_back(body);
 			
 
-			SceneObject* doo = scene->addDynamicOpaqueObject(modelcube, 0.02f, Float3(bodyDef.position.x, bodyDef.position.y, bodyDef.position.z), Quaternion());
+			SceneObject* doo = scene->addDynamicOpaqueObject(modelcubes.at(0), 0.1f, Float3(bodyDef.position.x, bodyDef.position.y, bodyDef.position.z), Quaternion());
 			//SceneObject* doo = scene->addDynamicOpaqueBoxObject( 0.02f, Float3(0, 10, 0), Quaternion());
 			meshlist.push_back(doo);
 			float radius = doo->bound->bsphere->Radius;
@@ -141,5 +147,5 @@ public:
 		}
 	}
 	float acc;
-	Model *modelcube;
+	
 };

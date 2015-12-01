@@ -89,6 +89,9 @@ public:
 	Model *addBoxModel();
 	Model *addPlaneModel();
 
+	inline void setProbeLength(float units) { _unitProbeLength = units; }
+	inline float getProbeLength() { return _unitProbeLength; }
+
 	// TODO: note that this approach fails to account for 
 	// cases that a model can have semi-static semi-dynamic 
 	// OR semi-opaque, semi-transparent structure. 
@@ -212,6 +215,9 @@ private:
 	FirstPersonCamera *_globalCam;
 
 	ProbeManager _probeManager;
+	
+	float _unitProbeLength;
+
 private:
 
 	// TODO: justify the usefulness of object id
