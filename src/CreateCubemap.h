@@ -37,7 +37,8 @@ public:
 
 	void Create(MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
 		const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox);
-	void RenderPrefilterCubebox(const Float4x4 &sceneTransform);
+	//void RenderPrefilterCubebox(const Float4x4 &sceneTransform);
+	void RenderPrefilterCubebox(RenderTarget2D cubemapArr, const Float4x4 &sceneTransform, int cubemapIndex);
 
 	void SetCubemapSize(uint32 size);
 	void SetClipPlane(float nearPlane, float farPlane);

@@ -33,9 +33,10 @@ static const char* JitterModesLabels[3] =
     "Hammersly16",
 };
 
-static const char* ScenesLabels[2] =
+static const char* ScenesLabels[3] =
 {
     "CornellBox",
+    "DropBoxes",
     "Sponza",
 };
 
@@ -78,6 +79,7 @@ namespace AppSettings
     BoolSetting EnableIndirectSpecularLighting;
     BoolSetting RenderBackground;
     BoolSetting RenderSceneObjectBBox;
+    BoolSetting RenderProbeBBox;
     BoolSetting RenderIrradianceVolumeProbes;
     BoolSetting EnableShadows;
     BoolSetting EnableNormalMaps;
@@ -171,7 +173,7 @@ namespace AppSettings
         SharpeningAmount.Initialize(tweakBar, "SharpeningAmount", "Anti Aliasing", "Sharpening Amount", "", 0.0000f, 0.0000f, 1.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&SharpeningAmount);
 
-        CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene Controls", "Current Scene", "", Scenes::CornellBox, 2, ScenesLabels);
+        CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene Controls", "Current Scene", "", Scenes::CornellBox, 3, ScenesLabels);
         Settings.AddSetting(&CurrentScene);
 
         CurrentShadingTech.Initialize(tweakBar, "CurrentShadingTech", "Scene Controls", "Current Shading Tech", "", ShadingTech::Clustered_Deferred, 2, ShadingTechLabels);
@@ -203,6 +205,9 @@ namespace AppSettings
 
         RenderSceneObjectBBox.Initialize(tweakBar, "RenderSceneObjectBBox", "Scene Controls", "Render Scene Object BBox", "", false);
         Settings.AddSetting(&RenderSceneObjectBBox);
+
+        RenderProbeBBox.Initialize(tweakBar, "RenderProbeBBox", "Scene Controls", "Render Probe BBox", "", false);
+        Settings.AddSetting(&RenderProbeBBox);
 
         RenderIrradianceVolumeProbes.Initialize(tweakBar, "RenderIrradianceVolumeProbes", "Scene Controls", "Render Irradiance Volume Probes", "", false);
         Settings.AddSetting(&RenderIrradianceVolumeProbes);
@@ -326,6 +331,7 @@ namespace AppSettings
         CBuffer.Data.EnableIndirectSpecularLighting = EnableIndirectSpecularLighting;
         CBuffer.Data.RenderBackground = RenderBackground;
         CBuffer.Data.RenderSceneObjectBBox = RenderSceneObjectBBox;
+        CBuffer.Data.RenderProbeBBox = RenderProbeBBox;
         CBuffer.Data.RenderIrradianceVolumeProbes = RenderIrradianceVolumeProbes;
         CBuffer.Data.EnableShadows = EnableShadows;
         CBuffer.Data.EnableNormalMaps = EnableNormalMaps;

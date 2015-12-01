@@ -21,21 +21,14 @@ public:
 		// set specular probes
 		scene->getProbeManagerPtr()->AddProbe(Float3(0, 0, 0), Float3(2, 2, 2));
 		scene->getProbeManagerPtr()->AddProbe(Float3(-1, 0, 0), Float3(2, 2, 2));
-
-		
 	}
 
 	virtual void Update(Scene *scene, const SampleFramework11::Timer *timer)
 	{
-		
-
-		//Float4x4 camMatrix = scene->getGlobalCameraPtr()->WorldMatrix();
-		//Float4x4 rotation = Quaternion::FromAxisAngle(Float3(0, 1, 0), timer->DeltaSecondsF()).ToFloat4x4();
-		//camMatrix = camMatrix * rotation;
-		//scene->getGlobalCameraPtr()->SetWorldMatrix(camMatrix);
-
-		
-		
+		Float4x4 camMatrix = scene->getGlobalCameraPtr()->WorldMatrix();
+		Float4x4 rotation = Quaternion::FromAxisAngle(Float3(0, 1, 0), timer->DeltaSecondsF()).ToFloat4x4();
+		camMatrix = camMatrix * rotation;
+		scene->getGlobalCameraPtr()->SetWorldMatrix(camMatrix);
 	}
 
 	

@@ -42,6 +42,7 @@ public class Settings
     enum Scenes
     {
         CornellBox,
+        DropBoxes,
         Sponza, 
     }
 
@@ -157,6 +158,8 @@ public class Settings
         bool RenderBackground = true;
 
         bool RenderSceneObjectBBox = false;
+
+        bool RenderProbeBBox = false;
 
         bool RenderIrradianceVolumeProbes = false;
 

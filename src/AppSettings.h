@@ -50,7 +50,8 @@ typedef EnumSettingT<JitterModes> JitterModesSetting;
 enum class Scenes
 {
     CornellBox = 0,
-    Sponza = 1,
+    DropBoxes = 1,
+    Sponza = 2,
 
     NumValues
 };
@@ -104,6 +105,7 @@ namespace AppSettings
     extern BoolSetting EnableIndirectSpecularLighting;
     extern BoolSetting RenderBackground;
     extern BoolSetting RenderSceneObjectBBox;
+    extern BoolSetting RenderProbeBBox;
     extern BoolSetting RenderIrradianceVolumeProbes;
     extern BoolSetting EnableShadows;
     extern BoolSetting EnableNormalMaps;
@@ -162,6 +164,7 @@ namespace AppSettings
         bool32 EnableIndirectSpecularLighting;
         bool32 RenderBackground;
         bool32 RenderSceneObjectBBox;
+        bool32 RenderProbeBBox;
         bool32 RenderIrradianceVolumeProbes;
         bool32 EnableShadows;
         bool32 EnableNormalMaps;

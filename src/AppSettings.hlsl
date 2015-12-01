@@ -29,6 +29,7 @@ cbuffer AppSettings : register(b7)
     bool EnableIndirectSpecularLighting;
     bool RenderBackground;
     bool RenderSceneObjectBBox;
+    bool RenderProbeBBox;
     bool RenderIrradianceVolumeProbes;
     bool EnableShadows;
     bool EnableNormalMaps;
@@ -78,7 +79,8 @@ static const int JitterModes_Uniform2x = 1;
 static const int JitterModes_Hammersly16 = 2;
 
 static const int Scenes_CornellBox = 0;
-static const int Scenes_Sponza = 1;
+static const int Scenes_DropBoxes = 1;
+static const int Scenes_Sponza = 2;
 
 static const int ShadingTech_Forward = 0;
 static const int ShadingTech_Clustered_Deferred = 1;
