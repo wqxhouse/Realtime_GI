@@ -139,6 +139,9 @@ protected:
 		float ProjTermA;
 		Float3 ClusterBias;
 		float ProjTermB;
+
+		Float4x4 WorldToView;
+		Float4 invNDCToWorldZ;
 	};
 
 
