@@ -1,8 +1,9 @@
 #pragma once
 class Scene;
 
-
+#pragma once
 #include <vector>
+
 
 namespace SampleFramework11
 {

@@ -202,6 +202,7 @@
     <ClInclude Include="BoundUtils.h" />
     <ClInclude Include="CornellBoxScript.h" />
     <ClInclude Include="CreateCubemap.h" />
+    <ClInclude Include="DropBoxesScript.h" />
     <ClInclude Include="IrradianceVolume.h" />
     <ClInclude Include="DebugRenderer.h" />
     <ClInclude Include="Light.h" />
@@ -218,6 +219,7 @@
     <ClInclude Include="ShadowMapSettings.h" />
     <ClInclude Include="SharedConstants.h" />
     <ClInclude Include="SSR.h" />
+    <ClInclude Include="SponzaScript.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="AppSettings.cs">

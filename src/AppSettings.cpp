@@ -33,11 +33,10 @@ static const char* JitterModesLabels[3] =
     "Hammersly16",
 };
 
-static const char* ScenesLabels[3] =
+static const char* ScenesLabels[2] =
 {
     "CornellBox",
-    "Boxes",
-    "Plane",
+    "Sponza",
 };
 
 static const char* ShadingTechLabels[2] =
@@ -172,7 +171,7 @@ namespace AppSettings
         SharpeningAmount.Initialize(tweakBar, "SharpeningAmount", "Anti Aliasing", "Sharpening Amount", "", 0.0000f, 0.0000f, 1.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&SharpeningAmount);
 
-        CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene Controls", "Current Scene", "", Scenes::CornellBox, 3, ScenesLabels);
+        CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene Controls", "Current Scene", "", Scenes::CornellBox, 2, ScenesLabels);
         Settings.AddSetting(&CurrentScene);
 
         CurrentShadingTech.Initialize(tweakBar, "CurrentShadingTech", "Scene Controls", "Current Shading Tech", "", ShadingTech::Clustered_Deferred, 2, ShadingTechLabels);

@@ -629,7 +629,7 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 
 	//Set Cubemap
 
-	DoSceneObjectsFrustumTests(camera, false);
+	// DoSceneObjectsFrustumTests(camera, false);
 
     // Set states
     float blendFactor[4] = {1, 1, 1, 1};
@@ -693,10 +693,10 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 	for (uint64 objIndex = 0; objIndex < numSceneObjs; objIndex++)
 	{
 		// Frustum culling on scene object bound
-		if (!sceneObjectsArr[objIndex].bound->frustumTest)
+		/*if (!sceneObjectsArr[objIndex].bound->frustumTest)
 		{
 			continue;
-		}
+		}*/
 
 		ModelPartsBound *partsBound = sceneObjectsArr[objIndex].bound->modelPartsBound;
 		Float4x4 worldMat = *sceneObjectsArr[objIndex].base * world;
@@ -764,13 +764,13 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 		{
 			const Mesh& mesh = model->Meshes()[meshIdx];
 
-			if (partsBound->BoundingSpheres.size() == 1) // which means the mesh has only one part - which is the assimp-type mesh
-			{
-				if (!partsBound->FrustumTests[0])
-				{
-					continue;
-				}
-			}
+			//if (partsBound->BoundingSpheres.size() == 1) // which means the mesh has only one part - which is the assimp-type mesh
+			//{
+			//	if (!partsBound->FrustumTests[0])
+			//	{
+			//		continue;
+			//	}
+			//}
 
 			// Set per mesh shaders
 			// TODO: sort by view depth
@@ -797,7 +797,7 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 				const MeshMaterial& material = model->Materials()[part.MaterialIdx];
 
 				// Frustum culling on parts
-				if (partsBound->FrustumTests[partCount++])
+				//if (partsBound->FrustumTests[partCount++])
 				{
 					const MeshPart& part = mesh.MeshParts()[partIdx];
 					const MeshMaterial& material = model->Materials()[part.MaterialIdx];
@@ -832,7 +832,7 @@ void MeshRenderer::RenderDepth(ID3D11DeviceContext* context, const Camera& camer
 {
     PIXEvent event(L"Mesh Depth Rendering");
 
-	DoSceneObjectsFrustumTests(camera, shadowRendering);
+	// DoSceneObjectsFrustumTests(camera, shadowRendering);
 
     // Set states
     float blendFactor[4] = {1, 1, 1, 1};
@@ -862,10 +862,10 @@ void MeshRenderer::RenderDepthSceneObjects(ID3D11DeviceContext* context, const F
 	for (uint64 objIndex = 0; objIndex < numSceneObjs; objIndex++)
 	{
 		// Frustum culling on scene object bound
-		if (!sceneObjectsArr[objIndex].bound->frustumTest)
+		/*if (!sceneObjectsArr[objIndex].bound->frustumTest)
 		{
 			continue;
-		}
+		}*/
 
 		ModelPartsBound *partsBound = sceneObjectsArr[objIndex].bound->modelPartsBound;
 		Float4x4 worldMat = *sceneObjectsArr[objIndex].base * world;
@@ -898,7 +898,7 @@ void MeshRenderer::RenderDepthSceneObjects(ID3D11DeviceContext* context, const F
 			for (uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
 			{
 				// Frustum culling on parts
-				if (partsBound->FrustumTests[partCount++])
+				//if (partsBound->FrustumTests[partCount++])
 				{
 					const MeshPart& part = mesh.MeshParts()[partIdx];
 					context->DrawIndexed(part.IndexCount, part.IndexStart, 0);

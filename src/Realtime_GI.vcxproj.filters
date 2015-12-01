@@ -269,6 +269,12 @@
       <Filter>SceneScripts</Filter>
     </ClInclude>
     <ClInclude Include="ProbeManager.h" />
+    <ClInclude Include="SponzaScript.h">
+      <Filter>SceneScripts</Filter>
+    </ClInclude>
+    <ClInclude Include="DropBoxesScript.h">
+      <Filter>SceneScripts</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="AppSettings.hlsl">
