@@ -3,9 +3,9 @@
 #include "LightCommon.hlsli"
 
 #define MAX_STEPS 300
-#define MAX_INTERSECT_DIST 0.04
-#define STRIDE 1.1
-#define ZTHICKNESS 0.15
+#define MAX_INTERSECT_DIST 0.1
+//#define STRIDE 1.1
+//#define ZTHICKNESS 0.15
 ////////////////////////////////////////////////////////////
 // Resources
 ////////////////////////////////////////////////////////////
@@ -25,6 +25,8 @@ cbuffer RayTracingConstants : register(b0)
 	float ProjTermA;
 	float3 ClusterBias;
 	float ProjTermB;
+
+	float4 invNDCToWorldZ;
 }
 
 Texture2D ClusteredColorMap : register(t0);
@@ -278,11 +280,11 @@ float4 PS(in PSInput input) : SV_Target0
 	float4 rt2 = NormalMap.Load(uint3(fragCoord.xy, 0));
 	float ndcZ = DepthMap.Load(uint3(fragCoord.xy, 0)).x;
 	float4 oriColor = ClusteredColorMap.Load(uint3(fragCoord.xy, 0));
-	
 
+	float4x4 dummy;
 	Surface surface = GetSurfaceFromGBuffer(
 		rt0, rt1, rt2, ndcZ, input.ViewRay, ViewToWorld,
-		CameraPosWS, CameraZAxisWS, ProjTermA, ProjTermB);
+		CameraPosWS, CameraZAxisWS, ProjTermA, ProjTermB, dummy, invNDCToWorldZ);
 
 	//get screen dimension
 	uint width;
@@ -362,8 +364,8 @@ float4 PS(in PSInput input) : SV_Target0
 			float ndcZtest = DepthMap.Load(uint3(coord.xy, 0)).x;
 
 			float depthVS;
-			float3 posWScoord = GetPositionWSFromNdcZ(ndcZtest, input.ViewRay, CameraPosWS, CameraZAxisWS, ProjTermA, ProjTermB, depthVS);
-			float storedDepth = mul(float4(posWScoord, 1.0), WorldToView).z;
+			float3 posWScoord = GetPositionWSFromNdcZ(ndcZtest, input.ViewRay, CameraPosWS, CameraZAxisWS, ProjTermA, ProjTermB, dummy, invNDCToWorldZ, depthVS);
+			float storedDepth = depthVS;//mul(float4(posWScoord, 1.0), WorldToView).z;
 			
 
 			if (curDepth > storedDepth && curDepth - storedDepth < MAX_INTERSECT_DIST)//&& curDepth - storedDepth < MAX_INTERSECT_DIST && t > 15

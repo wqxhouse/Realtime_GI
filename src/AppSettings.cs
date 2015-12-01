@@ -142,7 +142,9 @@ public class Settings
         [HDR(true)]
         Color LightColor = new Color(20.0f, 16.0f, 10.0f);
 
-        bool EnableSSR = true;
+        bool EnableSSR = false;
+
+        //bool ClearingBoxes = false;
 
         bool PauseSceneScript = false;
 

@@ -61,6 +61,8 @@ private:
 		Float3 ClusterBias;
 		float ProjTermB;
 
+		Float4 invToWorldZ;
+
 	};
 
 	ConstantBuffer<SSRPassConstants> _ssrPassConstants;

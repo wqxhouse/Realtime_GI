@@ -183,7 +183,7 @@ namespace AppSettings
         LightColor.Initialize(tweakBar, "LightColor", "Scene Controls", "Light Color", "The color of the light", Float3(20.0000f, 16.0000f, 10.0000f), true, 0.0000f, 20.0000f, 0.1000f, ColorUnit::None);
         Settings.AddSetting(&LightColor);
 
-        EnableSSR.Initialize(tweakBar, "EnableSSR", "Scene Controls", "Enable SSR", "", true);
+        EnableSSR.Initialize(tweakBar, "EnableSSR", "Scene Controls", "Enable SSR", "", false);
         Settings.AddSetting(&EnableSSR);
 
         PauseSceneScript.Initialize(tweakBar, "PauseSceneScript", "Scene Controls", "Pause Scene Script", "", false);

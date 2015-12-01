@@ -676,7 +676,10 @@ void Realtime_GI::RenderAA()
 
     context->OMSetRenderTargets(1, rtvs, nullptr);
 
-	RenderTarget2D  raaResource = _ssrTarget;
+	
+
+	RenderTarget2D  raaResource ;//= _ssrTarget
+	raaResource = AppSettings::EnableSSR ? _ssrTarget : _colorTarget;
 
     if(AppSettings::UseStandardResolve)
     {

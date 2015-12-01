@@ -6,6 +6,8 @@ q3Scene scenegb(dt);
 std::vector<q3Body *> bodylist;
 std::vector<SceneObject *> meshlist;
 
+std::vector<PointLight *> scenePointLight;
+
 
 class DropBoxesScript: public SceneScript
 {
@@ -16,6 +18,29 @@ public:
 		std::wstring cubePath = L"..\\Content\\Models\\Cube\\cube.FBX";
 		modelcube = scene->addModel(cubePath);
 		scene->setProxySceneObject(proxyModelPath, 0.1f, Float3(0, 0, 0), Quaternion());
+		
+		/*for (int i = 0; i < 4; i++)
+		{
+			scenePointLight.push_back(scene->addPointLight());
+		}
+		
+		
+			scenePointLight.at(0)->cColor = Float3(1, 0, 0) * 30;
+			scenePointLight.at(0)->cPos = Float3(15, 10, 0);
+			scenePointLight.at(0)->cRadius = 500.0f;
+
+			scenePointLight.at(1)->cColor = Float3(0, 1, 0) * 30;
+			scenePointLight.at(1)->cPos = Float3(-15, 10, 0);
+			scenePointLight.at(1)->cRadius = 500.0f;
+
+			scenePointLight.at(2)->cColor = Float3(0, 0, 1) * 30;
+			scenePointLight.at(2)->cPos = Float3(0, 10, 15);
+			scenePointLight.at(2)->cRadius = 500.0f;
+
+			scenePointLight.at(3)->cColor = Float3(1, 0, 1) * 30;
+			scenePointLight.at(3)->cPos = Float3(0, 10, -15);
+			scenePointLight.at(3)->cRadius = 500.0f;*/
+		
 
 		//scene->getGlobalCameraPtr()->SetLookAt(Float3(0.0f, 2.5f, -10.0f), Float3(0.0f, 0.0f, 0.0f), Float3(0.0f, 1.0f, 0.0f));
 
@@ -43,6 +68,22 @@ public:
 
 	virtual void Update(Scene *scene, const SampleFramework11::Timer *timer)
 	{
+		/*if (AppSettings::ClearingBoxes)
+		{
+			q3BodyDef bodyDef;
+			bodyDef.position.Set(0, 0, 20);
+			bodyDef.bodyType = eDynamicBody;
+			q3Body* body = scenegb.CreateBody(bodyDef);
+			body->ApplyLinearForce(q3Vec3(0,0,-1));
+			
+			q3Transform tx;
+
+			q3Identity(tx);
+			q3BoxDef boxDef;
+			boxDef.Set(tx, q3Vec3(50, 50, 1));
+			body->AddBox(boxDef);
+		}*/
+
 		acc += dt;
 		if (acc > 1.5f)
 		{
@@ -60,7 +101,7 @@ public:
 			q3Body* body = scenegb.CreateBody(bodyDef);
 
 			bodylist.push_back(body);
-
+			
 
 			SceneObject* doo = scene->addDynamicOpaqueObject(modelcube, 0.02f, Float3(bodyDef.position.x, bodyDef.position.y, bodyDef.position.z), Quaternion());
 			//SceneObject* doo = scene->addDynamicOpaqueBoxObject( 0.02f, Float3(0, 10, 0), Quaternion());
