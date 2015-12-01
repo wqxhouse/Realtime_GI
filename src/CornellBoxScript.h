@@ -18,7 +18,7 @@ public:
 
 		// set specular probes
 		scene->getProbeManagerPtr()->AddProbe(Float3(0, 0, 0), Float3(2, 2, 2));
-		scene->getProbeManagerPtr()->AddProbe(Float3(-1, 0, 0), Float3(2, 2, 2));
+		//scene->getProbeManagerPtr()->AddProbe(Float3(-1, 0, 0), Float3(2, 2, 2));
 	}
 
 	virtual void Update(Scene *scene, const SampleFramework11::Timer *timer)

@@ -134,7 +134,7 @@ void CreateCubemap::GenAndCacheConvoluteSphereInputLayout()
 	}
 }
 
-void CreateCubemap::RenderPrefilterCubebox(const Float4x4 &sceneTransform)
+void CreateCubemap::RenderPrefilterCubebox(RenderTarget2D cubemapArr, const Float4x4 &sceneTransform, int cubemapIndex)
 {
 	PIXEvent event(L"Prefilter Cubebox");
 
@@ -150,7 +150,8 @@ void CreateCubemap::RenderPrefilterCubebox(const Float4x4 &sceneTransform)
 			DefaultCubemapCameraStruct[cubeboxFaceIndex].LookAt,
 			DefaultCubemapCameraStruct[cubeboxFaceIndex].Up);
 
-		ID3D11RenderTargetViewPtr RTView = _prefilterCubemapTarget.RTVArraySlices.at(cubeboxFaceIndex);
+		//ID3D11RenderTargetViewPtr RTView = _prefilterCubemapTarget.RTVArraySlices.at(cubeboxFaceIndex);
+		ID3D11RenderTargetViewPtr RTView = cubemapArr.RTVArraySlices.at(6 * cubemapIndex + cubeboxFaceIndex);
 		ID3D11DepthStencilViewPtr DSView = _prefilterDepthTarget.ArraySlices.at(cubeboxFaceIndex);
 
 		_context->ClearRenderTargetView(RTView, clearColor);

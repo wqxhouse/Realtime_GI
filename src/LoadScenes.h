@@ -9,5 +9,5 @@
 inline void Realtime_GI::LoadScenes()
 {
 	AddScene(new CornellBoxScript);
-	AddScene(new SponzaScript);
+	//AddScene(new SponzaScript);
 }

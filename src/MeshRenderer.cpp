@@ -573,7 +573,7 @@ void MeshRenderer::ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx
     srvs[0] = NULL;
     context->PSSetShaderResources(0, 1, srvs);
 
-	_debugRenderer->QueueSprite(_varianceShadowMap.SRVArraySlices[cascadeIdx], Float3(128, 256, 0), Float4(1, 1, 1, 1));
+	//_debugRenderer->QueueSprite(_varianceShadowMap.SRVArraySlices[cascadeIdx], Float3(128, 256, 0), Float4(1, 1, 1, 1));
 
     const float FilterSizeU = std::max(FilterSize * cascadeScale.x, 1.0f);
     const float FilterSizeV = std::max(FilterSize * cascadeScale.y, 1.0f);
@@ -727,7 +727,7 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 			// ID3D11ShaderResourceViewPtr blendCubeMaps[2];
 
 			ProbeManager &probeManager = *_scene->getProbeManagerPtr();
-			probeManager.GetNNProbe(&cubeMap, objPos);
+			_meshPSConstants.Data.probeIndex = probeManager.GetNNProbe(&cubeMap, objPos);
 
 			if (cubeMap == nullptr)
 			{
@@ -817,6 +817,7 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 						material.RoughnessMap, 
 						material.MetallicMap, 
 						material.EmissiveMap,
+						//_scene->getProbeManagerPtr()->GetProbeArray().SRView,
 						/*blendCubeMaps[0],
 						blendCubeMaps[1]*/
 					};

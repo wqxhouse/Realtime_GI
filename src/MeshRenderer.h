@@ -109,6 +109,8 @@ public:
 		Float4Align Float3 ProbePosWS[2];
 		Float4Align Float3 BoxSize[2];
 		Float4Align Float3 ObjPos;
+
+		int probeIndex;
 	};
 
 	inline ConstantBuffer<MeshPSConstants> *getMeshPSConstantsPtr() { return &_meshPSConstants; }
