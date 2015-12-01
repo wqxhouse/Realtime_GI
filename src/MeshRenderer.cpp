@@ -658,6 +658,7 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 	// TODO: make deferred a unique structure
 	//if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
 	{
+		// Perframe
 		_meshPSConstants.Data.CameraPosWS = camera.Position();
 		_meshPSConstants.Data.OffsetScale = OffsetScale;
 		_meshPSConstants.Data.PositiveExponent = PositiveExponent;
@@ -669,11 +670,7 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 		_meshPSConstants.Data.RTSize.x = float(GlobalApp->DeviceManager().BackBufferWidth());
 		_meshPSConstants.Data.RTSize.y = float(GlobalApp->DeviceManager().BackBufferHeight());
 		_meshPSConstants.Data.JitterOffset = jitterOffset;
-		_meshPSConstants.ApplyChanges(context);
-		_meshPSConstants.SetPS(context, 0);
-		/*_meshPSConstants.Data.ProbePosWS = probePosWS;
-		_meshPSConstants.Data.MaxBox = maxbox;
-		_meshPSConstants.Data.MinBox = minbox;*/
+		
 	}
 
     // Set shaders
@@ -757,6 +754,10 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 				_meshPSConstants.Data.BoxSize[1] = blendCubemap2.GetBoxSize();
 				_meshPSConstants.Data.ObjPos = objPos;*/
 		// }
+
+		// Per object constants
+		_meshPSConstants.ApplyChanges(context);
+		_meshPSConstants.SetPS(context, 0);
 
 		// Draw all meshes
 		uint32 partCount = 0;

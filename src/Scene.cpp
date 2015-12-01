@@ -37,10 +37,9 @@ void Scene::Initialize(ID3D11Device *device, ID3D11DeviceContext *context, Scene
 	_context = context;
 	_sceneScript = sceneScript;
 	_globalCam = globalCamera;
+	_probeManager.Initialize(_device, _context);
 
 	_sceneScript->InitScene(this);
-
-	_probeManager.Initialize(_device, _context);
 }
 
 void Scene::Update(const Timer& timer)

@@ -51,17 +51,16 @@ private:
 	ID3D11Device *_device;
 	ID3D11DeviceContext *_context;
 
-	PerspectiveCamera cubemapCamera;
-	PerspectiveCamera filterCamera;
-	RenderTarget2D cubemapTarget;
-	DepthStencilBuffer cubemapDepthTarget;
-	RenderTarget2D prefilterCubemapTarget;
-	DepthStencilBuffer prefilterDepthTarget;
-	Float3 position;
+	PerspectiveCamera _cubemapCamera;
+	PerspectiveCamera _filterCamera;
+	RenderTarget2D _cubemapTarget;
+	DepthStencilBuffer _cubemapDepthTarget;
+	RenderTarget2D _prefilterCubemapTarget;
+	DepthStencilBuffer _prefilterDepthTarget;
+	Float3 _position;
 
 	Float3 _boxSize;
 
-	ID3D11InputLayoutPtr inputLayout;
 
 
 	BlendStates _blendStates;
@@ -111,5 +110,7 @@ private:
 
 	static VertexShaderPtr _convoluteVS;
 	static PixelShaderPtr _convolutePS[6];
+
+	static ID3D11InputLayoutPtr _inputLayout;
 };
 

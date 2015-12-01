@@ -24,33 +24,35 @@ const CreateCubemap::CameraStruct CreateCubemap::DefaultCubemapCameraStruct[6] =
 };
 
 CreateCubemap::CreateCubemap()
-	:cubemapCamera(1.0f, 90.0f * (Pi / 180), DefaultNearClip, DefaultFarClip),
-	filterCamera(1.0f, 90.0f * (Pi / 180), DefaultNearClip, DefaultFarClip)
+	:_cubemapCamera(1.0f, 90.0f * (Pi / 180), DefaultNearClip, DefaultFarClip),
+	_filterCamera(1.0f, 90.0f * (Pi / 180), DefaultNearClip, DefaultFarClip)
 {
 }
 
 void CreateCubemap::Initialize(ID3D11Device *device, ID3D11DeviceContext *context)
 {
+	_device = device;
+	_context = context;
+
 	if (!_convolveSphereSet)
 	{
-		_convolveSphere.CreateWithAssimp(_device, L"..\\Content\\Models\\sphere\\sphere.obj", false);
+		//_convolveSphere.CreateWithAssimp(_device, L"..\\Content\\Models\\sphere\\sphere.obj", false);
+		_convolveSphere.CreateWithAssimp(_device, L"..\\Content\\Models\\sphere\\sphere_new.FBX", false);
 		GenFilterShader();
 		GenAndCacheConvoluteSphereInputLayout();
 		_convolveSphereSet = true;
 	}
 
-	_device = device;
-	_context = context;
 	_CubemapWidth = 128;
 	_CubemapHeight = 128; 
 
-	cubemapTarget.Initialize(device, _CubemapWidth, _CubemapHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, 8,
+	_cubemapTarget.Initialize(device, _CubemapWidth, _CubemapHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, 8,
 		1, 0, TRUE, FALSE, 6, TRUE);
-	cubemapDepthTarget.Initialize(device, _CubemapWidth, _CubemapHeight, DXGI_FORMAT_D32_FLOAT, true, 1,
+	_cubemapDepthTarget.Initialize(device, _CubemapWidth, _CubemapHeight, DXGI_FORMAT_D32_FLOAT, true, 1,
 		0, 6, TRUE);
-	prefilterCubemapTarget.Initialize(device, _CubemapWidth, _CubemapHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, 8,
+	_prefilterCubemapTarget.Initialize(device, _CubemapWidth, _CubemapHeight, DXGI_FORMAT_R16G16B16A16_FLOAT, 8,
 		1, 0, TRUE, FALSE, 6, TRUE);
-	prefilterDepthTarget.Initialize(device, _CubemapWidth, _CubemapHeight, DXGI_FORMAT_D32_FLOAT, true, 1,
+	_prefilterDepthTarget.Initialize(device, _CubemapWidth, _CubemapHeight, DXGI_FORMAT_D32_FLOAT, true, 1,
 		0, 6, TRUE);
 
 	//_convolutePS = CompilePSFromFile(device, L"PrefilterCubemap.hlsl", "PS", "ps_5_0");
@@ -90,7 +92,7 @@ void CreateCubemap::GenFilterShader()
 
 void CreateCubemap::SetPosition(const Float3 &newPosition)
 {
-	position = newPosition;
+	_position = newPosition;
 	for (int faceIndex = 0; faceIndex < 6; faceIndex++)
 	{
 		CubemapCameraStruct[faceIndex] = 
@@ -103,7 +105,7 @@ void CreateCubemap::SetPosition(const Float3 &newPosition)
 
 Float3 CreateCubemap::GetPosition()
 {
-	return position;
+	return _position;
 }
 
 
@@ -122,14 +124,12 @@ void CreateCubemap::GenAndCacheConvoluteSphereInputLayout()
 	ID3D11InputLayoutPtr _meshInputLayouts;
 	VertexShaderPtr _sphereVertexShader;
 
-	std::unordered_map<const Mesh *, ID3D11InputLayoutPtr>;
-
 	for (uint64 i = 0; i < _convolveSphere.Meshes().size(); ++i)
 	{
 		const Mesh& mesh = _convolveSphere.Meshes()[i];
 
 		DXCall(_device->CreateInputLayout(mesh.InputElements(), mesh.NumInputElements(),
-			_convoluteVS->ByteCode->GetBufferPointer(), _convoluteVS->ByteCode->GetBufferSize(), &inputLayout));
+			_convoluteVS->ByteCode->GetBufferPointer(), _convoluteVS->ByteCode->GetBufferSize(), &_inputLayout));
 
 	}
 }
@@ -146,12 +146,12 @@ void CreateCubemap::RenderPrefilterCubebox(const Float4x4 &sceneTransform)
 
 	for (int cubeboxFaceIndex = 0; cubeboxFaceIndex < 6; cubeboxFaceIndex++)
 	{
-		filterCamera.SetLookAt(DefaultCubemapCameraStruct[cubeboxFaceIndex].Eye,
+		_filterCamera.SetLookAt(DefaultCubemapCameraStruct[cubeboxFaceIndex].Eye,
 			DefaultCubemapCameraStruct[cubeboxFaceIndex].LookAt,
 			DefaultCubemapCameraStruct[cubeboxFaceIndex].Up);
 
-		ID3D11RenderTargetViewPtr RTView = prefilterCubemapTarget.RTVArraySlices.at(cubeboxFaceIndex);
-		ID3D11DepthStencilViewPtr DSView = prefilterDepthTarget.ArraySlices.at(cubeboxFaceIndex);
+		ID3D11RenderTargetViewPtr RTView = _prefilterCubemapTarget.RTVArraySlices.at(cubeboxFaceIndex);
+		ID3D11DepthStencilViewPtr DSView = _prefilterDepthTarget.ArraySlices.at(cubeboxFaceIndex);
 
 		_context->ClearRenderTargetView(RTView, clearColor);
 		_context->ClearDepthStencilView(DSView, D3D11_CLEAR_DEPTH, 1.0f, 0);
@@ -162,7 +162,7 @@ void CreateCubemap::RenderPrefilterCubebox(const Float4x4 &sceneTransform)
 		//Start Render
 		//for (int mipLevel = 0; mipLevel < 8; ++mipLevel){
 		_PSConstants.Data.MipLevel = 0;
-		_PSConstants.Data.CameraPos = filterCamera.Position();
+		_PSConstants.Data.CameraPos = _filterCamera.Position();
 
 		// Set states
 		float blendFactor[4] = { 1, 1, 1, 1 };
@@ -186,8 +186,8 @@ void CreateCubemap::RenderPrefilterCubebox(const Float4x4 &sceneTransform)
 
 		//Set Constant Variables
 		_VSConstants.Data.world = sceneTransform;
-		_VSConstants.Data.View = Float4x4::Transpose(filterCamera.ViewMatrix());
-		_VSConstants.Data.WorldViewProjection = Float4x4::Transpose(sceneTransform * filterCamera.ProjectionMatrix());//meshRenderer->_meshVSConstants.Data.WorldViewProjection;
+		_VSConstants.Data.View = Float4x4::Transpose(_filterCamera.ViewMatrix());
+		_VSConstants.Data.WorldViewProjection = Float4x4::Transpose(sceneTransform * _filterCamera.ProjectionMatrix());//meshRenderer->_meshVSConstants.Data.WorldViewProjection;
 		_VSConstants.ApplyChanges(_context);
 		_VSConstants.SetVS(_context, 0);
 
@@ -205,7 +205,7 @@ void CreateCubemap::RenderPrefilterCubebox(const Float4x4 &sceneTransform)
 			_context->IASetIndexBuffer(mesh.IndexBuffer(), mesh.IndexBufferFormat(), 0);
 			_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-			_context->IASetInputLayout(inputLayout);
+			_context->IASetInputLayout(_inputLayout);
 
 			for (uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
 			{
@@ -213,7 +213,7 @@ void CreateCubemap::RenderPrefilterCubebox(const Float4x4 &sceneTransform)
 				const MeshMaterial& material = cubemapSphere->Materials()[part.MaterialIdx];
 
 				//Set ShaderResourse
-				ID3D11ShaderResourceView* cubemapResourse[1] = { cubemapTarget.SRView };
+				ID3D11ShaderResourceView* cubemapResourse[1] = { _cubemapTarget.SRView };
 
 				_context->PSSetShaderResources(0, _countof(cubemapResourse), cubemapResourse);
 				_context->DrawIndexed(part.IndexCount, part.IndexStart, 0);
@@ -236,35 +236,35 @@ void CreateCubemap::Create(MeshRenderer *meshRenderer,
 
 	for (int cubeboxFaceIndex = 0; cubeboxFaceIndex < 6; cubeboxFaceIndex++)
 	{
-		ID3D11RenderTargetViewPtr RTView = cubemapTarget.RTVArraySlices.at(cubeboxFaceIndex);
-		ID3D11DepthStencilViewPtr DSView = cubemapDepthTarget.ArraySlices.at(cubeboxFaceIndex);
+		ID3D11RenderTargetViewPtr RTView = _cubemapTarget.RTVArraySlices.at(cubeboxFaceIndex);
+		ID3D11DepthStencilViewPtr DSView = _cubemapDepthTarget.ArraySlices.at(cubeboxFaceIndex);
 		/*ID3D11RenderTargetViewPtr PreRTView = prefilterCubemapTarget.RTVArraySlices.at(cubeboxFaceIndex);
 		ID3D11DepthStencilViewPtr PreDSView = prefilterDepthTarget.ArraySlices.at(cubeboxFaceIndex);*/
 
-		cubemapCamera.SetLookAt(CubemapCameraStruct[cubeboxFaceIndex].Eye,
+		_cubemapCamera.SetLookAt(CubemapCameraStruct[cubeboxFaceIndex].Eye,
 			CubemapCameraStruct[cubeboxFaceIndex].LookAt,
 			CubemapCameraStruct[cubeboxFaceIndex].Up);
 
-		meshRenderer->SortSceneObjects(cubemapCamera.ViewMatrix());
+		meshRenderer->SortSceneObjects(_cubemapCamera.ViewMatrix());
 
 		_context->ClearRenderTargetView(RTView, clearColor);
 		_context->ClearDepthStencilView(DSView, D3D11_CLEAR_DEPTH, 1.0f, 0);
 
 		ID3D11RenderTargetView *renderTarget[1] = { RTView };
 		_context->OMSetRenderTargets(1, renderTarget, DSView);
-		meshRenderer->RenderDepth(_context, cubemapCamera, sceneTransform, false);
+		meshRenderer->RenderDepth(_context, _cubemapCamera, sceneTransform, false);
 
-		meshRenderer->ComputeShadowDepthBoundsCPU(cubemapCamera);
+		meshRenderer->ComputeShadowDepthBoundsCPU(_cubemapCamera);
 
 		// TODO: figure out how to reduce depth on a cubemap
 		// meshRenderer->ReduceDepth(context, cubemapDepthTarget, cubemapCamera);
-		meshRenderer->RenderShadowMap(_context, cubemapCamera, sceneTransform);
+		meshRenderer->RenderShadowMap(_context, _cubemapCamera, sceneTransform);
 
 		_context->OMSetRenderTargets(1, renderTarget, DSView);
-		meshRenderer->Render(_context, cubemapCamera, sceneTransform, environmentMap, environmentMapSH, jitterOffset);
+		meshRenderer->Render(_context, _cubemapCamera, sceneTransform, environmentMap, environmentMapSH, jitterOffset);
 
-		skybox->RenderEnvironmentMap(_context, environmentMap, cubemapCamera.ViewMatrix(),
-			cubemapCamera.ProjectionMatrix(), Float3(std::exp2(AppSettings::ExposureScale)));
+		skybox->RenderEnvironmentMap(_context, environmentMap, _cubemapCamera.ViewMatrix(),
+			_cubemapCamera.ProjectionMatrix(), Float3(std::exp2(AppSettings::ExposureScale)));
 
 		/*renderTarget[0] = PreRTView;
 		context->OMSetRenderTargets(1, renderTarget, PreDSView);
@@ -288,15 +288,15 @@ void CreateCubemap::Create(MeshRenderer *meshRenderer,
 const PerspectiveCamera &CreateCubemap::GetCubemapCamera()
 {
 	const int face = 4;
-	cubemapCamera.SetLookAt(DefaultCubemapCameraStruct[face].Eye,
+	_cubemapCamera.SetLookAt(DefaultCubemapCameraStruct[face].Eye,
 		DefaultCubemapCameraStruct[face].LookAt,
 		DefaultCubemapCameraStruct[face].Up);
-	return cubemapCamera;
+	return _cubemapCamera;
 }
 
 void CreateCubemap::GetTargetViews(RenderTarget2D &resCubemapTarget)
 {
-	resCubemapTarget = cubemapTarget;
+	resCubemapTarget = _cubemapTarget;
 }
 
 void CreateCubemap::SetCubemapSize(uint32 size)
@@ -307,7 +307,7 @@ void CreateCubemap::SetCubemapSize(uint32 size)
 
 void CreateCubemap::GetPreFilterRT(RenderTarget2D &prefilterTarget)
 {
-	prefilterTarget = prefilterCubemapTarget;
+	prefilterTarget = _prefilterCubemapTarget;
 }
 
 CreateCubemap::~CreateCubemap()
@@ -318,3 +318,4 @@ Model CreateCubemap::_convolveSphere;
 bool32 CreateCubemap::_convolveSphereSet;
 VertexShaderPtr CreateCubemap::_convoluteVS;
 PixelShaderPtr CreateCubemap::_convolutePS[6];
+ID3D11InputLayoutPtr CreateCubemap::_inputLayout;
