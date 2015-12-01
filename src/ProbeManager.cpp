@@ -36,6 +36,12 @@ void ProbeManager::AddProbe(const Float3 &pos, const Float3 &boxSize)
 	newCubemap.SetPosition(pos);
 	newCubemap.SetBoxSize(boxSize);
 	_cubemaps.push_back(newCubemap);
+
+	Probe newProbe;
+	newProbe.pos = pos;
+	newProbe.BoxSize = boxSize;
+	_probes.push_back(newProbe);
+
 	_probeNum++;
 }
 

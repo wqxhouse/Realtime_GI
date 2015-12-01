@@ -276,7 +276,11 @@ void Realtime_GI::UpdateSpecularProbeProperties()
 						AppSettings::BoxSizeZ.SetValue(boxSize.z);
 					}
 					cubeMap->SetPosition(Float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ));
+					_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->_probes.at(probeIndex).pos = 
+						Float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ);
 					cubeMap->SetBoxSize(Float3(AppSettings::BoxSizeX, AppSettings::BoxSizeY, AppSettings::BoxSizeZ));
+					_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->_probes.at(probeIndex).BoxSize =
+						Float3(AppSettings::BoxSizeX, AppSettings::BoxSizeY, AppSettings::BoxSizeZ);
 				}
 			}
 		}
@@ -409,6 +413,7 @@ void Realtime_GI::CreateLightBuffers()
 {
 	_pointLightBuffer.Initialize(_deviceManager.Device(), sizeof(PointLight), Scene::MAX_SCENE_LIGHTS, true);
 	_shProbeLightBuffer.Initialize(_deviceManager.Device(), sizeof(SHProbeLight), IrradianceVolume::MAX_PROBE_NUM, true);
+	_probeStructBuffer.Initialize(_deviceManager.Device(), sizeof(Probe), 12, true);
 }
 
 void Realtime_GI::ApplyMomentum(float &prevVal, float &val, float deltaTime)
@@ -742,6 +747,16 @@ void Realtime_GI::RenderSceneCubemaps(ID3D11DeviceContext *context)
 			_meshRenderer.SetCubemapCapture(false);
 		}
 	}
+
+	D3D11_MAPPED_SUBRESOURCE mappedResource;
+
+	_deviceManager.ImmediateContext()->Map(_probeStructBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	Probe *probePtr = static_cast<Probe*>(mappedResource.pData);
+
+	Scene *curScene = &_scenes[AppSettings::CurrentScene];
+	memcpy(probePtr, &(curScene->getProbeManagerPtr()->_probes[0]), 
+		sizeof(Probe) * curScene->getProbeManagerPtr()->GetProbeNums());
+	_deviceManager.ImmediateContext()->Unmap(_probeStructBuffer.Buffer, 0);
 }
 
 void Realtime_GI::Render(const Timer& timer)
@@ -922,6 +937,7 @@ void Realtime_GI::RenderLightsDeferred()
 		_shProbeLightBuffer.SRView,
 		_irradianceVolume.getRelightSHStructuredBufferPtr()->SRView,
 		_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeArray().SRView,
+		_probeStructBuffer.SRView
 	};
 
 	ID3D11SamplerState* sampStates[2] = {
@@ -1142,7 +1158,7 @@ void Realtime_GI::UploadLights()
 	Scene *curScene = &_scenes[AppSettings::CurrentScene];
 	PointLight *pointLightPtr = curScene->getPointLightPtr();
 	memcpy(pointLightGPUBufferPtr, pointLightPtr, sizeof(PointLight) * curScene->getNumPointLights());
-	_deviceManager.ImmediateContext()->Unmap(_pointLightBuffer.Buffer, 0);
+	_deviceManager.ImmediateContext()->Unmap(_pointLightBuffer.Buffer, 0);//!
 
 	// sh probe lights
 	_deviceManager.ImmediateContext()->Map(_shProbeLightBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);

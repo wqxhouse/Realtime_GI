@@ -36,12 +36,21 @@ cbuffer ClusteredDeferredConstants : register(b0)
 	float ProjTermA;
 	float3 ClusterBias;
 	float ProjTermB;
+
+	/*float3 ProbePositionWS;
+	float3 BoxSize;*/
 }
 
 struct ClusterData
 {
 	uint offset;
 	uint counts;
+};
+
+struct Probe
+{
+	float3 pos;
+	float3 boxSize;
 };
 
 Texture2D RT0 : register(t0);
@@ -60,6 +69,7 @@ Texture3D<ClusterData> Clusters : register(t9);
 StructuredBuffer<SHProbeLight> SHProbeLights: register(t10);
 
 TextureCubeArray<float4> probeArr : register(t12);
+StructuredBuffer<Probe> Probes : register(t13);
 // RWStructuredBuffer<SH9Color> SHProbeCoefficients: register(u0);
 
 SamplerState EVSMSampler : register(s0);
@@ -87,6 +97,27 @@ struct PSInput
     float4 PositionSS 		    : SV_Position;
 	float3 ViewRay				: VIEWRAY;
 };
+
+
+float3 parallaxCorrection(float3 PositionWS, float3 newProbePositionWS, float3 NormalWS, float3 boxMax, float3 boxMin)
+{
+	float3 DirectionWS = normalize(PositionWS - CameraPosWS);
+		float3 ReflDirectionWS = reflect(DirectionWS, NormalWS);
+
+		float3 FirstPlaneIntersect = (boxMax - PositionWS) / ReflDirectionWS;
+		float3 SecondPlaneIntersect = (boxMin - PositionWS) / ReflDirectionWS;
+
+		float3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
+
+		float Distance = min(min(FurthestPlane.x, FurthestPlane.y), FurthestPlane.z);
+
+	float3 IntersectPositionWS = PositionWS + ReflDirectionWS * Distance;
+
+		ReflDirectionWS = IntersectPositionWS - newProbePositionWS;
+
+	return ReflDirectionWS;
+}
+
 
 /////////////////////////////////////////////////////////////
 // Shader
@@ -163,6 +194,8 @@ float4 ClusteredDeferredPS(in PSInput input) : SV_Target0
 	{
 		float4 probeLighting = float4(0, 0, 0, 0);
 		uint shProbeLightOffset = offset + pointLightCount;
+		
+
 		for (uint i = 0; i < shProbeLightCount; i++)
 		{
 			uint shLightIndex = LightIndices[shProbeLightOffset + i];
@@ -176,13 +209,16 @@ float4 ClusteredDeferredPS(in PSInput input) : SV_Target0
 
 	if (EnableIndirectSpecularLighting)
 	{
+		uint probeIndex = (uint)rt1.w * 255;
 		float3 viewWS = normalize(CameraPosWS - surface.posWS); // TODO: this can be reused in several places
 		
 		float3 indirectDiffuse = EvalSH9Cosine(surface.normalWS, EnvironmentSH);
 
 		lighting += indirectDiffuse * surface.diffuse;
 
-		float3 reflectWS = reflect(-viewWS, surface.normalWS);
+		//float3 reflectWS = reflect(-viewWS, surface.normalWS);
+		float3 reflectWS = parallaxCorrection(surface.posWS, Probes[probeIndex].pos, normalize(surface.normalWS),
+			Probes[probeIndex].pos + Probes[probeIndex].boxSize, Probes[probeIndex].pos - Probes[probeIndex].boxSize);
 
 		uint width, height, numMips;
 		SpecularCubemap.GetDimensions(0, width, height, numMips);
@@ -204,7 +240,7 @@ float4 ClusteredDeferredPS(in PSInput input) : SV_Target0
 
 		//lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;
 
-		uint probeIndex = (uint)rt1.w * 255;
+		
 		float4 reflectWSIndex = float4(reflectWS, probeIndex);
 		
 			lighting += probeArr.SampleLevel(LinearSampler, reflectWSIndex, mipLevel).xyz * fresnel;
