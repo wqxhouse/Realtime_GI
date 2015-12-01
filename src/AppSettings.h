@@ -104,6 +104,7 @@ namespace AppSettings
     extern BoolSetting EnableIndirectSpecularLighting;
     extern BoolSetting RenderBackground;
     extern BoolSetting RenderSceneObjectBBox;
+    extern BoolSetting RenderProbeBBox;
     extern BoolSetting RenderIrradianceVolumeProbes;
     extern BoolSetting EnableShadows;
     extern BoolSetting EnableNormalMaps;
@@ -162,6 +163,7 @@ namespace AppSettings
         bool32 EnableIndirectSpecularLighting;
         bool32 RenderBackground;
         bool32 RenderSceneObjectBBox;
+        bool32 RenderProbeBBox;
         bool32 RenderIrradianceVolumeProbes;
         bool32 EnableShadows;
         bool32 EnableNormalMaps;

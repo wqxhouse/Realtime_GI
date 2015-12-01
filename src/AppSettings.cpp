@@ -78,6 +78,7 @@ namespace AppSettings
     BoolSetting EnableIndirectSpecularLighting;
     BoolSetting RenderBackground;
     BoolSetting RenderSceneObjectBBox;
+    BoolSetting RenderProbeBBox;
     BoolSetting RenderIrradianceVolumeProbes;
     BoolSetting EnableShadows;
     BoolSetting EnableNormalMaps;
@@ -204,6 +205,9 @@ namespace AppSettings
         RenderSceneObjectBBox.Initialize(tweakBar, "RenderSceneObjectBBox", "Scene Controls", "Render Scene Object BBox", "", false);
         Settings.AddSetting(&RenderSceneObjectBBox);
 
+        RenderProbeBBox.Initialize(tweakBar, "RenderProbeBBox", "Scene Controls", "Render Probe BBox", "", false);
+        Settings.AddSetting(&RenderProbeBBox);
+
         RenderIrradianceVolumeProbes.Initialize(tweakBar, "RenderIrradianceVolumeProbes", "Scene Controls", "Render Irradiance Volume Probes", "", false);
         Settings.AddSetting(&RenderIrradianceVolumeProbes);
 
@@ -326,6 +330,7 @@ namespace AppSettings
         CBuffer.Data.EnableIndirectSpecularLighting = EnableIndirectSpecularLighting;
         CBuffer.Data.RenderBackground = RenderBackground;
         CBuffer.Data.RenderSceneObjectBBox = RenderSceneObjectBBox;
+        CBuffer.Data.RenderProbeBBox = RenderProbeBBox;
         CBuffer.Data.RenderIrradianceVolumeProbes = RenderIrradianceVolumeProbes;
         CBuffer.Data.EnableShadows = EnableShadows;
         CBuffer.Data.EnableNormalMaps = EnableNormalMaps;

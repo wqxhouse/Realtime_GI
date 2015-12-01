@@ -144,6 +144,11 @@ protected:
 		Float4 invNDCToWorldZ;
 	};
 
+	struct Probe
+	{
+		Float3 pos;
+		Float3 BoxSize;
+	};
 
     ConstantBuffer<ResolveConstants> _resolveConstants;
     ConstantBuffer<BackgroundVelocityConstants> _backgroundVelocityConstants;
@@ -151,6 +156,8 @@ protected:
 
 	StructuredBuffer _pointLightBuffer;
 	StructuredBuffer _shProbeLightBuffer;
+
+	StructuredBuffer _probeStructBuffer;
 
 	SamplerStates _samplerStates;
 
