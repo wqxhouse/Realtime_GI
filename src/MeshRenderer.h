@@ -59,9 +59,16 @@ public:
                          const Float4x4& world);
 
 	void SetCubemapCapture(bool32 tf);
+
+	void MeshRenderer::SetParallaxCorrection(Float3 newProbePosWS[2], Float3 newBoxSize[2], Float3 newObjectPosWS[2]);
+
 	void SetDrawGBuffer(bool32 tf);
+
+	void SetInitializeProbes(bool32 tf);
+
 	void ReMapMeshShaders();
 	void SortSceneObjects(const Float4x4 &viewMatrix);
+
 
 	inline RenderTarget2D *GetVSMRenderTargetPtr() { return &_varianceShadowMap; }
 	inline ID3D11SamplerStatePtr GetEVSMSamplerStatePtr() { return _evsmSampler; }	
@@ -80,7 +87,6 @@ public:
 	struct MeshPSConstants
 	{
 		Float4Align Float3 CameraPosWS;
-
 		Float4Align Float4x4 ShadowMatrix;
 		Float4Align float CascadeSplits[NumCascades];
 
@@ -99,6 +105,10 @@ public:
 
 		Float2 RTSize;
 		Float2 JitterOffset;
+
+		Float4Align Float3 ProbePosWS[2];
+		Float4Align Float3 BoxSize[2];
+		Float4Align Float3 ObjPos;
 	};
 
 	inline ConstantBuffer<MeshPSConstants> *getMeshPSConstantsPtr() { return &_meshPSConstants; }
@@ -177,11 +187,13 @@ protected:
     ID3D11ShaderResourceViewPtr _specularLookupTexture;
 
 	bool32 _drawingCubemap;
+	bool32 _initializeProbes;
+
+	Float3 _probePosWS[2];
+	Float3 _boxSize[2];
+	Float3 _objPosWS[2];
+
 	bool32 _drawingGBuffer;
-
-  
-
-	// struct 
 
     struct EVSMConstants
     {

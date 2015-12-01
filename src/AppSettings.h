@@ -98,6 +98,8 @@ namespace AppSettings
     extern ShadingTechSetting CurrentShadingTech;
     extern DirectionSetting LightDirection;
     extern ColorSetting LightColor;
+    extern BoolSetting EnableSSR;
+    extern BoolSetting PauseSceneScript;
     extern BoolSetting EnableDirectLighting;
     extern BoolSetting EnableIndirectDiffuseLighting;
     extern BoolSetting EnableIndirectSpecularLighting;
@@ -114,6 +116,13 @@ namespace AppSettings
     extern FloatSetting Roughness;
     extern FloatSetting SpecularIntensity;
     extern FloatSetting EmissiveIntensity;
+    extern FloatSetting ProbeIndex;
+    extern FloatSetting ProbeX;
+    extern FloatSetting ProbeY;
+    extern FloatSetting ProbeZ;
+    extern FloatSetting BoxSizeX;
+    extern FloatSetting BoxSizeY;
+    extern FloatSetting BoxSizeZ;
     extern OrientationSetting SceneOrientation;
     extern FloatSetting ModelRotationSpeed;
     extern BoolSetting DoubleSyncInterval;
@@ -147,6 +156,8 @@ namespace AppSettings
         int32 CurrentShadingTech;
         Float3 LightDirection;
         Float4Align Float3 LightColor;
+        bool32 EnableSSR;
+        bool32 PauseSceneScript;
         bool32 EnableDirectLighting;
         bool32 EnableIndirectDiffuseLighting;
         bool32 EnableIndirectSpecularLighting;
@@ -163,6 +174,13 @@ namespace AppSettings
         float Roughness;
         float SpecularIntensity;
         float EmissiveIntensity;
+        float ProbeIndex;
+        float ProbeX;
+        float ProbeY;
+        float ProbeZ;
+        float BoxSizeX;
+        float BoxSizeY;
+        float BoxSizeZ;
         Float4Align Quaternion SceneOrientation;
         float ModelRotationSpeed;
         bool32 DoubleSyncInterval;

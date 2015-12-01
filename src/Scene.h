@@ -2,11 +2,15 @@
 #include "PCH.h"
 
 #include <Graphics\\Model.h>
+#include <Graphics\\Camera.h>
 #include <SF11_Math.h>
 #include <Timer.h>
 
 #include "Light.h"
 #include "BoundUtils.h"
+
+#include "ProbeManager.h"
+//#include "CreateCubemap.h"
 
 using namespace SampleFramework11;
 
@@ -69,16 +73,17 @@ struct TransparentObjectDepthCompare
 
 // TODO: implement scene graph - currently flat structure
 // TODO: support instancing
-
+class SceneScript;
 class Scene
 {
 public:
 	Scene();
 	~Scene();
 
-	void Initialize(ID3D11Device *device, ID3D11DeviceContext *context);
+	void Initialize(ID3D11Device *device, ID3D11DeviceContext *context, SceneScript *sceneScript, FirstPersonCamera *globalCamera);
 	void Update(const Timer& timer);
-	void SetUpdateFunction(void(*update)(Scene *scene, const Timer &timer));
+
+	void OnSceneChange();
 
 	Model *addModel(const std::wstring &modelPath);
 	Model *addBoxModel();
@@ -94,6 +99,7 @@ public:
 
 	SceneObject *addDynamicOpaqueBoxObject(float scale = 1.0f, const Float3 &pos = Float3(), const Quaternion &rot = Quaternion());
 	SceneObject *addDynamicOpaquePlaneObject(float scale = 1.0f, const Float3 &pos = Float3(), const Quaternion &rot = Quaternion());
+	SceneObject *addStaticOpaquePlaneObject(float scale = 1.0f, const Float3 &pos = Float3(), const Quaternion &rot = Quaternion());
 
 	void setProxySceneObject(const std::wstring &modelPath, float scale = 1.0f, const Float3 &pos = Float3(), const Quaternion &rot = Quaternion());
 	inline SceneObject *getProxySceneObjectPtr() { return &_proxySceneObject; }
@@ -117,14 +123,17 @@ public:
 	inline BBox *getDynamicObjectBBoxPtr() { return _dynamicOpaqueObjectsBBoxes; }
 	inline BBox *getStaticObjectBBoxPtr() { return _staticOpaqueObjectsBBoxes; }
 
+	inline FirstPersonCamera *getSceneCameraSavedPtr() { return &_sceneCamSaved; }
+	inline FirstPersonCamera *getGlobalCameraPtr() { return _globalCam; }
+
 	// Lights
 	PointLight *addPointLight();
 	uint32 fillPointLightsUniformGrid(float unitGridSize, float radius, Float3 offset=Float3());
 	inline PointLight *getPointLightPtr() { return _pointLights; }
 	inline int getNumPointLights() { return _numPointLights; }
-
-	// std::wstring getSceneBoundInfo();
 	BBox getSceneBoundingBox();
+
+	inline ProbeManager *Scene::getProbeManagerPtr() { return &_probeManager; }
 
 	// Caution: too large will stack overflow
 	static const int MAX_STATIC_OBJECTS = 32;
@@ -170,7 +179,7 @@ private:
 	bool _sceneBoundGenerated;
 
 	// TODO: refactor so that a controlled set of scene api is exposed
-	void(*_updateFunc)(Scene *scene, const Timer &timer);
+	// void(*_updateFunc)(Scene *scene, const Timer &timer);
 
 	bool32 _hasProxySceneObject;
 	SceneObject _proxySceneObject;
@@ -197,6 +206,12 @@ private:
 
 	PointLight _pointLights[MAX_SCENE_LIGHTS];
 
+	SceneScript *_sceneScript;
+
+	FirstPersonCamera _sceneCamSaved;
+	FirstPersonCamera *_globalCam;
+
+	ProbeManager _probeManager;
 private:
 
 	// TODO: justify the usefulness of object id

@@ -72,6 +72,8 @@ namespace AppSettings
     ShadingTechSetting CurrentShadingTech;
     DirectionSetting LightDirection;
     ColorSetting LightColor;
+    BoolSetting EnableSSR;
+    BoolSetting PauseSceneScript;
     BoolSetting EnableDirectLighting;
     BoolSetting EnableIndirectDiffuseLighting;
     BoolSetting EnableIndirectSpecularLighting;
@@ -88,6 +90,13 @@ namespace AppSettings
     FloatSetting Roughness;
     FloatSetting SpecularIntensity;
     FloatSetting EmissiveIntensity;
+    FloatSetting ProbeIndex;
+    FloatSetting ProbeX;
+    FloatSetting ProbeY;
+    FloatSetting ProbeZ;
+    FloatSetting BoxSizeX;
+    FloatSetting BoxSizeY;
+    FloatSetting BoxSizeZ;
     OrientationSetting SceneOrientation;
     FloatSetting ModelRotationSpeed;
     BoolSetting DoubleSyncInterval;
@@ -175,6 +184,12 @@ namespace AppSettings
         LightColor.Initialize(tweakBar, "LightColor", "Scene Controls", "Light Color", "The color of the light", Float3(20.0000f, 16.0000f, 10.0000f), true, 0.0000f, 20.0000f, 0.1000f, ColorUnit::None);
         Settings.AddSetting(&LightColor);
 
+        EnableSSR.Initialize(tweakBar, "EnableSSR", "Scene Controls", "Enable SSR", "", true);
+        Settings.AddSetting(&EnableSSR);
+
+        PauseSceneScript.Initialize(tweakBar, "PauseSceneScript", "Scene Controls", "Pause Scene Script", "", false);
+        Settings.AddSetting(&PauseSceneScript);
+
         EnableDirectLighting.Initialize(tweakBar, "EnableDirectLighting", "Scene Controls", "Enable Direct Lighting", "", true);
         Settings.AddSetting(&EnableDirectLighting);
 
@@ -222,6 +237,27 @@ namespace AppSettings
 
         EmissiveIntensity.Initialize(tweakBar, "EmissiveIntensity", "Scene Controls", "Emissive Intensity", "Emissive parameter for the material", 0.0000f, 0.0000f, 1.0000f, 0.0010f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&EmissiveIntensity);
+
+        ProbeIndex.Initialize(tweakBar, "ProbeIndex", "Scene Controls", "Probe Index", "", 0.0000f, 0.0000f, 50.0000f, 1.0000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&ProbeIndex);
+
+        ProbeX.Initialize(tweakBar, "ProbeX", "Scene Controls", "ProbeX", "", 0.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&ProbeX);
+
+        ProbeY.Initialize(tweakBar, "ProbeY", "Scene Controls", "ProbeY", "", 0.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&ProbeY);
+
+        ProbeZ.Initialize(tweakBar, "ProbeZ", "Scene Controls", "ProbeZ", "", 0.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&ProbeZ);
+
+        BoxSizeX.Initialize(tweakBar, "BoxSizeX", "Scene Controls", "BoxSizeX", "", 1.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&BoxSizeX);
+
+        BoxSizeY.Initialize(tweakBar, "BoxSizeY", "Scene Controls", "BoxSizeY", "", 1.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&BoxSizeY);
+
+        BoxSizeZ.Initialize(tweakBar, "BoxSizeZ", "Scene Controls", "BoxSizeZ", "", 1.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&BoxSizeZ);
 
         SceneOrientation.Initialize(tweakBar, "SceneOrientation", "Scene Controls", "Scene Orientation", "", Quaternion(0.0000f, 0.0000f, 0.0000f, 1.0000f));
         Settings.AddSetting(&SceneOrientation);
@@ -284,6 +320,8 @@ namespace AppSettings
         CBuffer.Data.CurrentShadingTech = CurrentShadingTech;
         CBuffer.Data.LightDirection = LightDirection;
         CBuffer.Data.LightColor = LightColor;
+        CBuffer.Data.EnableSSR = EnableSSR;
+        CBuffer.Data.PauseSceneScript = PauseSceneScript;
         CBuffer.Data.EnableDirectLighting = EnableDirectLighting;
         CBuffer.Data.EnableIndirectDiffuseLighting = EnableIndirectDiffuseLighting;
         CBuffer.Data.EnableIndirectSpecularLighting = EnableIndirectSpecularLighting;
@@ -300,6 +338,13 @@ namespace AppSettings
         CBuffer.Data.Roughness = Roughness;
         CBuffer.Data.SpecularIntensity = SpecularIntensity;
         CBuffer.Data.EmissiveIntensity = EmissiveIntensity;
+        CBuffer.Data.ProbeIndex = ProbeIndex;
+        CBuffer.Data.ProbeX = ProbeX;
+        CBuffer.Data.ProbeY = ProbeY;
+        CBuffer.Data.ProbeZ = ProbeZ;
+        CBuffer.Data.BoxSizeX = BoxSizeX;
+        CBuffer.Data.BoxSizeY = BoxSizeY;
+        CBuffer.Data.BoxSizeZ = BoxSizeZ;
         CBuffer.Data.SceneOrientation = SceneOrientation;
         CBuffer.Data.ModelRotationSpeed = ModelRotationSpeed;
         CBuffer.Data.DoubleSyncInterval = DoubleSyncInterval;

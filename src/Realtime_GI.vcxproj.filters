@@ -114,6 +114,7 @@
     <ClCompile Include="SSR.cpp">
       <Filter>SSR</Filter>
     </ClCompile>
+    <ClCompile Include="ProbeManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PostProcessor.h" />
@@ -258,6 +259,16 @@
     <ClInclude Include="SSR.h">
       <Filter>SSR</Filter>
     </ClInclude>
+    <ClInclude Include="SceneScriptBase.h">
+      <Filter>SceneScripts</Filter>
+    </ClInclude>
+    <ClInclude Include="LoadScenes.h">
+      <Filter>SceneScripts</Filter>
+    </ClInclude>
+    <ClInclude Include="CornellBoxScript.h">
+      <Filter>SceneScripts</Filter>
+    </ClInclude>
+    <ClInclude Include="ProbeManager.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="AppSettings.hlsl">
@@ -376,6 +387,9 @@
     <Filter Include="Shader\SSR">
       <UniqueIdentifier>{fa748d45-5502-4b56-b72a-91aea6a58088}</UniqueIdentifier>
     </Filter>
+    <Filter Include="SceneScripts">
+      <UniqueIdentifier>{25308ff5-b679-4ffb-98fa-ca45b98a4ec6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\Externals\AntTweakBar\bin\AntTweakBar64.dll">
@@ -436,5 +450,10 @@
     <Image Include="Debug\x64\t1.dds">
       <Filter>Misc</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="PrefilterCubemap.hlsl">
+      <Filter>Shader</Filter>
+    </Text>
   </ItemGroup>
 </Project>

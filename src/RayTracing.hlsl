@@ -3,7 +3,7 @@
 #include "LightCommon.hlsli"
 
 #define MAX_STEPS 300
-#define MAX_INTERSECT_DIST 0.15
+#define MAX_INTERSECT_DIST 0.04
 #define STRIDE 1.1
 #define ZTHICKNESS 0.15
 ////////////////////////////////////////////////////////////
@@ -277,7 +277,7 @@ float4 PS(in PSInput input) : SV_Target0
 	float4 rt1 = RMEMap.Load(uint3(fragCoord.xy, 0));
 	float4 rt2 = NormalMap.Load(uint3(fragCoord.xy, 0));
 	float ndcZ = DepthMap.Load(uint3(fragCoord.xy, 0)).x;
-
+	float4 oriColor = ClusteredColorMap.Load(uint3(fragCoord.xy, 0));
 	
 
 	Surface surface = GetSurfaceFromGBuffer(
@@ -344,8 +344,8 @@ float4 PS(in PSInput input) : SV_Target0
 
 	float maxSteps = min(MAX_STEPS, divisions);
 
-	if (reflectivity < 1.0f)
-	{
+	//if (reflectivity < 1.0f)
+	//{
 		while (t < maxSteps)
 		{
 			coord = fragCoord.xy + traceDir * t;
@@ -361,16 +361,16 @@ float4 PS(in PSInput input) : SV_Target0
 
 			float ndcZtest = DepthMap.Load(uint3(coord.xy, 0)).x;
 
-			float3 posWScoord = GetSurfaceFromGBuffer(
-				rt0, rt1, rt2, ndcZtest, input.ViewRay, ViewToWorld,
-				CameraPosWS, CameraZAxisWS, ProjTermA, ProjTermB).posWS;
+			float depthVS;
+			float3 posWScoord = GetPositionWSFromNdcZ(ndcZtest, input.ViewRay, CameraPosWS, CameraZAxisWS, ProjTermA, ProjTermB, depthVS);
 			float storedDepth = mul(float4(posWScoord, 1.0), WorldToView).z;
-				
+			
+
 			if (curDepth > storedDepth && curDepth - storedDepth < MAX_INTERSECT_DIST)//&& curDepth - storedDepth < MAX_INTERSECT_DIST && t > 15
 			{
 				intersection = true;
 				hitPixel = coord.xy;
-				depthofhit = DepthMap.Load(uint3(coord.xy, 0)).x;
+				depthofhit = ndcZtest;
 				
 				reflColor = float4(ClusteredColorMap.Load(uint3(coord.xy, 0)).xyz, 1.0);
 				
@@ -378,18 +378,18 @@ float4 PS(in PSInput input) : SV_Target0
 			}
 			t++;
 		}
-	}
+	//}
 	
 	//return float4(surface.posWS.y,0,0, 1.0f);
 	//return reflColor;
-	
+	[flatten]
 	if (intersection)
 	{
-		return  ClusteredColorMap.Load(uint3(fragCoord.xy, 0)) * (reflectivity)+reflColor * (1 - reflectivity); 
+		return  oriColor * (reflectivity)+reflColor * (1 - reflectivity) ;
 	}
 	else
 	{
-		return  ClusteredColorMap.Load(uint3(fragCoord.xy, 0));
+		return  oriColor;
 	}
 	
 	//return  ClusteredColorMap.Load(uint3(fragCoord.xy, 0)) * (reflectivity) + reflColor * (1-reflectivity);

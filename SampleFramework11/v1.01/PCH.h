@@ -136,6 +136,8 @@ using namespace DirectX::PackedVector;
 // AntTweakBar
 #include "..\\..\\Externals\\AntTweakBar\\include\\AntTweakBar.h"
 
+#include "..\\..\\Externals\\Qu3e\\include\\q3.h"
+
 // Assimp
 #include "..\\..\\Externals\\Assimp-3.1.1\\include\\Importer.hpp"
 #include "..\\..\\Externals\\Assimp-3.1.1\\include\\scene.h"
@@ -171,6 +173,16 @@ using namespace DirectX::PackedVector;
     #pragma comment(lib, "comsuppwd.lib")
 #else
     #pragma comment(lib, "comsuppw.lib")
+#endif
+
+#ifdef _DEBUG
+#pragma comment(lib, "..\\..\\Externals\\Qu3e\\lib\\Debug\\freeglut_static.lib")
+#pragma comment(lib, "..\\..\\Externals\\Qu3e\\lib\\Debug\\imgui.lib")
+#pragma comment(lib, "..\\..\\Externals\\Qu3e\\lib\\Debug\\qu3e.lib")
+#else
+#pragma comment(lib, "..\\..\\Externals\\Qu3e\\lib\\Release\\freeglut_static.lib")
+#pragma comment(lib, "..\\..\\Externals\\Qu3e\\lib\\Release\\imgui.lib")
+#pragma comment(lib, "..\\..\\Externals\\Qu3e\\lib\\Release\\qu3e.lib")
 #endif
 
 #include <AppPCH.h>
