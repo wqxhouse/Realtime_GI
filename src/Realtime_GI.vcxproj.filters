@@ -111,6 +111,9 @@
     <ClCompile Include="IrradianceVolume.cpp">
       <Filter>GI</Filter>
     </ClCompile>
+    <ClCompile Include="SSR.cpp">
+      <Filter>SSR</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PostProcessor.h" />
@@ -252,6 +255,9 @@
     <ClInclude Include="IrradianceVolume.h">
       <Filter>GI</Filter>
     </ClInclude>
+    <ClInclude Include="SSR.h">
+      <Filter>SSR</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="AppSettings.hlsl">
@@ -326,6 +332,9 @@
     <None Include="IndirectDiffuse.hlsl">
       <Filter>Shader\GI</Filter>
     </None>
+    <None Include="RayTracing.hlsl">
+      <Filter>Shader\SSR</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="SampleFramework11">
@@ -360,6 +369,12 @@
     </Filter>
     <Filter Include="Shader\GI">
       <UniqueIdentifier>{115b12d1-2327-4838-8358-50c93587849a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SSR">
+      <UniqueIdentifier>{c93449b0-29f9-4cd3-838c-8d6193ce56b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shader\SSR">
+      <UniqueIdentifier>{fa748d45-5502-4b56-b72a-91aea6a58088}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

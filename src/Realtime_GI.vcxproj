@@ -149,6 +149,7 @@
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Realtime_GI.cpp" />
     <ClCompile Include="PostProcessor.cpp" />
+    <ClCompile Include="SSR.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\SampleFramework11\v1.01\App.h" />
@@ -203,6 +204,7 @@
     <ClInclude Include="Realtime_GI.h" />
     <ClInclude Include="ShadowMapSettings.h" />
     <ClInclude Include="SharedConstants.h" />
+    <ClInclude Include="SSR.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="AppSettings.cs">
@@ -340,6 +342,13 @@
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">4.0</ShaderModel>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Geometry</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4.0</ShaderModel>
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="RayTracing.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

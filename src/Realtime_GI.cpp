@@ -194,6 +194,9 @@ void Realtime_GI::Initialize()
 		&_meshRenderer, &_camera, &_pointLightBuffer, &_lightClusters, &_debugRenderer, &_shProbeLightBuffer);
 
 	_irradianceVolume.SetScene(&_scenes[AppSettings::CurrentScene]);
+
+	_ssr.Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext(), &_camera, &_colorTarget, &_rt1Target, &_rt2Target
+		,&_depthBuffer, &_ssrTarget, _quadVB, _quadIB);
 }
 
 // Creates all required render targets
@@ -226,6 +229,8 @@ void Realtime_GI::CreateRenderTargets()
 		_rt2Target.Initialize(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT);
 		_depthBuffer.Initialize(device, width, height, DXGI_FORMAT_D32_FLOAT, true);
 		_colorTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT);
+		// SSR
+		_ssrTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	}
 
 	if (_firstFrame)
@@ -596,6 +601,9 @@ void Realtime_GI::Render(const Timer& timer)
 
 		_irradianceVolume.MainRender();
 		RenderLightsDeferred();
+		
+		//SSR
+		_ssr.MainRender();
 	}
 	else if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
 	{

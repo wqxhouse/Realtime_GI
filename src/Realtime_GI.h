@@ -30,6 +30,8 @@
 #include "CreateCubemap.h"
 #include "IrradianceVolume.h"
 #include "DebugRenderer.h"
+//SSR
+#include "SSR.h"
 
 using namespace SampleFramework11;
 
@@ -54,6 +56,9 @@ protected:
     RenderTarget2D _prevFrameTarget;
     RenderTarget2D _velocityTarget;
     RenderTarget2D _velocityResolveTarget;
+	
+	// SSR
+	RenderTarget2D _ssrTarget;
 
 	// Deferred - GBuffer
 	RenderTarget2D _rt0Target;  // albedo 
@@ -181,7 +186,12 @@ protected:
 	LightClusters _lightClusters;
 	IrradianceVolume _irradianceVolume;
 
+	//SSR
+	SSR _ssr;
+
 public:
 
     Realtime_GI();
 };
+
+
