@@ -80,7 +80,7 @@ int ProbeManager::GetNNProbe(CreateCubemap **nearCubemap, const Float3 &objPos)
 //		blendCubemaps.push_back(_cubemaps.at(secondIndex));
 //}
 
-RenderTarget2D ProbeManager::GetProbeArray()
+RenderTarget2D &ProbeManager::GetProbeArray()
 {
 	return _cubemapArray;
 }

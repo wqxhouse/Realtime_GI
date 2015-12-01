@@ -19,7 +19,7 @@ public:
 	uint32 GetProbeNums();
 	void GetProbe(CreateCubemap **cubemap, uint32 index);
 	int GetNNProbe(CreateCubemap **nearCubemap, const Float3 &objPos);
-	RenderTarget2D GetProbeArray();
+	RenderTarget2D &GetProbeArray();
 	// void GetBlendProbes(std::vector<CreateCubemap> &blendCubemaps, Float3 objPos);
 
 	struct Probe

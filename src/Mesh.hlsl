@@ -480,8 +480,8 @@ PSOutput PS(in PSInput input)
 			lighting += indirectDiffuse * diffuseAlbedo;
 
 			//float3 parallaxCorrection(float3 PositionWS, float3 newProbePositionWS, float3 NormalWS, float3 boxMax, float3 boxMin)
-			//float3 reflectWS = parallaxCorrection(positionWS, ProbePositionWS[0], normalize(normalWS), ProbePositionWS[0] + BoxSize[0], ProbePositionWS[0] - BoxSize[0]);
-			float3 reflectWS = reflect(-viewWS, normalWS);
+			float3 reflectWS = parallaxCorrection(positionWS, ProbePositionWS[0], normalize(normalWS), ProbePositionWS[0] + BoxSize[0], ProbePositionWS[0] - BoxSize[0]);
+			//float3 reflectWS = reflect(-viewWS, normalWS);
 			float3 vtxReflectWS = reflect(-viewWS, vtxNormal);
 
 			uint width, height, numMips;

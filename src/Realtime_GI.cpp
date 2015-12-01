@@ -300,7 +300,8 @@ void Realtime_GI::RenderSpecularProbeCubemaps()
 			_deviceManager.ImmediateContext()->GenerateMips(renderTarget.SRView);
 			cubeMap->RenderPrefilterCubebox(_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeArray(), 
 				_globalTransform, probeIndex);
-			cubeMap->GetPreFilterRT(renderTarget);
+			//cubeMap->GetPreFilterRT(renderTarget);
+			renderTarget = _scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeArray();
 			_deviceManager.ImmediateContext()->GenerateMips(renderTarget.SRView);
 		}
 
