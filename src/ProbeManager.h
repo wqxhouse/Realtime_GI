@@ -8,56 +8,30 @@ Manage the probes created by Cubemap(header)
 
 #include "CreateCubemap.h"
 
-#define ORIGIN_PROBE 0
-#define MAX_PROBE_MANAGER 1024
-
 class ProbeManager
 {
 public:
 	ProbeManager();
 
-	struct CameraClips
-	{
-		float NearClip;
-		float FarClip;
-	};
+	void Initialize(ID3D11Device *device, ID3D11DeviceContext *context);
 
-	void Initialize(ID3D11Device *device, const std::vector<CameraClips> cameraClipVector);
-
-	//Create a new probe for the cubemap queue from on the index position.
-	void CreateProbe(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
-		const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, Float3 position, Float3 boxSize, uint32 index);
-	//Create new probes for the cubemap queue from start index to end index.
-	void CreateProbes(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
-		const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, std::vector<Float3> positions, std::vector<Float3> bosSizes);
-
-	void AddProbe(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
-		const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, Float3 position, Float3 boxSize, const CameraClips cameraClips);
-	void AddProbes(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
-		const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox, std::vector<Float3> positions, std::vector<Float3> boxSizes, const std::vector<CameraClips> cameraClips);
-
-	void RemoveProbe(uint32 index);
-	void RemoveProbes(uint32 start, uint32 end);
-	void ClearProbes();
-
+	void AddProbe(const Float3 &pos, const Float3 &boxSize);
 	uint32 GetProbeNums();
 	void GetProbe(CreateCubemap **cubemap, uint32 index);
-	void GetNNProbe(CreateCubemap &nearCubemap, Float3 objPos);
-	void GetBlendProbes(std::vector<CreateCubemap> &blendCubemaps, Float3 objPos);
+	void GetNNProbe(CreateCubemap **nearCubemap, const Float3 &objPos);
+	// void GetBlendProbes(std::vector<CreateCubemap> &blendCubemaps, Float3 objPos);
 
-	~ProbeManager();
 private:
-	float CalDistance(Float3 probePos, Float3 objPos);//Calculate distance between object and a single probe.
-	uint32 CalNN(Float3 objPos);
-	void CalTwoNN(Float3 objPos, uint32 &first, uint32 &second);
-	//void BlendCubemaps(Float3 objPos);
-
-	CreateCubemap *_resCubemap = nullptr;
+	float CalDistance(const Float3 &probePos, const Float3 &objPos); //Calculate distance between object and a single probe.
+	uint32 CalNN(const Float3 &objPos);
+	void CalTwoNN(const Float3 &objPos, uint32 &first, uint32 &second);
 
 	std::vector<Float3> _probePositions;
 	std::vector<CreateCubemap> _cubemaps;
-	std::vector<CameraClips> _cameraClipVector;
 
-	uint32 probeNum = 0;
+	uint32 _probeNum = 0;
+
+	ID3D11Device *_device;
+	ID3D11DeviceContext *_context;
 };
 

@@ -111,7 +111,7 @@ BBox ComputeBoundingBoxFromPoints(const XMFLOAT3* points, uint32 numPoints, uint
 {
 	BBox out;
 	XMVECTOR MinX, MaxX, MinY, MaxY, MinZ, MaxZ;
-	GetBoundCornersFromPoints(points, 2, sizeof(XMFLOAT3), MinX, MaxX, MinY, MaxY, MinZ, MaxZ);
+	GetBoundCornersFromPoints(points, numPoints, sizeof(XMFLOAT3), MinX, MaxX, MinY, MaxY, MinZ, MaxZ);
 
 	float maxx = XMVectorGetX(MaxX);
 	float maxy = XMVectorGetY(MaxY);

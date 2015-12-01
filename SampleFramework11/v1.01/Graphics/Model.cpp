@@ -630,6 +630,57 @@ void Mesh::InitCornea(ID3D11Device* device, uint32 materialIdx)
     part.MaterialIdx = materialIdx;
 }
 
+// From Humus's framework3
+void subDivide(Float3 *&dest, const Float3 &v0, const Float3 &v1, const Float3 &v2, int level)
+{
+	if (level){
+		level--;
+		Float3 v3 = Float3::Normalize(v0 + v1);
+		Float3 v4 = Float3::Normalize(v1 + v2);
+		Float3 v5 = Float3::Normalize(v2 + v0);
+
+		subDivide(dest, v0, v3, v5, level);
+		subDivide(dest, v3, v4, v5, level);
+		subDivide(dest, v3, v1, v4, level);
+		subDivide(dest, v5, v4, v2, level);
+	}
+	else {
+		*dest++ = v0;
+		*dest++ = v1;
+		*dest++ = v2;
+	}
+}
+
+void Mesh::InitSphere(ID3D11Device *device, const int subDivLevel, uint32 materialIdx)
+{
+	// TODO: complete this
+	const int nVertices = 8 * 3 * (1 << (2 * subDivLevel));
+
+	Float3 *vertices = new Float3[nVertices];
+
+	// Tessellate a octahedron
+	Float3 px0(-1, 0, 0);
+	Float3 px1(1, 0, 0);
+	Float3 py0(0, -1, 0);
+	Float3 py1(0, 1, 0);
+	Float3 pz0(0, 0, -1);
+	Float3 pz1(0, 0, 1);
+
+	Float3 *dest = vertices;
+	subDivide(dest, py0, px0, pz0, subDivLevel);
+	subDivide(dest, py0, pz0, px1, subDivLevel);
+	subDivide(dest, py0, px1, pz1, subDivLevel);
+	subDivide(dest, py0, pz1, px0, subDivLevel);
+	subDivide(dest, py1, pz0, px0, subDivLevel);
+	subDivide(dest, py1, px0, pz1, subDivLevel);
+	subDivide(dest, py1, pz1, px1, subDivLevel);
+	subDivide(dest, py1, px1, pz0, subDivLevel);
+
+	Assert_(dest - vertices == nVertices);
+
+	free(vertices);
+}
+
 void Mesh::GenerateTangentFrame()
 {
     // Make sure that we have a position + texture coordinate + normal

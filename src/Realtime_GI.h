@@ -27,13 +27,16 @@
 #include "Scene.h"
 #include "LightClusters.h"
 
+#include "CreateCubemap.h"
+#include "IrradianceVolume.h"
 #include "ProbeManager.h"
 #include "DebugRenderer.h"
 
 using namespace SampleFramework11;
-
 class Realtime_GI : public App
 {
+public:
+	void AddScene(SceneScript *sceneScript);
 
 protected:
 
@@ -64,6 +67,7 @@ protected:
 
 	Scene _scenes[MAX_SCENES];
 	uint32 _numScenes;
+	Scene *_prevScene;
 
     MeshRenderer _meshRenderer;
 
@@ -143,13 +147,18 @@ protected:
 	ConstantBuffer<DeferredPassConstants> _deferredPassConstants;
 
 	StructuredBuffer _pointLightBuffer;
+	StructuredBuffer _shProbeLightBuffer;
 
 	SamplerStates _samplerStates;
 
+	// Defined outside of the class;
+	void LoadScenes();
+
     virtual void Initialize() override;
-	void LoadScenes(ID3D11DevicePtr device);
 	void LoadShaders(ID3D11DevicePtr device);
-	void SetProbeManager();
+	void RenderSpecularProbeCubemaps();
+	void UpdateSpecularProbeProperties();
+	void UpdateSpecularProbeUIInfo();
 
     virtual void Render(const Timer& timer) override;
     virtual void Update(const Timer& timer) override;
@@ -176,10 +185,12 @@ protected:
 	void AssignLightAndUploadClusters();
 
 	void ApplyMomentum(float &prevVal, float &val, float deltaTime);
+	void QueueDebugCommands();
 
-	CreateCubemap _cubemapGenerator;
+
 	DebugRenderer _debugRenderer;
 	LightClusters _lightClusters;
+	IrradianceVolume _irradianceVolume;
 
 	//Create probe manager
 	/*ProbeManager _probeManager[1024];

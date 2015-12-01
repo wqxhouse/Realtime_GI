@@ -658,6 +658,7 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 	// TODO: make deferred a unique structure
 	//if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
 	{
+		// Perframe
 		_meshPSConstants.Data.CameraPosWS = camera.Position();
 		_meshPSConstants.Data.OffsetScale = OffsetScale;
 		_meshPSConstants.Data.PositiveExponent = PositiveExponent;
@@ -669,11 +670,6 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 		_meshPSConstants.Data.RTSize.x = float(GlobalApp->DeviceManager().BackBufferWidth());
 		_meshPSConstants.Data.RTSize.y = float(GlobalApp->DeviceManager().BackBufferHeight());
 		_meshPSConstants.Data.JitterOffset = jitterOffset;
-		_meshPSConstants.ApplyChanges(context);
-		_meshPSConstants.SetPS(context, 0);
-		/*_meshPSConstants.Data.ProbePosWS = probePosWS;
-		_meshPSConstants.Data.MaxBox = maxbox;
-		_meshPSConstants.Data.MinBox = minbox;*/
 	}
 
     // Set shaders
@@ -716,37 +712,51 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 
 		*sceneObjectsArr[objIndex].prevWVP = _meshVSConstants.Data.WorldViewProjection;
 
-		//Get cubemap
-		Float3 objPos = sceneObjectsArr[objIndex].base->Translation();
-		ProbeManager probeManager = _scene->getProbeManager();
-		RenderTarget2D renderTargetView;
-		CreateCubemap cubeMap;
-		RenderTarget2D blendRenderTargetViews[2];
-		ID3D11ShaderResourceViewPtr blendCubeMaps[2];
+		ID3D11ShaderResourceView *chosenEnvMap = nullptr;
 
-		if (!_initializeProbes)
-		{	
-			probeManager.GetNNProbe(cubeMap, objPos);
-			cubeMap.GetPreFilterTargetViews(renderTargetView);
-			envMap = renderTargetView.SRView;
+		//if (!_initializeProbes)
+		// {	
+			//Get cubemap
+			Float3 objPos = sceneObjectsArr[objIndex].base->Translation();
+			RenderTarget2D cubemapRT;
+			CreateCubemap *cubeMap = nullptr;
+			// RenderTarget2D blendRenderTargetViews[2];
+			// ID3D11ShaderResourceViewPtr blendCubeMaps[2];
 
-			std::vector<CreateCubemap> blendCubeMapsVec;
-			probeManager.GetBlendProbes(blendCubeMapsVec, objPos);
-			CreateCubemap blendCubemap1 = blendCubeMapsVec.at(0);
-			CreateCubemap blendCubemap2 = blendCubeMapsVec.at(1);
+			ProbeManager &probeManager = *_scene->getProbeManagerPtr();
+			probeManager.GetNNProbe(&cubeMap, objPos);
 
-			blendCubemap1.GetPreFilterTargetViews(blendRenderTargetViews[0]);
-			blendCubemap2.GetPreFilterTargetViews(blendRenderTargetViews[1]);
+			if (cubeMap == nullptr)
+			{
+				chosenEnvMap = envMap;
+			}
+			else
+			{
+				cubeMap->GetPreFilterRT(cubemapRT);
+				chosenEnvMap = cubemapRT.SRView;
+			}
 
-			blendCubeMaps[0] = blendRenderTargetViews[0].SRView;
-			blendCubeMaps[1] = blendRenderTargetViews[1].SRView;
+			/*	std::vector<CreateCubemap> blendCubeMapsVec;
+				probeManager.GetBlendProbes(blendCubeMapsVec, objPos);
+				CreateCubemap &blendCubemap1 = blendCubeMapsVec.at(0);
+				CreateCubemap &blendCubemap2 = blendCubeMapsVec.at(1);
 
-			_meshPSConstants.Data.ProbePosWS[0] = blendCubemap1.GetPosition();
-			_meshPSConstants.Data.ProbePosWS[1] = blendCubemap2.GetPosition();
-			_meshPSConstants.Data.BoxSize[0] = blendCubemap1.GetBoxSize();
-			_meshPSConstants.Data.BoxSize[1] = blendCubemap2.GetBoxSize();
-			_meshPSConstants.Data.ObjPos = objPos;
-		}
+				blendCubemap1.GetPreFilterTargetViews(blendRenderTargetViews[0]);
+				blendCubemap2.GetPreFilterTargetViews(blendRenderTargetViews[1]);
+
+				blendCubeMaps[0] = blendRenderTargetViews[0].SRView;
+				blendCubeMaps[1] = blendRenderTargetViews[1].SRView;
+
+				_meshPSConstants.Data.ProbePosWS[0] = blendCubemap1.GetPosition();
+				_meshPSConstants.Data.ProbePosWS[1] = blendCubemap2.GetPosition();
+				_meshPSConstants.Data.BoxSize[0] = blendCubemap1.GetBoxSize();
+				_meshPSConstants.Data.BoxSize[1] = blendCubemap2.GetBoxSize();
+				_meshPSConstants.Data.ObjPos = objPos;*/
+		// }
+
+		// Per object constants
+		_meshPSConstants.ApplyChanges(context);
+		_meshPSConstants.SetPS(context, 0);
 
 		// Draw all meshes
 		uint32 partCount = 0;
@@ -804,8 +814,8 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 						material.RoughnessMap, 
 						material.MetallicMap, 
 						material.EmissiveMap,
-						blendCubeMaps[0],
-						blendCubeMaps[1]
+						/*blendCubeMaps[0],
+						blendCubeMaps[1]*/
 					};
 
 					context->PSSetShaderResources(0, _countof(psTextures), psTextures);

@@ -2,19 +2,10 @@
 #include "FileIO.h"
 #include "ProbeManager.h"
 
-int Scene::_highestSceneObjId = 0;
-int Scene::_numTotalModelsShared = 0;
-Model *Scene::_boxModel = nullptr;
-Model *Scene::_planeModel = nullptr;
-Model Scene::_models[Scene::MAX_MODELS];
-ModelPartsBound Scene::_modelsData[Scene::MAX_MODELS];
-//SceneObject Scene::_staticOpaqueObjects[Scene::MAX_STATIC_OBJECTS];
-//SceneObject Scene::_dynamicOpaqueObjects[Scene::MAX_DYNAMIC_OBJECTS];
-//Float4x4 Scene::_objectBases[Scene::MAX_OBJECT_MATRICES];
-//Float4x4 Scene::_prevWVPs[Scene::MAX_OBJECT_MATRICES];
-std::unordered_map<std::wstring, Model *> Scene::_modelCache;
+#include "SceneScriptBase.h"
 
 Scene::Scene()
+	: _sceneCamSaved(1.7778f, 0.785f * 0.75f, 0.01f, 100.0f)
 {
 	_device = NULL;
 	
@@ -31,18 +22,24 @@ Scene::Scene()
 	_sceneWSAABB_staticObj.Max = XMFLOAT3(0, 0, 0);
 	_sceneWSAABB_staticObj.Min = XMFLOAT3(0, 0, 0);
 
-	_updateFunc = NULL;
+	_sceneScript = NULL;
+	_hasProxySceneObject = false;
 }
 
 Scene::~Scene()
 {
-	//delete _probeManager;
+	delete _sceneScript;
 }
 
-void Scene::Initialize(ID3D11Device *device, ID3D11DeviceContext *context)
+void Scene::Initialize(ID3D11Device *device, ID3D11DeviceContext *context, SceneScript *sceneScript, FirstPersonCamera *globalCamera)
 {
 	_device = device;
 	_context = context;
+	_sceneScript = sceneScript;
+	_globalCam = globalCamera;
+	_probeManager.Initialize(_device, _context);
+
+	_sceneScript->InitScene(this);
 }
 
 void Scene::Update(const Timer& timer)
@@ -52,19 +49,20 @@ void Scene::Update(const Timer& timer)
 		genStaticSceneWSAABB();
 		_sceneBoundGenerated = true;
 	}
-
-	if (_updateFunc)
-	{
-		_updateFunc(this, timer);
-	}
-
+	
+	_sceneScript->Update(this, &timer);
 	updateDynamicSceneObjectBounds();
 }
 
-void Scene::SetUpdateFunction(void(*update)(Scene *scene, const Timer &timer))
+void Scene::OnSceneChange()
 {
-	_updateFunc = update;
+	_sceneCamSaved = *_globalCam;
 }
+
+//void Scene::SetUpdateFunction(void(*update)(Scene *scene, const Timer &timer))
+//{
+//	_updateFunc = update;
+//}
 
 Model *Scene::addBoxModel()
 {
@@ -133,6 +131,25 @@ Model *Scene::addModel(const std::wstring &modelPath)
 	return &_models[_numTotalModelsShared - 1];
 }
 
+void Scene::setProxySceneObject(const std::wstring &modelPath, float scale, const Float3 &pos, const Quaternion &rot)
+{
+	Model *m = addModel(modelPath);
+	_objectBases[_numObjectBases] = createBase(scale, pos, rot);
+	_prevWVPs[_numPrevWVPs] = _objectBases[_numObjectBases];
+
+	SceneObject &obj = _proxySceneObject;
+	obj.base = &_objectBases[_numObjectBases];
+	obj.model = m;
+	obj.bound = nullptr;
+	obj.prevWVP = &_prevWVPs[_numPrevWVPs];
+	obj.id = _highestSceneObjId++;
+
+	_numObjectBases++;
+	_numPrevWVPs++;
+
+	_hasProxySceneObject = true;
+}
+
 void Scene::genSceneObjectBounds(uint64 objTypeflag, uint64 sceneObjIndex, uint64 modelIndex)
 {
 	bool isstatic = (objTypeflag & STATIC_OBJ) > 0;
@@ -191,6 +208,11 @@ void Scene::genSceneObjectBounds(uint64 objTypeflag, uint64 sceneObjIndex, uint6
 
 SceneObject *Scene::addDynamicOpaqueBoxObject(float scale, const Float3 &pos, const Quaternion &rot)
 {
+	Assert_(_numObjectBases < MAX_DYNAMIC_OBJECTS);
+	Assert_(_numTotalModelsShared < MAX_MODELS);
+	Assert_(_numObjectBases < MAX_OBJECT_MATRICES);
+	Assert_(_numPrevWVPs < MAX_OBJECT_MATRICES);
+
 	if (!_boxModel)
 	{
 		addBoxModel();
@@ -222,6 +244,11 @@ SceneObject *Scene::addDynamicOpaqueBoxObject(float scale, const Float3 &pos, co
 
 SceneObject *Scene::addDynamicOpaquePlaneObject(float scale, const Float3 &pos, const Quaternion &rot)
 {
+	Assert_(_numObjectBases < MAX_DYNAMIC_OBJECTS);
+	Assert_(_numTotalModelsShared < MAX_MODELS);
+	Assert_(_numObjectBases < MAX_OBJECT_MATRICES);
+	Assert_(_numPrevWVPs < MAX_OBJECT_MATRICES);
+
 	if (!_planeModel)
 	{
 		addPlaneModel();
@@ -280,13 +307,15 @@ SceneObject *Scene::addStaticOpaqueObject(Model *model, float scale, const Float
 	_numPrevWVPs++;
 	_numStaticOpaqueObjects++;
 
+	genStaticSceneWSAABB();
+
 	return &obj;
 }
 
 SceneObject *Scene::addDynamicOpaqueObject(Model *model, float scale, const Float3 &pos, const Quaternion &rot)
 {
 	Assert_(model != nullptr);
-	Assert_(_numObjectBases < MAX_STATIC_OBJECTS);
+	Assert_(_numObjectBases < MAX_DYNAMIC_OBJECTS);
 	Assert_(_numTotalModelsShared < MAX_MODELS);
 	Assert_(_numObjectBases < MAX_OBJECT_MATRICES);
 	Assert_(_numPrevWVPs < MAX_OBJECT_MATRICES);
@@ -336,7 +365,7 @@ void Scene::sortSceneObjects(const Float4x4 &viewMatrix)
 
 PointLight *Scene::addPointLight()
 {
-	if (_numLights > MAX_SCENE_LIGHTS) return NULL;
+	if (_numLights >= MAX_SCENE_LIGHTS) return NULL;
 	_pointLights[_numPointLights] = PointLight();
 	_pointLights[_numPointLights].cColor = Float3(0.1f, 0.3f, 0.7f);
 	_pointLights[_numPointLights].cPos = Float3();
@@ -346,6 +375,36 @@ PointLight *Scene::addPointLight()
 	_numLights++;
 
 	return &_pointLights[_numPointLights - 1];
+}
+
+uint32 Scene::fillPointLightsUniformGrid(float unitGridSize, float radius, Float3 offset)
+{
+	Float3 diff = Float3(_sceneWSAABB_staticObj.Max) - Float3(_sceneWSAABB_staticObj.Min);
+	Float3 lightNumAxis = diff / (float)unitGridSize;
+	uint32 xnum = (uint32)floorf(Max(lightNumAxis.x, 1.0f));
+	uint32 ynum = (uint32)floorf(Max(lightNumAxis.y, 1.0f));
+	uint32 znum = (uint32)floorf(Max(lightNumAxis.z, 1.0f));
+
+	Float3 inv_scale = diff / Float3((float)xnum, (float)ynum, (float)znum);
+
+	uint32 lightNum = 0;
+	for (uint32 z = 0; z < znum; z++)
+	{
+		for (uint32 y = 0; y < ynum; y++)
+		{
+			for (uint32 x = 0; x < xnum; x++)
+			{
+				PointLight *pl = addPointLight();
+				if (pl == NULL) return lightNum; // reached maximum
+				pl->cRadius = radius;
+				pl->cColor = Float3((float)x / xnum, (float)y / ynum, (float)z / znum);
+				pl->cPos = Float3((float)x, (float)y, (float)z) * inv_scale + Float3(_sceneWSAABB_staticObj.Min) + offset;
+				lightNum++;
+			}
+		}
+	}
+
+	return lightNum;
 }
 
 void Scene::genStaticSceneWSAABB()
@@ -391,36 +450,6 @@ BBox Scene::getSceneBoundingBox()
 	return _sceneWSAABB_staticObj;
 }
 
-
-void Scene::InitializeProbeManager(std::vector<float> nearClips, std::vector<float> farClips)
-{
-	_probeManager = new ProbeManager();
-
-	size_t clampProbeNum = std::min(nearClips.size(), farClips.size());
-	std::vector<ProbeManager::CameraClips> cameraClips;
-
-	for (int probeClipsIndex = 0; probeClipsIndex < clampProbeNum; ++probeClipsIndex)
-	{
-		ProbeManager::CameraClips cameraClip;
-		cameraClips.push_back(cameraClip);
-		cameraClips[probeClipsIndex].NearClip = nearClips.at(probeClipsIndex);
-		cameraClips[probeClipsIndex].FarClip = farClips.at(probeClipsIndex);
-	}
-
-	_probeManager->Initialize(_device, cameraClips);
-}
-
-void Scene::setProbeManager(ProbeManager *probeManager)
-{
-	_probeManager = probeManager;
-}
-
-
-ProbeManager &Scene::getProbeManager()
-{
-	return *_probeManager;
-}
-
 void Scene::transformSceneObjectModelPartsBounds(SceneObject *obj)
 {
 	Float4x4 &transform = *obj->base;
@@ -440,3 +469,16 @@ void Scene::transformSceneObjectModelPartsBounds(SceneObject *obj)
 	}
 	
 }
+
+
+int Scene::_highestSceneObjId = 0;
+int Scene::_numTotalModelsShared = 0;
+Model *Scene::_boxModel = nullptr;
+Model *Scene::_planeModel = nullptr;
+Model Scene::_models[Scene::MAX_MODELS];
+ModelPartsBound Scene::_modelsData[Scene::MAX_MODELS];
+//SceneObject Scene::_staticOpaqueObjects[Scene::MAX_STATIC_OBJECTS];
+//SceneObject Scene::_dynamicOpaqueObjects[Scene::MAX_DYNAMIC_OBJECTS];
+//Float4x4 Scene::_objectBases[Scene::MAX_OBJECT_MATRICES];
+//Float4x4 Scene::_prevWVPs[Scene::MAX_OBJECT_MATRICES];
+std::unordered_map<std::wstring, Model *> Scene::_modelCache;

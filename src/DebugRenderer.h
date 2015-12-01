@@ -6,6 +6,8 @@
 #include <Graphics/GraphicsTypes.h>
 #include <Graphics/DeviceManager.h>
 #include <Graphics/Camera.h>
+#include <Graphics/SpriteRenderer.h>
+#include <Graphics/Model.h>
 #include <Utility.h>
 #include "BoundUtils.h"
 
@@ -19,6 +21,8 @@ public:
 	void QueueCubeTranslucent(const Float3 &pos, const Float3 &halfLength, const Float4 &color);
 	void QueueBBoxWire(const BBox &bbox, const Float4 &color);
 	void QueueBBoxTranslucent(const BBox &bbox, const Float4 &color);
+	void QueueSprite(ID3D11ShaderResourceView *texture, const Float3 &pos, const Float4 &color);
+	void QueueLightSphere(const Float3 &pos, const Float4 &color, float radius);
 
 	void FlushDrawQueued();
 
@@ -43,8 +47,12 @@ private:
 	std::vector<std::tuple<Float4x4, Float4> > _cubeQueueWire;
 	std::vector<std::tuple<Float4x4, Float4> > _cubeQueueTranslucent;
 
+	std::vector<std::tuple<ID3D11ShaderResourceView *, SpriteRenderer::SpriteDrawData> > _spriteData;
+	std::vector<std::tuple<Float4x4, Float4> > _sphereQueue;
+
 	Float4x4 matModelToWorldFromBBox(const BBox &bbox);
-	void updateConstantBuffer(bool32 isWire);
+	void updateConstantBufferCube(bool32 isWire);
+	void updateConstantBufferSphere();
 
 private:
 	static Mesh _cubeMesh;
@@ -55,4 +63,8 @@ private:
 	static BlendStates _blendStates;
 	static RasterizerStates _rasterizerStates;
 	static DepthStencilStates _depthStencilStates;
+
+	static SpriteRenderer _spriteRenderer;
+	static ID3D11ShaderResourceViewPtr _spriteTexture;
+	static Model _sphereModel;
 };

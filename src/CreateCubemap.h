@@ -15,56 +15,53 @@
 #include <Graphics\\GraphicsTypes.h>
 #include <Graphics\\Model.h>
 #include <Graphics\\ShaderCompilation.h>
-
-#include "MeshRenderer.h"
-
-#define SPHERE_FILE L"..\\Content\\Models\\sphere\\sphere.obj"
-#define CubemapWidth 128
-#define CubemapHeight 128
+#include <Graphics\\SH.h>
 
 using namespace SampleFramework11;
-
+class MeshRenderer;
 class CreateCubemap
 {
 
 public:
 	CreateCubemap();
-	CreateCubemap(const FLOAT NearClip, const FLOAT FarClip);
 	~CreateCubemap();
 
-	void Initialize(ID3D11Device *device);
+	void Initialize(ID3D11Device *device, ID3D11DeviceContext *context);
 	
-	void SetPosition(Float3 position);
+	void SetPosition(const Float3 &position);
 	Float3 GetPosition();
-	void SetBoxSize(Float3 boxSize);
+	void SetBoxSize(const Float3 &boxSize);
 	Float3 GetBoxSize();
 	void GetTargetViews(RenderTarget2D &resCubemapTarget);
-	void GetPreFilterTargetViews(RenderTarget2D &prefilterTarget);
+	void GetPreFilterRT(RenderTarget2D &prefilterTarget);
 
-	void Create(const DeviceManager &deviceManager, MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
+	void Create(MeshRenderer *meshRenderer, const Float4x4 &sceneTransform, ID3D11ShaderResourceView *environmentMap,
 		const SH9Color &environmentMapSH, const Float2 &jitterOffset, Skybox *skybox);
-	void RenderPrefilterCubebox(const DeviceManager &deviceManager, const Float4x4 &sceneTransform);
+	void RenderPrefilterCubebox(const Float4x4 &sceneTransform);
+
+	void SetCubemapSize(uint32 size);
+	void SetClipPlane(float nearPlane, float farPlane);
 
 	const PerspectiveCamera &GetCubemapCamera();
 
 private:
-	void GenAndCacheConvoluteSphereInputLayout(const DeviceManager &deviceManager, const Model *model);
-	void GenFilterShader(ID3D11Device *device);
+	uint32 _CubemapWidth;
+	uint32 _CubemapHeight;
 
-	PerspectiveCamera cubemapCamera;
-	PerspectiveCamera filterCamera;
-	RenderTarget2D cubemapTarget;
-	DepthStencilBuffer cubemapDepthTarget;
-	RenderTarget2D prefilterCubemapTarget;
-	DepthStencilBuffer prefilterDepthTarget;
-	Float3 position;
+	ID3D11Device *_device;
+	ID3D11DeviceContext *_context;
+
+	PerspectiveCamera _cubemapCamera;
+	PerspectiveCamera _filterCamera;
+	RenderTarget2D _cubemapTarget;
+	DepthStencilBuffer _cubemapDepthTarget;
+	RenderTarget2D _prefilterCubemapTarget;
+	DepthStencilBuffer _prefilterDepthTarget;
+	Float3 _position;
 
 	Float3 _boxSize;
 
-	ID3D11InputLayoutPtr inputLayout;
 
-	VertexShaderPtr _convoluteVS;
-	PixelShaderPtr _convolutePS[6];
 
 	BlendStates _blendStates;
 	DepthStencilStates _depthStencilStates;
@@ -101,5 +98,19 @@ private:
 
 	ConstantBuffer<VSConstant> _VSConstants;
 	ConstantBuffer<PSConstant> _PSConstants;
+
+	float _nearPlane;
+	float _farPlane;
+
+	void GenAndCacheConvoluteSphereInputLayout();
+	void GenFilterShader();
+
+	static Model _convolveSphere;
+	static bool32 _convolveSphereSet;
+
+	static VertexShaderPtr _convoluteVS;
+	static PixelShaderPtr _convolutePS[6];
+
+	static ID3D11InputLayoutPtr _inputLayout;
 };
 
