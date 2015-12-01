@@ -143,6 +143,8 @@ public class Settings
         [HDR(true)]
         Color LightColor = new Color(20.0f, 16.0f, 10.0f);
 
+        bool PauseSceneScript = false;
+
         bool EnableDirectLighting = true;
 
         bool EnableIndirectDiffuseLighting = true;

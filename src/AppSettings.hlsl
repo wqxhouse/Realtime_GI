@@ -22,6 +22,7 @@ cbuffer AppSettings : register(b7)
     int CurrentShadingTech;
     float3 LightDirection;
     float3 LightColor;
+    bool PauseSceneScript;
     bool EnableDirectLighting;
     bool EnableIndirectDiffuseLighting;
     bool EnableIndirectSpecularLighting;

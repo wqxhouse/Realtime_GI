@@ -72,6 +72,7 @@ namespace AppSettings
     ShadingTechSetting CurrentShadingTech;
     DirectionSetting LightDirection;
     ColorSetting LightColor;
+    BoolSetting PauseSceneScript;
     BoolSetting EnableDirectLighting;
     BoolSetting EnableIndirectDiffuseLighting;
     BoolSetting EnableIndirectSpecularLighting;
@@ -181,6 +182,9 @@ namespace AppSettings
 
         LightColor.Initialize(tweakBar, "LightColor", "Scene Controls", "Light Color", "The color of the light", Float3(20.0000f, 16.0000f, 10.0000f), true, 0.0000f, 20.0000f, 0.1000f, ColorUnit::None);
         Settings.AddSetting(&LightColor);
+
+        PauseSceneScript.Initialize(tweakBar, "PauseSceneScript", "Scene Controls", "Pause Scene Script", "", false);
+        Settings.AddSetting(&PauseSceneScript);
 
         EnableDirectLighting.Initialize(tweakBar, "EnableDirectLighting", "Scene Controls", "Enable Direct Lighting", "", true);
         Settings.AddSetting(&EnableDirectLighting);
@@ -312,6 +316,7 @@ namespace AppSettings
         CBuffer.Data.CurrentShadingTech = CurrentShadingTech;
         CBuffer.Data.LightDirection = LightDirection;
         CBuffer.Data.LightColor = LightColor;
+        CBuffer.Data.PauseSceneScript = PauseSceneScript;
         CBuffer.Data.EnableDirectLighting = EnableDirectLighting;
         CBuffer.Data.EnableIndirectDiffuseLighting = EnableIndirectDiffuseLighting;
         CBuffer.Data.EnableIndirectSpecularLighting = EnableIndirectSpecularLighting;

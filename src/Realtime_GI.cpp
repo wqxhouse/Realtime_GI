@@ -447,7 +447,10 @@ void Realtime_GI::Update(const Timer& timer)
 {
     AppSettings::UpdateUI();
 
-	_scenes[AppSettings::CurrentScene].Update(timer);
+	if (!AppSettings::PauseSceneScript)
+	{
+		_scenes[AppSettings::CurrentScene].Update(timer);
+	}
 
     MouseState mouseState = MouseState::GetMouseState(_window);
     KeyboardState kbState = KeyboardState::GetKeyboardState(_window);

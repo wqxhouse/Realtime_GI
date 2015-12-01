@@ -107,7 +107,7 @@ public:
 		Float2 JitterOffset;
 
 		Float4Align Float3 ProbePosWS[2];
-		Float3 BoxSize[2];
+		Float4Align Float3 BoxSize[2];
 		Float4Align Float3 ObjPos;
 	};
 
