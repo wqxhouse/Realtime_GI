@@ -157,6 +157,8 @@ protected:
     virtual void Initialize() override;
 	void LoadShaders(ID3D11DevicePtr device);
 	void RenderSpecularProbeCubemaps();
+	void UpdateSpecularProbeProperties();
+	void UpdateSpecularProbeUIInfo();
 
     virtual void Render(const Timer& timer) override;
     virtual void Update(const Timer& timer) override;

@@ -206,16 +206,41 @@ void Realtime_GI::Initialize()
 		&_meshRenderer, &_camera, &_pointLightBuffer, &_lightClusters, &_debugRenderer, &_shProbeLightBuffer);
 
 	_irradianceVolume.SetScene(&_scenes[AppSettings::CurrentScene]);
+
+	UpdateSpecularProbeUIInfo();
 }
 
-void Realtime_GI::RenderSpecularProbeCubemaps()
+void Realtime_GI::UpdateSpecularProbeUIInfo()
 {
-	_meshRenderer.SetInitializeProbes(true);
 	if (_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeNums() != 0)
 	{
 		CreateCubemap *cubeMap;
-		RenderTarget2D renderTarget;
+		for (uint32 probeIndex = 0; probeIndex < _scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeNums(); ++probeIndex)
+		{
+			_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbe(&cubeMap, probeIndex);
 
+			if (probeIndex == AppSettings::ProbeIndex.Value())
+			{
+				Float3 pos = cubeMap->GetPosition();
+				Float3 boxSize = cubeMap->GetBoxSize();
+
+				AppSettings::ProbeX.SetValue(pos.x);
+				AppSettings::ProbeY.SetValue(pos.y);
+				AppSettings::ProbeZ.SetValue(pos.z);
+
+				AppSettings::BoxSizeX.SetValue(boxSize.x);
+				AppSettings::BoxSizeY.SetValue(boxSize.y);
+				AppSettings::BoxSizeZ.SetValue(boxSize.z);
+			}
+		}
+	}
+}
+
+void Realtime_GI::UpdateSpecularProbeProperties()
+{
+	if (_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeNums() != 0)
+	{
+		CreateCubemap *cubeMap;
 		for (uint32 probeIndex = 0; probeIndex < _scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeNums(); ++probeIndex)
 		{
 			_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbe(&cubeMap, probeIndex);
@@ -254,11 +279,21 @@ void Realtime_GI::RenderSpecularProbeCubemaps()
 					cubeMap->SetBoxSize(Float3(AppSettings::BoxSizeX, AppSettings::BoxSizeY, AppSettings::BoxSizeZ));
 				}
 			}
-			else
-			{
-				cubeMap->SetBoxSize(cubeMap->GetBoxSize());
-				cubeMap->SetPosition(cubeMap->GetPosition());
-			}
+		}
+	}
+}
+
+void Realtime_GI::RenderSpecularProbeCubemaps()
+{
+	_meshRenderer.SetInitializeProbes(true);
+	if (_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeNums() != 0)
+	{
+		CreateCubemap *cubeMap;
+		RenderTarget2D renderTarget;
+
+		for (uint32 probeIndex = 0; probeIndex < _scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeNums(); ++probeIndex)
+		{
+			_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbe(&cubeMap, probeIndex);
 
 			cubeMap->Create(&_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox);
 			cubeMap->GetTargetViews(renderTarget);
@@ -587,6 +622,8 @@ void Realtime_GI::Update(const Timer& timer)
 		_irradianceVolume.SetScene(currScene);
 
 		_prevScene = &_scenes[AppSettings::CurrentScene];
+
+		UpdateSpecularProbeUIInfo();
     }
 
 	Quaternion orientation = AppSettings::SceneOrientation;
@@ -599,6 +636,7 @@ void Realtime_GI::Update(const Timer& timer)
 		Float4x4::TranslationMatrix(_scenes[AppSettings::CurrentScene].getSceneTranslation());
 
 	_irradianceVolume.Update();
+	UpdateSpecularProbeProperties();
 
 	QueueDebugCommands();
 }

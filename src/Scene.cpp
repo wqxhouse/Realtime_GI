@@ -208,6 +208,11 @@ void Scene::genSceneObjectBounds(uint64 objTypeflag, uint64 sceneObjIndex, uint6
 
 SceneObject *Scene::addDynamicOpaqueBoxObject(float scale, const Float3 &pos, const Quaternion &rot)
 {
+	Assert_(_numObjectBases < MAX_DYNAMIC_OBJECTS);
+	Assert_(_numTotalModelsShared < MAX_MODELS);
+	Assert_(_numObjectBases < MAX_OBJECT_MATRICES);
+	Assert_(_numPrevWVPs < MAX_OBJECT_MATRICES);
+
 	if (!_boxModel)
 	{
 		addBoxModel();
@@ -239,6 +244,11 @@ SceneObject *Scene::addDynamicOpaqueBoxObject(float scale, const Float3 &pos, co
 
 SceneObject *Scene::addDynamicOpaquePlaneObject(float scale, const Float3 &pos, const Quaternion &rot)
 {
+	Assert_(_numObjectBases < MAX_DYNAMIC_OBJECTS);
+	Assert_(_numTotalModelsShared < MAX_MODELS);
+	Assert_(_numObjectBases < MAX_OBJECT_MATRICES);
+	Assert_(_numPrevWVPs < MAX_OBJECT_MATRICES);
+
 	if (!_planeModel)
 	{
 		addPlaneModel();
@@ -305,7 +315,7 @@ SceneObject *Scene::addStaticOpaqueObject(Model *model, float scale, const Float
 SceneObject *Scene::addDynamicOpaqueObject(Model *model, float scale, const Float3 &pos, const Quaternion &rot)
 {
 	Assert_(model != nullptr);
-	Assert_(_numObjectBases < MAX_STATIC_OBJECTS);
+	Assert_(_numObjectBases < MAX_DYNAMIC_OBJECTS);
 	Assert_(_numTotalModelsShared < MAX_MODELS);
 	Assert_(_numObjectBases < MAX_OBJECT_MATRICES);
 	Assert_(_numPrevWVPs < MAX_OBJECT_MATRICES);
