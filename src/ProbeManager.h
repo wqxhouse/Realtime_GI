@@ -18,8 +18,15 @@ public:
 	void AddProbe(const Float3 &pos, const Float3 &boxSize);
 	uint32 GetProbeNums();
 	void GetProbe(CreateCubemap **cubemap, uint32 index);
-	void GetNNProbe(CreateCubemap **nearCubemap, const Float3 &objPos);
+	int GetNNProbe(CreateCubemap **nearCubemap, const Float3 &objPos);
+	RenderTarget2D GetProbeArray();
 	// void GetBlendProbes(std::vector<CreateCubemap> &blendCubemaps, Float3 objPos);
+
+	struct Probe
+	{
+		Float3 pos;
+		Float3 BoxSize;
+	};
 
 private:
 	float CalDistance(const Float3 &probePos, const Float3 &objPos); //Calculate distance between object and a single probe.
@@ -28,6 +35,10 @@ private:
 
 	std::vector<Float3> _probePositions;
 	std::vector<CreateCubemap> _cubemaps;
+
+	RenderTarget2D _cubemapArray;
+	ID3D11ShaderResourceViewPtr _cubemapArrRSV;
+	D3D11_SHADER_RESOURCE_VIEW_DESC _cubemapArrDESC;
 
 	uint32 _probeNum = 0;
 

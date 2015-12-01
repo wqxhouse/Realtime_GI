@@ -58,6 +58,8 @@ StructuredBuffer<uint> LightIndices : register(t8);
 Texture3D<ClusterData> Clusters : register(t9);
 
 StructuredBuffer<SHProbeLight> SHProbeLights: register(t10);
+
+TextureCubeArray<float4> probeArr : register(t12);
 // RWStructuredBuffer<SH9Color> SHProbeCoefficients: register(u0);
 
 SamplerState EVSMSampler : register(s0);
@@ -200,7 +202,12 @@ float4 ClusteredDeferredPS(in PSInput input) : SV_Target0
 		float fresnel = surface.metallic * AB.x + AB.y;
 		fresnel *= saturate(surface.metallic * 100.0f);
 
-		lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;
+		//lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;
+
+		uint probeIndex = (uint)rt1.w * 255;
+		float4 reflectWSIndex = float4(reflectWS, probeIndex);
+		
+			lighting += probeArr.SampleLevel(LinearSampler, reflectWSIndex, mipLevel).xyz * fresnel;
 	}
 
 

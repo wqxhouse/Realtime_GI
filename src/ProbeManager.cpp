@@ -16,6 +16,17 @@ void ProbeManager::Initialize(ID3D11Device *device, ID3D11DeviceContext *context
 {
 	_device = device;
 	_context = context;
+
+	_cubemapArray.Initialize(device, 128, 128, DXGI_FORMAT_R16G16B16A16_FLOAT, 8, 1, 0, TRUE, FALSE, 72, TRUE);
+
+	_cubemapArrDESC.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	_cubemapArrDESC.ViewDimension = D3D11_SRV_DIMENSION_TEXTURECUBEARRAY;
+	_cubemapArrDESC.TextureCubeArray.MipLevels = -1;
+	_cubemapArrDESC.TextureCubeArray.MostDetailedMip = 0;
+	_cubemapArrDESC.TextureCubeArray.NumCubes = 12;
+	_cubemapArrDESC.TextureCubeArray.First2DArrayFace = 0;
+	
+	DXCall(device->CreateShaderResourceView(_cubemapArray.Texture, &_cubemapArrDESC, &_cubemapArrRSV));
 }
 
 void ProbeManager::AddProbe(const Float3 &pos, const Float3 &boxSize)
@@ -44,15 +55,16 @@ void ProbeManager::GetProbe(CreateCubemap **cubemap, uint32 index)
 }
 
 
-void ProbeManager::GetNNProbe(CreateCubemap **nearCubemap, const Float3 &objPos)
+int ProbeManager::GetNNProbe(CreateCubemap **nearCubemap, const Float3 &objPos)
 {
 	uint32 NNIndex = CalNN(objPos);
 	if (NNIndex >= _cubemaps.size())
 	{
-		return;
+		return -1;
 	}
 
 	*nearCubemap = &_cubemaps.at(NNIndex);
+	return NNIndex;
 }
 
 
@@ -67,6 +79,11 @@ void ProbeManager::GetNNProbe(CreateCubemap **nearCubemap, const Float3 &objPos)
 //	else
 //		blendCubemaps.push_back(_cubemaps.at(secondIndex));
 //}
+
+RenderTarget2D ProbeManager::GetProbeArray()
+{
+	return _cubemapArray;
+}
 
 float ProbeManager::CalDistance(const Float3 &probePos, const Float3 &objPos)
 {

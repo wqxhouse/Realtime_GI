@@ -57,6 +57,7 @@ cbuffer PSConstants : register(b0)
 	float3 ProbePositionWS[2];
 	float3 BoxSize[2];
 	float3 ObjPositionWS;
+	uint probeIndex;
 }
 
 //=================================================================================================
@@ -72,8 +73,8 @@ Texture2D RoughnessMap : register(t5);
 Texture2D MetallicMap : register(t6);
 Texture2D EmissiveMap : register(t7);
 //TextureCubeArray<float3> SpecularCubemapArray : register(t8);
-TextureCube<float3> SpecularCubemapArray1 : register(t8);
-TextureCube<float3> SpecularCubemapArray2 : register(t9);
+//TextureCube<float3> SpecularCubemapArray1 : register(t8);
+//TextureCube<float3> SpecularCubemapArray2 : register(t9);
 
 SamplerState AnisoSampler : register(s0);
 SamplerState EVSMSampler : register(s1);
@@ -443,7 +444,8 @@ PSOutput PS(in PSInput input)
 			output.RT1.r   = roughness;
 			output.RT1.g   = metallic;
 			output.RT1.b   = EmissiveIntensity; // TODO: hook up emissive map later
-			output.RT1.a   = 0.0f;
+			output.RT1.a   = probeIndex / 255; // Set probe index
+			//output.RT1.a   = 0.0f;
 			// ouput.RT1.a = SSR?;
 
 			float3 normalVS = normalize(mul(normalWS, (float3x3)View_));

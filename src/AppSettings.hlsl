@@ -28,6 +28,7 @@ cbuffer AppSettings : register(b7)
     bool EnableIndirectSpecularLighting;
     bool RenderBackground;
     bool RenderSceneObjectBBox;
+    bool RenderProbeBBox;
     bool RenderIrradianceVolumeProbes;
     bool EnableShadows;
     bool EnableNormalMaps;

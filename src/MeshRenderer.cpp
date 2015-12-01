@@ -724,7 +724,7 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 			// ID3D11ShaderResourceViewPtr blendCubeMaps[2];
 
 			ProbeManager &probeManager = *_scene->getProbeManagerPtr();
-			probeManager.GetNNProbe(&cubeMap, objPos);
+			_meshPSConstants.Data.probeIndex = probeManager.GetNNProbe(&cubeMap, objPos);
 
 			if (cubeMap == nullptr)
 			{
@@ -814,6 +814,7 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 						material.RoughnessMap, 
 						material.MetallicMap, 
 						material.EmissiveMap,
+						//_scene->getProbeManagerPtr()->GetProbeArray().SRView,
 						/*blendCubeMaps[0],
 						blendCubeMaps[1]*/
 					};

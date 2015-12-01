@@ -155,6 +155,8 @@ public class Settings
 
         bool RenderSceneObjectBBox = false;
 
+        bool RenderProbeBBox = false;
+
         bool RenderIrradianceVolumeProbes = false;
 
         bool EnableShadows = true;
