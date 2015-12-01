@@ -24,7 +24,7 @@
 
 using namespace SampleFramework11;
 
-
+class DebugRenderer;
 struct BakeData;
 class MeshRenderer
 {
@@ -37,7 +37,7 @@ protected:
 
 public:
 
-    void Initialize(ID3D11Device* device, ID3D11DeviceContext* context);
+    void Initialize(ID3D11Device* device, ID3D11DeviceContext* context, DebugRenderer *_debugRenderer);
 	void SetScene(Scene *scene);
 
     void RenderDepth(ID3D11DeviceContext* context, const Camera& camera, const Float4x4& world,
@@ -219,4 +219,6 @@ protected:
     ConstantBuffer<MeshPSConstants> _meshPSConstants;
     ConstantBuffer<EVSMConstants> _evsmConstants;
 	ConstantBuffer<ReductionConstants> _reductionConstants;
+
+	DebugRenderer *_debugRenderer;
 };

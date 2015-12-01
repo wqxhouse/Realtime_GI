@@ -212,6 +212,7 @@
     <ClInclude Include="SceneScriptBase.h" />
     <ClInclude Include="ShadowMapSettings.h" />
     <ClInclude Include="SharedConstants.h" />
+    <ClInclude Include="SponzaScript.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="AppSettings.cs">
