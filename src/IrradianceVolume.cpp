@@ -88,12 +88,14 @@ void IrradianceVolume::Initialize(ID3D11Device *device, ID3D11DeviceContext *con
 void IrradianceVolume::SetProbeDensity(float unitsBetweenProbes)
 {
 	_unitsBetweenProbes = unitsBetweenProbes;
+	if (!_scene->hasProxySceneObject()) return;
 	setupResourcesForScene();
 }
 
 void IrradianceVolume::SetScene(Scene *scene)
 {
 	_scene = scene;
+	if (!_scene->hasProxySceneObject()) return;
 	setupResourcesForScene();
 }
 
@@ -543,6 +545,8 @@ void IrradianceVolume::Update()
 
 void IrradianceVolume::MainRender()
 {
+	if (!_scene->hasProxySceneObject()) return;
+
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
 	_context->ClearRenderTargetView(_indirectLightDiffuseBufferRT.RTView, clearColor);
 
