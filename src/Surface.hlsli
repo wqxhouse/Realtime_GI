@@ -33,19 +33,25 @@ float3 DecodeSphereMap(float2 e)
 	return n;
 }
 
-float3 GetPositionWSFromNdcZ(in float ndcZ, in float3 viewRay, in float3 camPos, in float3 camZAxisWS, in float projA, in float projB, out float depthVS)
+float3 GetPositionWSFromNdcZ(in float ndcZ, in float3 viewRay, in float3 camPos, in float3 camZAxisWS, in float projA, in float projB, in float4x4 viewMat, in float4 magic, out float depthVS)
 {
 	viewRay = normalize(viewRay);
 	float linearZ = projB / (ndcZ - projA);
 	float viewRayProjCamZ = dot(camZAxisWS, viewRay);
 	float3 posWS = camPos + viewRay * (linearZ / viewRayProjCamZ);
-	depthVS = linearZ;
+	//depthVS = linearZ;
+	depthVS = mul(float4(posWS, 1.0), viewMat).z;
+
+	float convFromDeviceZ = 1.0f / (ndcZ * magic[2] - magic[3]);
+	depthVS = convFromDeviceZ;
+	posWS = camPos + viewRay * (convFromDeviceZ / viewRayProjCamZ);
+
 	return posWS;
 }
 
 Surface GetSurfaceFromGBuffer(in float4 RT0, in float4 RT1, in float4 RT2, 
 				in float ndcZ, in float3 viewRay, in float4x4 ViewInv, 
-				in float3 camPos, in float3 camZAxisWS, in float projA, in float projB)
+				in float3 camPos, in float3 camZAxisWS, in float projA, in float projB, in float4x4 viewMat, in float4 magic)
 {
 	Surface surface;
 	surface.diffuse = RT0.rgb;
@@ -54,7 +60,7 @@ Surface GetSurfaceFromGBuffer(in float4 RT0, in float4 RT1, in float4 RT2,
 	surface.emissive = RT1.b;
 	surface.normalVS = DecodeSphereMap(RT2.zw);
 	surface.normalWS = mul(surface.normalVS, (float3x3)ViewInv);
-	surface.posWS = GetPositionWSFromNdcZ(ndcZ, viewRay, camPos, camZAxisWS, projA, projB, surface.depthVS);
+	surface.posWS = GetPositionWSFromNdcZ(ndcZ, viewRay, camPos, camZAxisWS, projA, projB, viewMat, magic, surface.depthVS);
 
 	return surface;
 }

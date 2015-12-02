@@ -1,4 +1,5 @@
 #include "DebugRenderer.h"
+#include <Graphics\\Textures.h>
 
 void DebugRenderer::Initialize(DeviceManager *deviceManager, ID3D11Device *device, ID3D11DeviceContext *context, Camera *cam)
 {
@@ -24,6 +25,12 @@ void DebugRenderer::Initialize(DeviceManager *deviceManager, ID3D11Device *devic
 		DXCall(_device->CreateInputLayout(_cubeMesh.InputElements(), 1,
 			   _debugShaderGeomVS->ByteCode->GetBufferPointer(), 
 			   _debugShaderGeomVS->ByteCode->GetBufferSize(), &_debugGeomInputLayout));
+
+		_spriteRenderer.Initialize(_device);
+		_spriteTexture = LoadTexture(_device, L"..\\Content\\Textures\\Default.dds");
+
+		_sphereModel = Model();
+		_sphereModel.CreateWithAssimp(_device, L"..\\Content\\Models\\sphere\\sphere_new.FBX");
 
 		_hasInit = true;
 	}
@@ -51,9 +58,25 @@ void DebugRenderer::QueueBBoxTranslucent(const BBox &bbox, const Float4 &color)
 	_cubeQueueTranslucent.push_back(std::make_tuple(mat, color));
 }
 
+void DebugRenderer::QueueSprite(ID3D11ShaderResourceView *texture, const Float3 &pos, const Float4 &color)
+{
+	if (!texture) return;
+
+	SpriteRenderer::SpriteDrawData drawData;
+	drawData.Transform = Float4x4::TranslationMatrix(pos);
+	drawData.Color = color;
+	_spriteData.push_back(std::make_tuple(texture, drawData));
+}
+
+void DebugRenderer::QueueLightSphere(const Float3 &pos, const Float4 &color, float radius)
+{
+	Float4x4 transform = Float4x4::ScaleMatrix(Float3(radius, radius, radius)) * Float4x4::TranslationMatrix(pos);
+	_sphereQueue.push_back(std::make_tuple(transform, color));
+}
+
 void DebugRenderer::FlushDrawQueued()
 {
-	if (_cubeQueueWire.empty() && _cubeQueueTranslucent.empty())
+	if (_cubeQueueWire.empty() && _cubeQueueTranslucent.empty() && _sphereQueue.empty() && _spriteData.empty())
 	{
 		return;
 	}
@@ -86,7 +109,7 @@ void DebugRenderer::FlushDrawQueued()
 
 	// Batch wire call
 	_context->RSSetState(_rasterizerStates.Wireframe());
-	updateConstantBuffer(true);
+	updateConstantBufferCube(true);
 	for (size_t i = 0; i < _cubeMesh.MeshParts().size(); i++)
 	{
 		MeshPart &m = _cubeMesh.MeshParts()[i];
@@ -94,7 +117,7 @@ void DebugRenderer::FlushDrawQueued()
 	}
 
 	// Batch translucent call
-	updateConstantBuffer(false);
+	updateConstantBufferCube(false);
 	_context->RSSetState(_rasterizerStates.NoCull());
 	for (size_t i = 0; i < _cubeMesh.MeshParts().size(); i++)
 	{
@@ -105,9 +128,33 @@ void DebugRenderer::FlushDrawQueued()
 	// rtvs[0] = nullptr;
 	// _context->OMSetRenderTargets(1, rtvs, nullptr);
 
+	updateConstantBufferSphere();
+	Mesh *sphereMesh = &_sphereModel.Meshes()[0];
+	vertexBuffers[0] = { sphereMesh->VertexBuffer() };
+	vertexStrides[0] = { sphereMesh->VertexStride() };
+	_context->IASetVertexBuffers(0, 1, vertexBuffers, vertexStrides, offsets);
+	_context->IASetIndexBuffer(sphereMesh->IndexBuffer(), sphereMesh->IndexBufferFormat(), 0);
+	for (size_t i = 0; i < sphereMesh->MeshParts().size(); i++)
+	{
+		MeshPart &m = sphereMesh->MeshParts()[i];
+		_context->DrawIndexedInstanced(m.IndexCount, (UINT)_sphereQueue.size(), 0, 0, 0);
+	}
+
+	_spriteRenderer.Begin(_context);
+	for (size_t i = 0; i < _spriteData.size(); i++)
+	{
+		SpriteRenderer::SpriteDrawData &drawData = std::get<1>(_spriteData[i]);
+		ID3D11ShaderResourceView *srv = std::get<0>(_spriteData[i]);
+		_spriteRenderer.Render(srv, drawData.Transform, drawData.Color);
+	}
+	_spriteRenderer.End();
+
 	// flush
 	_cubeQueueWire.clear();
 	_cubeQueueTranslucent.clear();
+
+	_spriteData.clear();
+	_sphereQueue.clear();
 }
 
 Float4x4 DebugRenderer::matModelToWorldFromBBox(const BBox &bbox)
@@ -121,11 +168,12 @@ Float4x4 DebugRenderer::matModelToWorldFromBBox(const BBox &bbox)
 	return scale * Float4x4::TranslationMatrix(center);
 }
 
-void DebugRenderer::updateConstantBuffer(bool32 isWire)
+void DebugRenderer::updateConstantBufferCube(bool32 isWire)
 {
 	if (isWire)
 	{
-		for (size_t i = 0; i < _cubeQueueWire.size(); i++)
+		uint64 num = Min(_cubeQueueWire.size(), (uint64)_maxBatchSize);
+		for (size_t i = 0; i < num; i++)
 		{
 			auto t = _cubeQueueWire[i];
 			_shaderConstants.Data.data[i].Transform = Float4x4::Transpose(std::get<0>(t) * _camera->ViewProjectionMatrix());
@@ -134,7 +182,9 @@ void DebugRenderer::updateConstantBuffer(bool32 isWire)
 	}
 	else
 	{
-		for (size_t i = 0; i < _cubeQueueTranslucent.size(); i++)
+
+		uint64 num = Min(_cubeQueueTranslucent.size(), (uint64)_maxBatchSize);
+		for (size_t i = 0; i < num; i++)
 		{
 			auto t = _cubeQueueTranslucent[i];
 
@@ -147,6 +197,17 @@ void DebugRenderer::updateConstantBuffer(bool32 isWire)
 	_shaderConstants.SetVS(_context, 0);
 }
 
+void DebugRenderer::updateConstantBufferSphere()
+{
+	uint64 num = Min(_sphereQueue.size(), (uint64)_maxBatchSize);
+	for (size_t i = 0; i < num; i++)
+	{
+		auto t = _sphereQueue[i];
+		_shaderConstants.Data.data[i].Transform = Float4x4::Transpose(std::get<0>(t) * _camera->ViewProjectionMatrix());
+		_shaderConstants.Data.data[i].Color = std::get<1>(t);
+	}
+}
+
 // static vars
 Mesh DebugRenderer::_cubeMesh;
 VertexShaderPtr DebugRenderer::_debugShaderGeomVS;
@@ -156,3 +217,6 @@ bool32 DebugRenderer::_hasInit;
 BlendStates DebugRenderer::_blendStates;
 RasterizerStates DebugRenderer::_rasterizerStates;
 DepthStencilStates DebugRenderer::_depthStencilStates;
+SpriteRenderer DebugRenderer::_spriteRenderer;
+ID3D11ShaderResourceViewPtr DebugRenderer::_spriteTexture;
+Model DebugRenderer::_sphereModel;

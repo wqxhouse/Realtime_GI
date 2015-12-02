@@ -21,3 +21,13 @@ struct SpotLight // 3 vec4
 	Float3 cDir;
 	float pad;
 };
+
+struct SHProbeLight
+{
+	Float3 cPos;
+	uint32 cProbeIndex;
+	float cRadius;
+	float cIntensity;
+	float pad1;
+	float pad2;
+};

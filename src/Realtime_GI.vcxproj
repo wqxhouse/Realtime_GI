@@ -79,7 +79,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;Shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <StackReserveSize>2048000</StackReserveSize>
+      <StackReserveSize>20480000</StackReserveSize>
     </Link>
     <Bscmake>
       <PreserveSbr>true</PreserveSbr>
@@ -145,6 +145,7 @@
     <ClCompile Include="..\SampleFramework11\v1.01\Window.cpp" />
     <ClCompile Include="BoundUtils.cpp" />
     <ClCompile Include="CreateCubemap.cpp" />
+    <ClCompile Include="IrradianceVolume.cpp" />
     <ClCompile Include="DebugRenderer.cpp" />
     <ClCompile Include="LightClusters.cpp" />
     <ClCompile Include="MeshRenderer.cpp" />
@@ -194,10 +195,13 @@
     <ClInclude Include="..\SampleFramework11\v1.01\Window.h" />
     <ClInclude Include="AppPCH.h" />
     <ClInclude Include="BoundUtils.h" />
+    <ClInclude Include="CornellBoxScript.h" />
     <ClInclude Include="CreateCubemap.h" />
+    <ClInclude Include="IrradianceVolume.h" />
     <ClInclude Include="DebugRenderer.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="LightClusters.h" />
+    <ClInclude Include="LoadScenes.h" />
     <ClInclude Include="MeshRenderer.h" />
     <ClInclude Include="AppSettings.h" />
     <ClInclude Include="ProbeManager.h" />
@@ -205,8 +209,10 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="PostProcessor.h" />
     <ClInclude Include="Realtime_GI.h" />
+    <ClInclude Include="SceneScriptBase.h" />
     <ClInclude Include="ShadowMapSettings.h" />
     <ClInclude Include="SharedConstants.h" />
+    <ClInclude Include="SponzaScript.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="AppSettings.cs">
@@ -290,6 +296,61 @@
     <None Include="DebugGeom.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ProxyMeshTexcoord.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4.0</ShaderModel>
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="DirectDiffuse.hlsl">
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="SimpleDepthOnly.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="RelightCubemap.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="RelightSH.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4.0</ShaderModel>
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="SHProbeLight.hlsli">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Compute</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4.0</ShaderModel>
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="IndirectDiffuse.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Geometry</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">4.0</ShaderModel>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Geometry</ShaderType>
+      <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">4.0</ShaderModel>
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

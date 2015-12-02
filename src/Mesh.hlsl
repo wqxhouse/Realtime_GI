@@ -57,6 +57,7 @@ cbuffer PSConstants : register(b0)
 	float3 ProbePositionWS[2];
 	float3 BoxSize[2];
 	float3 ObjPositionWS;
+	uint probeIndex;
 }
 
 //=================================================================================================
@@ -72,8 +73,8 @@ Texture2D RoughnessMap : register(t5);
 Texture2D MetallicMap : register(t6);
 Texture2D EmissiveMap : register(t7);
 //TextureCubeArray<float3> SpecularCubemapArray : register(t8);
-TextureCube<float3> SpecularCubemapArray1 : register(t8);
-TextureCube<float3> SpecularCubemapArray2 : register(t9);
+//TextureCube<float3> SpecularCubemapArray1 : register(t8);
+//TextureCube<float3> SpecularCubemapArray2 : register(t9);
 
 SamplerState AnisoSampler : register(s0);
 SamplerState EVSMSampler : register(s1);
@@ -151,8 +152,12 @@ struct PSOutput
 		float4 Color                : SV_Target0;
 	#elif IsGBuffer_
 		float4 RT0					: SV_Target0;	// albedo (xyz) 
-		float4 RT1					: SV_Target1;	// roughness(x) | metallic(y) | emissive (z) | SSR? (w)
-		float4 RT2					: SV_Target2;	// spheremap_vs_normal (xy) | velocity (zw)
+		#if CreateCubemap_
+			float2 RT1					: SV_Target1;	// spheremap normal
+		#else
+			float4 RT1					: SV_Target1;	// roughness(x) | metallic(y) | emissive (z) | SSR? (w)
+			float4 RT2					: SV_Target2;	// spheremap_vs_normal (xy) | velocity (zw)
+		#endif
 	#else
 		float4 Color                : SV_Target0;
 		float2 Velocity             : SV_Target1;
@@ -435,20 +440,27 @@ PSOutput PS(in PSInput input)
 		// output.RT0.a   = shadowVisibility;
 		output.RT0.a = 0;
 
-		output.RT1.r   = roughness;
-		output.RT1.g   = metallic;
-		output.RT1.b   = EmissiveIntensity; // TODO: hook up emissive map later
-		output.RT1.a   = 0.0f;
-		// ouput.RT1.a = SSR?;
+		#if !CreateCubemap_
+			output.RT1.r   = roughness;
+			output.RT1.g   = metallic;
+			output.RT1.b   = EmissiveIntensity; // TODO: hook up emissive map later
+			output.RT1.a   = probeIndex / 255; // Set probe index
+			//output.RT1.a   = 0.0f;
+			// ouput.RT1.a = SSR?;
 
-		float3 normalVS = normalize(mul(normalWS, (float3x3)View_));
-		output.RT2.zw = EncodeSphereMap(normalVS);
+			float3 normalVS = normalize(mul(normalWS, (float3x3)View_));
+			output.RT2.zw = EncodeSphereMap(normalVS);
 		
-		// Velocity
-		float2 prevPositionSS = (input.PrevPosition.xy / input.PrevPosition.z) * float2(0.5f, -0.5f) + 0.5f;
-		prevPositionSS *= RTSize;
-		output.RT2.xy = input.PositionSS.xy - prevPositionSS;
-		output.RT2.xy -= JitterOffset;
+			// Velocity
+			float2 prevPositionSS = (input.PrevPosition.xy / input.PrevPosition.z) * float2(0.5f, -0.5f) + 0.5f;
+			prevPositionSS *= RTSize;
+			output.RT2.xy = input.PositionSS.xy - prevPositionSS;
+			output.RT2.xy -= JitterOffset;
+
+		#else
+			float3 normalVS = normalize(mul(normalWS, (float3x3)View_));
+			output.RT1 = EncodeSphereMap(normalVS);
+		#endif
 
 	#else // Forward path
 		// Add in the primary directional light
@@ -461,7 +473,7 @@ PSOutput PS(in PSInput input)
 									 roughness, positionWS);
 
 		// Add in the ambient
-		if(EnableAmbientLighting)
+		if (EnableIndirectSpecularLighting)
 		{
 			float3 indirectDiffuse = EvalSH9Cosine(normalWS, EnvironmentSH);
 
@@ -489,19 +501,20 @@ PSOutput PS(in PSInput input)
 			float fresnel = metallic * AB.x + AB.y;
 			fresnel *= saturate(metallic * 100.0f);
 
-			float weight1 = probeWeightCalculate(ProbePositionWS[0], positionWS, BoxSize[0]);//Bug
-			float weight2 = probeWeightCalculate(ProbePositionWS[1], positionWS, BoxSize[1]);//Bug
+			lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;
+			//float weight1 = probeWeightCalculate(ProbePositionWS[0], positionWS, BoxSize[0]);//Bug
+			//float weight2 = probeWeightCalculate(ProbePositionWS[1], positionWS, BoxSize[1]);//Bug
 
-			if (weight1 == 0 && weight2 == 0)
-				lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;
-			else
-			{
-				if (weight1 == 0) lighting += SpecularCubemapArray2.SampleLevel(LinearSampler, reflectWS, mipLevel) * weight2;
-				else if (weight2 == 0) lighting += SpecularCubemapArray1.SampleLevel(LinearSampler, reflectWS, mipLevel) * weight1;
-				else
-					lighting += SpecularCubemapArray1.SampleLevel(LinearSampler, reflectWS, mipLevel) +
-						SpecularCubemapArray2.SampleLevel(LinearSampler, reflectWS, mipLevel);
-			}
+			//if (weight1 == 0 && weight2 == 0)
+			//	lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;
+			//else
+			//{
+			//	if (weight1 == 0) lighting += SpecularCubemapArray2.SampleLevel(LinearSampler, reflectWS, mipLevel) * weight2;
+			//	else if (weight2 == 0) lighting += SpecularCubemapArray1.SampleLevel(LinearSampler, reflectWS, mipLevel) * weight1;
+			//	else
+			//		lighting += SpecularCubemapArray1.SampleLevel(LinearSampler, reflectWS, mipLevel) +
+			//			SpecularCubemapArray2.SampleLevel(LinearSampler, reflectWS, mipLevel);
+			//}
 
 			//lighting = weight1;
 		}

@@ -104,6 +104,8 @@ public:
 
     void InitCornea(ID3D11Device* device, uint32 materialIdx);
 
+	void InitSphere(ID3D11Device *device, const int subDivLevel, uint32 materialIdx);
+
     // Rendering
     void Render(ID3D11DeviceContext* context);
 

@@ -22,13 +22,19 @@ cbuffer AppSettings : register(b7)
     int CurrentShadingTech;
     float3 LightDirection;
     float3 LightColor;
+    bool PauseSceneScript;
     bool EnableDirectLighting;
-    bool EnableAmbientLighting;
+    bool EnableIndirectDiffuseLighting;
+    bool EnableIndirectSpecularLighting;
     bool RenderBackground;
     bool RenderSceneObjectBBox;
+    bool RenderProbeBBox;
+    bool RenderIrradianceVolumeProbes;
     bool EnableShadows;
     bool EnableNormalMaps;
     bool EnableRealtimeCubemap;
+    int DiffuseGIBounces;
+    float DiffuseGI_Intensity;
     float NormalMapIntensity;
     float DiffuseIntensity;
     float Roughness;
@@ -72,8 +78,7 @@ static const int JitterModes_Uniform2x = 1;
 static const int JitterModes_Hammersly16 = 2;
 
 static const int Scenes_CornellBox = 0;
-static const int Scenes_Boxes = 1;
-static const int Scenes_Plane = 2;
+static const int Scenes_Sponza = 1;
 
 static const int ShadingTech_Forward = 0;
 static const int ShadingTech_Clustered_Deferred = 1;
