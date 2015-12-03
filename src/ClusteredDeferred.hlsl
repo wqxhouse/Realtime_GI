@@ -216,10 +216,10 @@ float4 ClusteredDeferredPS(in PSInput input) : SV_Target0
 
 		lighting += indirectDiffuse * surface.diffuse;
 
-		//float3 reflectWS = reflect(-viewWS, surface.normalWS);
-		float3 reflectWS = parallaxCorrection(surface.posWS, Probes[probeIndex].pos, normalize(surface.normalWS),
+		float3 reflectWS = reflect(-viewWS, surface.normalWS);
+		/*float3 reflectWS = parallaxCorrection(surface.posWS, Probes[probeIndex].pos, normalize(surface.normalWS),
 			Probes[probeIndex].pos + Probes[probeIndex].boxSize, Probes[probeIndex].pos - Probes[probeIndex].boxSize);
-
+*/
 		uint width, height, numMips;
 		SpecularCubemap.GetDimensions(0, width, height, numMips);
 
