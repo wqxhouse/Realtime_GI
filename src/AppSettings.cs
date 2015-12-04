@@ -42,8 +42,8 @@ public class Settings
     enum Scenes
     {
         CornellBox,
-        Boxes, 
-        Plane,
+        DropBoxes,
+        Sponza, 
     }
 
     enum JitterModes
@@ -138,10 +138,24 @@ public class Settings
         [DisplayName("Light Color")]
         [HelpText("The color of the light")]
         [MinValue(0.0f)]
-        [MaxValue(20.0f)]
+        [MaxValue(50.0f)]
         [StepSize(0.1f)]
         [HDR(true)]
         Color LightColor = new Color(20.0f, 16.0f, 10.0f);
+
+       
+
+        [DisplayName("Sky Color")]
+        [HelpText("The color of the sky")]
+        [MinValue(0.0f)]
+        [MaxValue(20.0f)]
+        [StepSize(0.1f)]
+        [HDR(true)]
+        Color SkyColor = new Color(0.1f, 0.3f, 0.7f);
+
+        bool EnableSSR = false;
+
+        bool PauseSceneScript = false;
 
         bool EnableDirectLighting = true;
 
@@ -152,6 +166,8 @@ public class Settings
         bool RenderBackground = true;
 
         bool RenderSceneObjectBBox = false;
+
+        bool RenderProbeBBox = false;
 
         bool RenderIrradianceVolumeProbes = false;
 
@@ -207,6 +223,48 @@ public class Settings
         [HelpText("Emissive parameter for the material")]
         float EmissiveIntensity = 0.00f;
 
+        [DisplayName("Probe Index")]
+        [MinValue(0.0f)]
+        [MaxValue(50.0f)]
+        [StepSize(1.0f)]
+        float ProbeIndex = 0.0f;
+
+        [DisplayName("ProbeX")]
+        [MinValue(-100.0f)]
+        [MaxValue(100.0f)]
+        [StepSize(0.1f)]
+        float ProbeX = 0.0f;
+
+        [DisplayName("ProbeY")]
+        [MinValue(-100.0f)]
+        [MaxValue(100.0f)]
+        [StepSize(0.1f)]
+        float ProbeY = 0.0f;
+
+        [DisplayName("ProbeZ")]
+        [MinValue(-100.0f)]
+        [MaxValue(100.0f)]
+        [StepSize(0.1f)]
+        float ProbeZ = 0.0f;
+
+        [DisplayName("BoxSizeX")]
+        [MinValue(-100.0f)]
+        [MaxValue(100.0f)]
+        [StepSize(0.1f)]
+        float BoxSizeX = 1.0f;
+
+        [DisplayName("BoxSizeY")]
+        [MinValue(-100.0f)]
+        [MaxValue(100.0f)]
+        [StepSize(0.1f)]
+        float BoxSizeY = 1.0f;
+
+        [DisplayName("BoxSizeZ")]
+        [MinValue(-100.0f)]
+        [MaxValue(100.0f)]
+        [StepSize(0.1f)]
+        float BoxSizeZ = 1.0f;
+
         // Orientation SceneOrientation = new Orientation(0.41f, -0.55f, -0.29f, 0.67f);
         Orientation SceneOrientation = new Orientation(0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -220,6 +278,7 @@ public class Settings
         [MinValue(-16.0f)]
         [MaxValue(16.0f)]
         float ExposureScale = 0.0f;
+
     }
 
     public class PostProcessing

@@ -9,6 +9,9 @@
 #include "Light.h"
 #include "BoundUtils.h"
 
+#include "ProbeManager.h"
+//#include "CreateCubemap.h"
+
 using namespace SampleFramework11;
 
 struct ModelPartsBound
@@ -79,13 +82,15 @@ public:
 
 	void Initialize(ID3D11Device *device, ID3D11DeviceContext *context, SceneScript *sceneScript, FirstPersonCamera *globalCamera);
 	void Update(const Timer& timer);
-	// void SetUpdateFunction(void(*update)(Scene *scene, const Timer &timer));
 
 	void OnSceneChange();
 
 	Model *addModel(const std::wstring &modelPath);
 	Model *addBoxModel();
 	Model *addPlaneModel();
+
+	inline void setProbeLength(float units) { _unitProbeLength = units; }
+	inline float getProbeLength() { return _unitProbeLength; }
 
 	// TODO: note that this approach fails to account for 
 	// cases that a model can have semi-static semi-dynamic 
@@ -97,6 +102,7 @@ public:
 
 	SceneObject *addDynamicOpaqueBoxObject(float scale = 1.0f, const Float3 &pos = Float3(), const Quaternion &rot = Quaternion());
 	SceneObject *addDynamicOpaquePlaneObject(float scale = 1.0f, const Float3 &pos = Float3(), const Quaternion &rot = Quaternion());
+	SceneObject *addStaticOpaquePlaneObject(float scale = 1.0f, const Float3 &pos = Float3(), const Quaternion &rot = Quaternion());
 
 	void setProxySceneObject(const std::wstring &modelPath, float scale = 1.0f, const Float3 &pos = Float3(), const Quaternion &rot = Quaternion());
 	inline SceneObject *getProxySceneObjectPtr() { return &_proxySceneObject; }
@@ -128,9 +134,9 @@ public:
 	uint32 fillPointLightsUniformGrid(float unitGridSize, float radius, Float3 offset=Float3());
 	inline PointLight *getPointLightPtr() { return _pointLights; }
 	inline int getNumPointLights() { return _numPointLights; }
-
-	// std::wstring getSceneBoundInfo();
 	BBox getSceneBoundingBox();
+
+	inline ProbeManager *Scene::getProbeManagerPtr() { return &_probeManager; }
 
 	// Caution: too large will stack overflow
 	static const int MAX_STATIC_OBJECTS = 32;
@@ -207,6 +213,10 @@ private:
 
 	FirstPersonCamera _sceneCamSaved;
 	FirstPersonCamera *_globalCam;
+
+	ProbeManager _probeManager;
+	
+	float _unitProbeLength;
 
 private:
 

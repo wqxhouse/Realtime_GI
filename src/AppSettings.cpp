@@ -36,8 +36,8 @@ static const char* JitterModesLabels[3] =
 static const char* ScenesLabels[3] =
 {
     "CornellBox",
-    "Boxes",
-    "Plane",
+    "DropBoxes",
+    "Sponza",
 };
 
 static const char* ShadingTechLabels[2] =
@@ -72,11 +72,15 @@ namespace AppSettings
     ShadingTechSetting CurrentShadingTech;
     DirectionSetting LightDirection;
     ColorSetting LightColor;
+    ColorSetting SkyColor;
+    BoolSetting EnableSSR;
+    BoolSetting PauseSceneScript;
     BoolSetting EnableDirectLighting;
     BoolSetting EnableIndirectDiffuseLighting;
     BoolSetting EnableIndirectSpecularLighting;
     BoolSetting RenderBackground;
     BoolSetting RenderSceneObjectBBox;
+    BoolSetting RenderProbeBBox;
     BoolSetting RenderIrradianceVolumeProbes;
     BoolSetting EnableShadows;
     BoolSetting EnableNormalMaps;
@@ -88,6 +92,13 @@ namespace AppSettings
     FloatSetting Roughness;
     FloatSetting SpecularIntensity;
     FloatSetting EmissiveIntensity;
+    FloatSetting ProbeIndex;
+    FloatSetting ProbeX;
+    FloatSetting ProbeY;
+    FloatSetting ProbeZ;
+    FloatSetting BoxSizeX;
+    FloatSetting BoxSizeY;
+    FloatSetting BoxSizeZ;
     OrientationSetting SceneOrientation;
     FloatSetting ModelRotationSpeed;
     BoolSetting DoubleSyncInterval;
@@ -172,8 +183,17 @@ namespace AppSettings
         LightDirection.Initialize(tweakBar, "LightDirection", "Scene Controls", "Light Direction", "The direction of the light", Float3(-0.7500f, 0.9770f, -0.4000f));
         Settings.AddSetting(&LightDirection);
 
-        LightColor.Initialize(tweakBar, "LightColor", "Scene Controls", "Light Color", "The color of the light", Float3(20.0000f, 16.0000f, 10.0000f), true, 0.0000f, 20.0000f, 0.1000f, ColorUnit::None);
+        LightColor.Initialize(tweakBar, "LightColor", "Scene Controls", "Light Color", "The color of the light", Float3(20.0000f, 16.0000f, 10.0000f), true, 0.0000f, 50.0000f, 0.1000f, ColorUnit::None);
         Settings.AddSetting(&LightColor);
+
+        SkyColor.Initialize(tweakBar, "SkyColor", "Scene Controls", "Sky Color", "The color of the sky", Float3(0.1000f, 0.3000f, 0.7000f), true, 0.0000f, 20.0000f, 0.1000f, ColorUnit::None);
+        Settings.AddSetting(&SkyColor);
+
+        EnableSSR.Initialize(tweakBar, "EnableSSR", "Scene Controls", "Enable SSR", "", false);
+        Settings.AddSetting(&EnableSSR);
+
+        PauseSceneScript.Initialize(tweakBar, "PauseSceneScript", "Scene Controls", "Pause Scene Script", "", false);
+        Settings.AddSetting(&PauseSceneScript);
 
         EnableDirectLighting.Initialize(tweakBar, "EnableDirectLighting", "Scene Controls", "Enable Direct Lighting", "", true);
         Settings.AddSetting(&EnableDirectLighting);
@@ -189,6 +209,9 @@ namespace AppSettings
 
         RenderSceneObjectBBox.Initialize(tweakBar, "RenderSceneObjectBBox", "Scene Controls", "Render Scene Object BBox", "", false);
         Settings.AddSetting(&RenderSceneObjectBBox);
+
+        RenderProbeBBox.Initialize(tweakBar, "RenderProbeBBox", "Scene Controls", "Render Probe BBox", "", false);
+        Settings.AddSetting(&RenderProbeBBox);
 
         RenderIrradianceVolumeProbes.Initialize(tweakBar, "RenderIrradianceVolumeProbes", "Scene Controls", "Render Irradiance Volume Probes", "", false);
         Settings.AddSetting(&RenderIrradianceVolumeProbes);
@@ -222,6 +245,27 @@ namespace AppSettings
 
         EmissiveIntensity.Initialize(tweakBar, "EmissiveIntensity", "Scene Controls", "Emissive Intensity", "Emissive parameter for the material", 0.0000f, 0.0000f, 1.0000f, 0.0010f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&EmissiveIntensity);
+
+        ProbeIndex.Initialize(tweakBar, "ProbeIndex", "Scene Controls", "Probe Index", "", 0.0000f, 0.0000f, 50.0000f, 1.0000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&ProbeIndex);
+
+        ProbeX.Initialize(tweakBar, "ProbeX", "Scene Controls", "ProbeX", "", 0.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&ProbeX);
+
+        ProbeY.Initialize(tweakBar, "ProbeY", "Scene Controls", "ProbeY", "", 0.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&ProbeY);
+
+        ProbeZ.Initialize(tweakBar, "ProbeZ", "Scene Controls", "ProbeZ", "", 0.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&ProbeZ);
+
+        BoxSizeX.Initialize(tweakBar, "BoxSizeX", "Scene Controls", "BoxSizeX", "", 1.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&BoxSizeX);
+
+        BoxSizeY.Initialize(tweakBar, "BoxSizeY", "Scene Controls", "BoxSizeY", "", 1.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&BoxSizeY);
+
+        BoxSizeZ.Initialize(tweakBar, "BoxSizeZ", "Scene Controls", "BoxSizeZ", "", 1.0000f, -100.0000f, 100.0000f, 0.1000f, ConversionMode::None, 1.0000f);
+        Settings.AddSetting(&BoxSizeZ);
 
         SceneOrientation.Initialize(tweakBar, "SceneOrientation", "Scene Controls", "Scene Orientation", "", Quaternion(0.0000f, 0.0000f, 0.0000f, 1.0000f));
         Settings.AddSetting(&SceneOrientation);
@@ -284,11 +328,15 @@ namespace AppSettings
         CBuffer.Data.CurrentShadingTech = CurrentShadingTech;
         CBuffer.Data.LightDirection = LightDirection;
         CBuffer.Data.LightColor = LightColor;
+        CBuffer.Data.SkyColor = SkyColor;
+        CBuffer.Data.EnableSSR = EnableSSR;
+        CBuffer.Data.PauseSceneScript = PauseSceneScript;
         CBuffer.Data.EnableDirectLighting = EnableDirectLighting;
         CBuffer.Data.EnableIndirectDiffuseLighting = EnableIndirectDiffuseLighting;
         CBuffer.Data.EnableIndirectSpecularLighting = EnableIndirectSpecularLighting;
         CBuffer.Data.RenderBackground = RenderBackground;
         CBuffer.Data.RenderSceneObjectBBox = RenderSceneObjectBBox;
+        CBuffer.Data.RenderProbeBBox = RenderProbeBBox;
         CBuffer.Data.RenderIrradianceVolumeProbes = RenderIrradianceVolumeProbes;
         CBuffer.Data.EnableShadows = EnableShadows;
         CBuffer.Data.EnableNormalMaps = EnableNormalMaps;
@@ -300,6 +348,13 @@ namespace AppSettings
         CBuffer.Data.Roughness = Roughness;
         CBuffer.Data.SpecularIntensity = SpecularIntensity;
         CBuffer.Data.EmissiveIntensity = EmissiveIntensity;
+        CBuffer.Data.ProbeIndex = ProbeIndex;
+        CBuffer.Data.ProbeX = ProbeX;
+        CBuffer.Data.ProbeY = ProbeY;
+        CBuffer.Data.ProbeZ = ProbeZ;
+        CBuffer.Data.BoxSizeX = BoxSizeX;
+        CBuffer.Data.BoxSizeY = BoxSizeY;
+        CBuffer.Data.BoxSizeZ = BoxSizeZ;
         CBuffer.Data.SceneOrientation = SceneOrientation;
         CBuffer.Data.ModelRotationSpeed = ModelRotationSpeed;
         CBuffer.Data.DoubleSyncInterval = DoubleSyncInterval;

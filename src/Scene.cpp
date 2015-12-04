@@ -1,5 +1,6 @@
 #include "Scene.h"
 #include "FileIO.h"
+#include "ProbeManager.h"
 
 #include "SceneScriptBase.h"
 
@@ -22,10 +23,8 @@ Scene::Scene()
 	_sceneWSAABB_staticObj.Min = XMFLOAT3(0, 0, 0);
 
 	_sceneScript = NULL;
-
-	// _updateFunc = NULL;
-
 	_hasProxySceneObject = false;
+	_unitProbeLength = 1.0f;
 }
 
 Scene::~Scene()
@@ -39,6 +38,7 @@ void Scene::Initialize(ID3D11Device *device, ID3D11DeviceContext *context, Scene
 	_context = context;
 	_sceneScript = sceneScript;
 	_globalCam = globalCamera;
+	_probeManager.Initialize(_device, _context);
 
 	_sceneScript->InitScene(this);
 }
@@ -50,15 +50,8 @@ void Scene::Update(const Timer& timer)
 		genStaticSceneWSAABB();
 		_sceneBoundGenerated = true;
 	}
-
-	/*if (_updateFunc)
-	{
-	_updateFunc(this, timer);
-	}
-	*/
 	
 	_sceneScript->Update(this, &timer);
-
 	updateDynamicSceneObjectBounds();
 }
 
@@ -216,6 +209,11 @@ void Scene::genSceneObjectBounds(uint64 objTypeflag, uint64 sceneObjIndex, uint6
 
 SceneObject *Scene::addDynamicOpaqueBoxObject(float scale, const Float3 &pos, const Quaternion &rot)
 {
+	Assert_(_numObjectBases < MAX_DYNAMIC_OBJECTS);
+	Assert_(_numTotalModelsShared < MAX_MODELS);
+	Assert_(_numObjectBases < MAX_OBJECT_MATRICES);
+	Assert_(_numPrevWVPs < MAX_OBJECT_MATRICES);
+
 	if (!_boxModel)
 	{
 		addBoxModel();
@@ -245,8 +243,49 @@ SceneObject *Scene::addDynamicOpaqueBoxObject(float scale, const Float3 &pos, co
 	return &obj;
 }
 
+SceneObject *Scene::addStaticOpaquePlaneObject(float scale, const Float3 &pos, const Quaternion &rot)
+{
+	Assert_(_numObjectBases < MAX_STATIC_OBJECTS);
+	Assert_(_numTotalModelsShared < MAX_MODELS);
+	Assert_(_numObjectBases < MAX_OBJECT_MATRICES);
+	Assert_(_numPrevWVPs < MAX_OBJECT_MATRICES);
+
+	if (!_planeModel)
+	{
+		addPlaneModel();
+		_modelIndices.push_back(_numTotalModelsShared - 1);
+	}
+
+	uint64 modelIndex = getModelIndex(_planeModel);
+	Assert_(modelIndex != -1);
+
+	_objectBases[_numObjectBases] = createBase(scale, pos, rot);
+	_prevWVPs[_numPrevWVPs] = _objectBases[_numObjectBases];
+	_sceneStaticOpaqueObjectBounds[_numStaticOpaqueObjects] = SceneObjectBound();
+
+	SceneObject &obj = _staticOpaqueObjects[_numStaticOpaqueObjects];
+	obj.base = &_objectBases[_numObjectBases];
+	obj.model = _planeModel;
+	obj.bound = &_sceneStaticOpaqueObjectBounds[_numStaticOpaqueObjects];
+	obj.prevWVP = &_prevWVPs[_numPrevWVPs];
+	obj.id = _highestSceneObjId++;
+
+
+	genSceneObjectBounds(STATIC_OBJ | OPAQUE_OBJ, _numStaticOpaqueObjects, modelIndex);
+
+	_numObjectBases++;
+	_numPrevWVPs++;
+	_numStaticOpaqueObjects++;
+
+	return &obj;
+}
 SceneObject *Scene::addDynamicOpaquePlaneObject(float scale, const Float3 &pos, const Quaternion &rot)
 {
+	Assert_(_numObjectBases < MAX_DYNAMIC_OBJECTS);
+	Assert_(_numTotalModelsShared < MAX_MODELS);
+	Assert_(_numObjectBases < MAX_OBJECT_MATRICES);
+	Assert_(_numPrevWVPs < MAX_OBJECT_MATRICES);
+
 	if (!_planeModel)
 	{
 		addPlaneModel();
@@ -313,7 +352,7 @@ SceneObject *Scene::addStaticOpaqueObject(Model *model, float scale, const Float
 SceneObject *Scene::addDynamicOpaqueObject(Model *model, float scale, const Float3 &pos, const Quaternion &rot)
 {
 	Assert_(model != nullptr);
-	Assert_(_numObjectBases < MAX_STATIC_OBJECTS);
+	Assert_(_numObjectBases < MAX_DYNAMIC_OBJECTS);
 	Assert_(_numTotalModelsShared < MAX_MODELS);
 	Assert_(_numObjectBases < MAX_OBJECT_MATRICES);
 	Assert_(_numPrevWVPs < MAX_OBJECT_MATRICES);

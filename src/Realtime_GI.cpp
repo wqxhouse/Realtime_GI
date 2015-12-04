@@ -27,9 +27,9 @@
 #include <Graphics\\Textures.h>
 #include <Graphics\\Sampling.h>
 
+#include "ProbeManager.h"
 #include "Light.h"
 #include "ShadowMapSettings.h"
-
 #include "LoadScenes.h"
 
 using namespace SampleFramework11;
@@ -46,8 +46,7 @@ static const float FarClip = 300.0f;
 
 Realtime_GI::Realtime_GI() :  App(L"Realtime GI (CSCI 580)", MAKEINTRESOURCEW(IDI_DEFAULT)),
                             _camera(WindowWidthF / WindowHeightF, Pi_4 * 0.75f, NearClip, FarClip), 
-							_prevForward(0.0f), _prevStrafe(0.0f), _prevAscend(0.0f), _numScenes(0),
-							_cubemapGenerator(NearClip, FarClip)
+							_prevForward(0.0f), _prevStrafe(0.0f), _prevAscend(0.0f), _numScenes(0)
 {
     _deviceManager.SetBackBufferWidth(WindowWidth);
     _deviceManager.SetBackBufferHeight(WindowHeight);
@@ -80,6 +79,7 @@ void Realtime_GI::AddScene(SceneScript *sceneScript)
 	_scenes[_numScenes] = Scene();
 	Scene *scene = &_scenes[_numScenes];
 	scene->Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext(), sceneScript, &_camera);
+
 	_numScenes++;
 }
 //
@@ -174,9 +174,11 @@ void Realtime_GI::Initialize()
 
 	LoadScenes();
 
+	_debugRenderer.Initialize(&_deviceManager, _deviceManager.Device(), _deviceManager.ImmediateContext(), &_camera);
+
 	_prevScene = &_scenes[AppSettings::CurrentScene];
 
-    _meshRenderer.Initialize(device, _deviceManager.ImmediateContext());
+    _meshRenderer.Initialize(device, _deviceManager.ImmediateContext(), &_debugRenderer);
     _meshRenderer.SetScene(&_scenes[AppSettings::CurrentScene]);
 
     _skybox.Initialize(device);
@@ -194,7 +196,6 @@ void Realtime_GI::Initialize()
 
     // Init the post processor
     _postProcessor.Initialize(device);
-	_debugRenderer.Initialize(&_deviceManager, _deviceManager.Device(), _deviceManager.ImmediateContext(), &_camera);
 
 	CreateLightBuffers();
 	CreateQuadBuffers();
@@ -206,6 +207,120 @@ void Realtime_GI::Initialize()
 		&_meshRenderer, &_camera, &_pointLightBuffer, &_lightClusters, &_debugRenderer, &_shProbeLightBuffer);
 
 	_irradianceVolume.SetScene(&_scenes[AppSettings::CurrentScene]);
+
+	_ssr.Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext(), &_camera, &_colorTarget, &_rt1Target, &_rt2Target
+		,&_depthBuffer, &_ssrTarget, _quadVB, _quadIB);
+
+
+	UpdateSpecularProbeUIInfo();
+}
+
+void Realtime_GI::UpdateSpecularProbeUIInfo()
+{
+	if (_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeNums() != 0)
+	{
+		CreateCubemap *cubeMap;
+		for (uint32 probeIndex = 0; probeIndex < _scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeNums(); ++probeIndex)
+		{
+			_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbe(&cubeMap, probeIndex);
+
+			if (probeIndex == AppSettings::ProbeIndex.Value())
+			{
+				Float3 pos = cubeMap->GetPosition();
+				Float3 boxSize = cubeMap->GetBoxSize();
+
+				AppSettings::ProbeX.SetValue(pos.x);
+				AppSettings::ProbeY.SetValue(pos.y);
+				AppSettings::ProbeZ.SetValue(pos.z);
+
+				AppSettings::BoxSizeX.SetValue(boxSize.x);
+				AppSettings::BoxSizeY.SetValue(boxSize.y);
+				AppSettings::BoxSizeZ.SetValue(boxSize.z);
+			}
+		}
+	}
+}
+
+void Realtime_GI::UpdateSpecularProbeProperties()
+{
+	if (_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeNums() != 0)
+	{
+		CreateCubemap *cubeMap;
+		for (uint32 probeIndex = 0; probeIndex < _scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeNums(); ++probeIndex)
+		{
+			_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbe(&cubeMap, probeIndex);
+
+			if (probeIndex == AppSettings::ProbeIndex.Value())
+			{
+				Float3 pos = cubeMap->GetPosition();
+				Float3 boxSize = cubeMap->GetBoxSize();
+
+				if (AppSettings::ProbeIndex.Changed()){
+					if (AppSettings::ProbeX != pos.x || AppSettings::ProbeY != pos.y || AppSettings::ProbeZ != pos.z
+						|| AppSettings::BoxSizeX != boxSize.x || AppSettings::BoxSizeY != boxSize.y || AppSettings::BoxSizeZ != boxSize.z)
+					{
+						AppSettings::ProbeX.SetValue(pos.x);
+						AppSettings::ProbeY.SetValue(pos.y);
+						AppSettings::ProbeZ.SetValue(pos.z);
+
+						AppSettings::BoxSizeX.SetValue(boxSize.x);
+						AppSettings::BoxSizeY.SetValue(boxSize.y);
+						AppSettings::BoxSizeZ.SetValue(boxSize.z);
+					}
+				}
+				else
+				{
+					if (AppSettings::EnableRealtimeCubemap.Changed())
+					{
+						AppSettings::ProbeX.SetValue(pos.x);
+						AppSettings::ProbeY.SetValue(pos.y);
+						AppSettings::ProbeZ.SetValue(pos.z);
+
+						AppSettings::BoxSizeX.SetValue(boxSize.x);
+						AppSettings::BoxSizeY.SetValue(boxSize.y);
+						AppSettings::BoxSizeZ.SetValue(boxSize.z);
+					}
+					cubeMap->SetPosition(Float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ));
+					_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->_probes.at(probeIndex).pos = 
+						Float3(AppSettings::ProbeX, AppSettings::ProbeY, AppSettings::ProbeZ);
+					cubeMap->SetBoxSize(Float3(AppSettings::BoxSizeX, AppSettings::BoxSizeY, AppSettings::BoxSizeZ));
+					_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->_probes.at(probeIndex).BoxSize =
+						Float3(AppSettings::BoxSizeX, AppSettings::BoxSizeY, AppSettings::BoxSizeZ);
+				}
+			}
+		}
+	}
+}
+
+void Realtime_GI::RenderSpecularProbeCubemaps()
+{
+	_meshRenderer.SetInitializeProbes(true);
+	if (_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeNums() != 0)
+	{
+		CreateCubemap *cubeMap;
+		RenderTarget2D renderTarget;
+
+		for (uint32 probeIndex = 0; probeIndex < _scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeNums(); ++probeIndex)
+		{
+			_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbe(&cubeMap, probeIndex);
+
+			cubeMap->Create(&_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox);
+			cubeMap->GetTargetViews(renderTarget);
+			_deviceManager.ImmediateContext()->GenerateMips(renderTarget.SRView);
+			cubeMap->RenderPrefilterCubebox(_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeArray(), 
+				_globalTransform, probeIndex);
+			//cubeMap->GetPreFilterRT(renderTarget);
+			renderTarget = _scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeArray();
+			_deviceManager.ImmediateContext()->GenerateMips(renderTarget.SRView);
+		}
+
+		_meshRenderer.SetInitializeProbes(false);
+		cubeMap = nullptr;
+		return;
+	}
+
+	_meshRenderer.SetInitializeProbes(false);
+
 }
 
 // Creates all required render targets
@@ -238,11 +353,14 @@ void Realtime_GI::CreateRenderTargets()
 		_rt2Target.Initialize(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT);
 		_depthBuffer.Initialize(device, width, height, DXGI_FORMAT_D32_FLOAT, true);
 		_colorTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT);
+		// SSR
+		_ssrTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	}
 
-	if (_firstFrame)
+	//if (_firstFrame)
 	{
-		_cubemapGenerator.Initialize(device, 1, NumSamples, Quality);
+		//_cubemapGenerator.Initialize(device);
+		
 	}
 
     if(_resolveTarget.Width != width || _resolveTarget.Height != height)
@@ -303,6 +421,7 @@ void Realtime_GI::CreateLightBuffers()
 {
 	_pointLightBuffer.Initialize(_deviceManager.Device(), sizeof(PointLight), Scene::MAX_SCENE_LIGHTS, true);
 	_shProbeLightBuffer.Initialize(_deviceManager.Device(), sizeof(SHProbeLight), IrradianceVolume::MAX_PROBE_NUM, true);
+	_probeStructBuffer.Initialize(_deviceManager.Device(), sizeof(Probe), 12, true);
 }
 
 void Realtime_GI::ApplyMomentum(float &prevVal, float &val, float deltaTime)
@@ -350,15 +469,41 @@ void Realtime_GI::QueueDebugCommands()
 	{
 		Float3 &pos = _scenes[AppSettings::CurrentScene].getPointLightPtr()[i].cPos;
 		_debugRenderer.QueueLightSphere(pos, Float4(1.0f, 1.0f, 1.0f, 0.2f), 0.2f);
-
 	}
+
+	if (AppSettings::RenderProbeBBox)
+	{
+		for (uint32 i = 0; i < _scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeNums(); ++i)
+		{
+			BBox b;
+			CreateCubemap *cubemap;
+			_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbe(&cubemap, i);
+
+			b.Max.x = cubemap->GetPosition().x + cubemap->GetBoxSize().x;
+			b.Max.y = cubemap->GetPosition().y + cubemap->GetBoxSize().y;
+			b.Max.z = cubemap->GetPosition().z + cubemap->GetBoxSize().z;
+
+			b.Min.x = cubemap->GetPosition().x - cubemap->GetBoxSize().x;
+			b.Min.y = cubemap->GetPosition().y - cubemap->GetBoxSize().y;
+			b.Min.z = cubemap->GetPosition().z - cubemap->GetBoxSize().z;
+
+			if (i == AppSettings::ProbeIndex)
+				_debugRenderer.QueueBBoxTranslucent(b, Float4(0.3f, 0.3f, 0.7f, 0.1f));
+			else
+				_debugRenderer.QueueBBoxTranslucent(b, Float4(0.7f, 0.3f, 0.3f, 0.1f));
+		}
+	}
+	
 }
 
 void Realtime_GI::Update(const Timer& timer)
 {
     AppSettings::UpdateUI();
 
-	_scenes[AppSettings::CurrentScene].Update(timer);
+	if (!AppSettings::PauseSceneScript)
+	{
+		_scenes[AppSettings::CurrentScene].Update(timer);
+	}
 
     MouseState mouseState = MouseState::GetMouseState(_window);
     KeyboardState kbState = KeyboardState::GetKeyboardState(_window);
@@ -387,17 +532,42 @@ void Realtime_GI::Update(const Timer& timer)
 		((kbState.IsKeyDown(KeyboardState::Q) ? 1 : 0.0f) +
 		(kbState.IsKeyDown(KeyboardState::E) ? -1 : 0.0f));
 
-    Float3 camPos = _camera.Position();
+	/*if (kbState.IsKeyDown(KeyboardState::Up))
+	{
+		Float3 trans = _scenes[0].getStaticOpaqueObjectsPtr()->base->Translation();
+		_scenes[0].getStaticOpaqueObjectsPtr()->base->SetTranslation(Float3(0, trans[1] + 1, 0));
+	}*/
+
+
+	Float3 camPos = _camera.Position();
 
 	ApplyMomentum(_prevForward, forward, deltaSec);
 	ApplyMomentum(_prevStrafe, strafe, deltaSec);
 	ApplyMomentum(_prevAscend, ascend, deltaSec);
 
-	camPos += _camera.Forward() * forward;
-	camPos += _camera.Left() * strafe;
-	camPos += _camera.Up() * ascend;
+	if (AppSettings::ProbeIndex.Changed() && 
+		AppSettings::ProbeIndex < _scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeNums())
+	{
+		CreateCubemap *cubeMap;
+		_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbe(&cubeMap, (uint32)AppSettings::ProbeIndex);
+		Float3 pos = cubeMap->GetPosition();
+		Float3 boxSize = cubeMap->GetBoxSize();
 
-    _camera.SetPosition(camPos);
+		_camera.SetLookAt(pos + boxSize * 2, pos, Float3(0, 1, 0));
+		_camera.SetPosition(pos + boxSize * 2);
+		_camera.SetXRotation(45 * Pi / 180);
+		_camera.SetYRotation(-135 * Pi / 180);
+
+		cubeMap = nullptr;
+	}
+	else
+	{
+		camPos += _camera.Forward() * forward;
+		camPos += _camera.Left() * strafe;
+		camPos += _camera.Up() * ascend;
+
+		_camera.SetPosition(camPos);
+	}
 
     // Rotate the camera with the mouse
     if(mouseState.RButton.Pressed && mouseState.IsOverWindow)
@@ -470,6 +640,8 @@ void Realtime_GI::Update(const Timer& timer)
 		_irradianceVolume.SetScene(currScene);
 
 		_prevScene = &_scenes[AppSettings::CurrentScene];
+
+		UpdateSpecularProbeUIInfo();
     }
 
 	Quaternion orientation = AppSettings::SceneOrientation;
@@ -482,6 +654,7 @@ void Realtime_GI::Update(const Timer& timer)
 		Float4x4::TranslationMatrix(_scenes[AppSettings::CurrentScene].getSceneTranslation());
 
 	_irradianceVolume.Update();
+	UpdateSpecularProbeProperties();
 
 	QueueDebugCommands();
 }
@@ -513,12 +686,17 @@ void Realtime_GI::RenderAA()
 
     context->OMSetRenderTargets(1, rtvs, nullptr);
 
+	
+
+	RenderTarget2D  raaResource ;//= _ssrTarget
+	raaResource = AppSettings::EnableSSR ? _ssrTarget : _colorTarget;
+
     if(AppSettings::UseStandardResolve)
     {
         if(AppSettings::MSAAMode == 0)
-            context->CopyResource(_resolveTarget.Texture, _colorTarget.Texture);
+			context->CopyResource(_resolveTarget.Texture, raaResource.Texture); //_colorTarget
         else
-            context->ResolveSubresource(_resolveTarget.Texture, 0, _colorTarget.Texture, 0, _colorTarget.Format);
+			context->ResolveSubresource(_resolveTarget.Texture, 0, raaResource.Texture, 0, raaResource.Format);//
         return;
     }
 
@@ -527,13 +705,13 @@ void Realtime_GI::RenderAA()
     context->PSSetShader(pixelShader, nullptr, 0);
     context->VSSetShader(_resolveVS, nullptr, 0);
 
-    _resolveConstants.Data.TextureSize = Float2(static_cast<float>(_colorTarget.Width), 
-		static_cast<float>(_colorTarget.Height));
+	_resolveConstants.Data.TextureSize = Float2(static_cast<float>(raaResource.Width),//
+		static_cast<float>(raaResource.Height));//
     _resolveConstants.Data.SampleRadius = SampleRadius;;
     _resolveConstants.ApplyChanges(context);
     _resolveConstants.SetPS(context, 0);
 
-    ID3D11ShaderResourceView* srvs[3] = { _colorTarget.SRView, _prevFrameTarget.SRView, velocitySRV };
+	ID3D11ShaderResourceView* srvs[3] = { raaResource.SRView, _prevFrameTarget.SRView, velocitySRV };//
     context->PSSetShaderResources(0, 3, srvs);
 
     ID3D11SamplerState* samplers[1] = { _samplerStates.LinearClamp() };
@@ -556,7 +734,7 @@ void Realtime_GI::RenderAA()
     context->CopyResource(_prevFrameTarget.Texture, _resolveTarget.Texture);
 }
 
-void Realtime_GI::RenderSceneCubemaps()
+void Realtime_GI::RenderSceneCubemaps(ID3D11DeviceContext *context)
 {
 	_meshRenderer.SetCubemapCapture(true);
 	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
@@ -564,9 +742,8 @@ void Realtime_GI::RenderSceneCubemaps()
 		_meshRenderer.SetDrawGBuffer(false);
 	}
 
-	// TODO: make a separate cubemap manager to set different locations
-	_cubemapGenerator.SetPosition(float3(0.0f, 0.0f, 0.0f));
-	_cubemapGenerator.Create(_deviceManager, &_meshRenderer, _globalTransform, _envMap, _envMapSH, _jitterOffset, &_skybox);
+	RenderSpecularProbeCubemaps();
+
 	_meshRenderer.SetCubemapCapture(false);
 
 	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
@@ -581,6 +758,18 @@ void Realtime_GI::RenderSceneCubemaps()
 			_meshRenderer.SetCubemapCapture(false);
 		}
 	}
+	Scene *curScene = &_scenes[AppSettings::CurrentScene];
+	if (curScene->getProbeManagerPtr()->GetProbeNums() == 0) return;
+
+	D3D11_MAPPED_SUBRESOURCE mappedResource;
+
+	_deviceManager.ImmediateContext()->Map(_probeStructBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+	Probe *probePtr = static_cast<Probe*>(mappedResource.pData);
+
+	
+	memcpy(probePtr, &(curScene->getProbeManagerPtr()->_probes[0]), 
+		sizeof(Probe) * curScene->getProbeManagerPtr()->GetProbeNums());
+	_deviceManager.ImmediateContext()->Unmap(_probeStructBuffer.Buffer, 0);
 }
 
 void Realtime_GI::Render(const Timer& timer)
@@ -602,7 +791,7 @@ void Realtime_GI::Render(const Timer& timer)
 	if (_firstFrame || AppSettings::CurrentScene.Changed() || AppSettings::EnableRealtimeCubemap)
 	{
 		// render cubemap every time scene has changed
-		RenderSceneCubemaps();
+		RenderSceneCubemaps(context);
 	}
 
 	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
@@ -614,6 +803,9 @@ void Realtime_GI::Render(const Timer& timer)
 
 		_irradianceVolume.MainRender();
 		RenderLightsDeferred();
+		
+		//SSR
+		_ssr.MainRender();
 	}
 	else if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
 	{
@@ -638,8 +830,9 @@ void Realtime_GI::Render(const Timer& timer)
 	_debugRenderer.FlushDrawQueued();
     RenderHUD();
 
-    ++_frameCount; 
-	_firstFrame = false;
+    //if(++_frameCount == 2)
+	_frameCount++;
+		_firstFrame = false;
 }
 
 void Realtime_GI::RenderSceneGBuffer()
@@ -649,11 +842,15 @@ void Realtime_GI::RenderSceneGBuffer()
 	_meshRenderer.SetDrawGBuffer(true);
 
 	ID3D11DeviceContextPtr context = _deviceManager.ImmediateContext();
-	RenderTarget2D cubemapRenderTarget;
+	ProbeManager probeManager;
+	//RenderTarget2D cubemapRenderTarget;
+
+	SceneObject *staticObj = _scenes[AppSettings::CurrentScene].getStaticOpaqueObjectsPtr();
+	SceneObject *dynamicObj = _scenes[AppSettings::CurrentScene].getDynamicOpaqueObjectsPtr();
+	int staticNum = _scenes[AppSettings::CurrentScene].getNumStaticOpaqueObjects();
+	int dynamicNum = _scenes[AppSettings::CurrentScene].getNumDynamicOpaueObjects();
 
 	SetViewport(context, _colorTarget.Width, _colorTarget.Height);
-
-	_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
 
 	float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 	context->ClearRenderTargetView(_rt0Target.RTView, clearColor);
@@ -672,14 +869,59 @@ void Realtime_GI::RenderSceneGBuffer()
 
 	// _meshRenderer.Render(context, _camera, _globalTransform, _envMap, _envMapSH, _jitterOffset);
 	// TODO: note that render is controlled by AppSettings::CurrentShadingTech, in deferred settings, it writes to depth buffer
-	_meshRenderer.Render(context, _camera, _globalTransform, cubemapRenderTarget.SRView, _envMapSH, _jitterOffset);
 
+	_meshRenderer.Render(context, _camera, _globalTransform, _envMap, _envMapSH, _jitterOffset);
+	
 	// sample the depth after gbuffer and depth is filled
 	_meshRenderer.ReduceDepth(context, _depthBuffer, _camera);
 	_meshRenderer.RenderShadowMap(context, _camera, _globalTransform);
 
 	renderTargets[0] = renderTargets[1] = renderTargets[2] = nullptr;
 	context->OMSetRenderTargets(3, renderTargets, nullptr);
+}
+
+Float4 CreateInvDeviceZToWorldZTransform(Float4x4 const & ProjMatrix)
+{
+	// The depth projection comes from the the following projection matrix:
+	//
+	// | 1  0  0  0 |
+	// | 0  1  0  0 |
+	// | 0  0  A  1 |
+	// | 0  0  B  0 |
+	//
+	// Z' = (Z * A + B) / Z
+	// Z' = A + B / Z
+	//
+	// So to get Z from Z' is just:
+	// Z = B / (Z' - A)
+	// 
+	// Note a reversed Z projection matrix will have A=0. 
+	//
+	// Done in shader as:
+	// Z = 1 / (Z' * C1 - C2)   --- Where C1 = 1/B, C2 = A/B
+	//
+
+	float DepthMul = ProjMatrix.m[2][2];
+	float DepthAdd = ProjMatrix.m[3][2];
+
+	if (DepthAdd == 0.f)
+	{
+		// Avoid dividing by 0 in this case
+		DepthAdd = 0.00000001f;
+	}
+
+	float SubtractValue = DepthMul / DepthAdd;
+
+	// Subtract a tiny number to avoid divide by 0 errors in the shader when a very far distance is decided from the depth buffer.
+	// This fixes fog not being applied to the black background in the editor.
+	SubtractValue -= 0.00000001f;
+
+	return Float4(
+		0.0f,			// Unused
+		0.0f,			// Unused
+		1.f / DepthAdd,
+		SubtractValue
+		);
 }
 
 void Realtime_GI::RenderLightsDeferred()
@@ -689,7 +931,6 @@ void Realtime_GI::RenderLightsDeferred()
 	ID3D11DeviceContextPtr context = _deviceManager.ImmediateContext();
 
 	SetViewport(context, _colorTarget.Width, _colorTarget.Height);
-
 	context->IASetInputLayout(_quadInputLayout);
 
 	// Set the vertex buffer
@@ -736,6 +977,8 @@ void Realtime_GI::RenderLightsDeferred()
 	_deferredPassConstants.Data.ProjTermB = (-FarClip * NearClip) / (FarClip - NearClip);
 	_deferredPassConstants.Data.ClusterScale = _lightClusters.getClusterScale();
 	_deferredPassConstants.Data.ClusterBias = _lightClusters.getClusterBias();
+	_deferredPassConstants.Data.WorldToView = Float4x4::Transpose(_camera.ViewMatrix());
+	_deferredPassConstants.Data.invNDCToWorldZ = CreateInvDeviceZToWorldZTransform(_camera.ProjectionMatrix());
 	_deferredPassConstants.ApplyChanges(context);
 	_deferredPassConstants.SetVS(context, 0);
 	_deferredPassConstants.SetPS(context, 0);
@@ -754,7 +997,9 @@ void Realtime_GI::RenderLightsDeferred()
 		_lightClusters.getLightIndicesListSRV(),
 		_lightClusters.getClusterTexSRV(),
 		_shProbeLightBuffer.SRView,
-		_irradianceVolume.getRelightSHStructuredBufferPtr()->SRView
+		_irradianceVolume.getRelightSHStructuredBufferPtr()->SRView,
+		_scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeArray().SRView,
+		_probeStructBuffer.SRView
 	};
 
 	ID3D11SamplerState* sampStates[2] = {
@@ -792,11 +1037,13 @@ void Realtime_GI::RenderSceneForward()
 	_meshRenderer.SetDrawGBuffer(false);
 
     ID3D11DeviceContextPtr context = _deviceManager.ImmediateContext();
-	RenderTarget2D cubemapRenderTarget;
+	ProbeManager probeManager;
+	//RenderTarget2D cubemapRenderTarget;
 
     SetViewport(context, _colorTarget.Width, _colorTarget.Height);
 
-	_cubemapGenerator.GetTargetViews(cubemapRenderTarget);
+	//_cubemapGenerator.GetTargetViews(cubemapRenderTarget)
+	//_cubemapGenerator.GetPreFilterTargetViews(cubemapRenderTarget);
 
     float clearColor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
     context->ClearRenderTargetView(_colorTarget.RTView, clearColor);
@@ -816,8 +1063,7 @@ void Realtime_GI::RenderSceneForward()
     renderTargets[1] = _velocityTarget.RTView;
     context->OMSetRenderTargets(2, renderTargets, _depthBuffer.DSView);
 
-    // _meshRenderer.Render(context, _camera, _globalTransform, _envMap, _envMapSH, _jitterOffset);
-	_meshRenderer.Render(context, _camera, _globalTransform, cubemapRenderTarget.SRView, _envMapSH, _jitterOffset);
+	_meshRenderer.Render(context, _camera, _globalTransform, _envMap, _envMapSH, _jitterOffset);
 
     renderTargets[0] = _colorTarget.RTView;
     renderTargets[1] = nullptr;
@@ -931,6 +1177,19 @@ void Realtime_GI::RenderHUD()
     vsyncText += _deviceManager.VSYNCEnabled() ? L"Enabled" : L"Disabled";
     _spriteRenderer.RenderText(_font, vsyncText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));
 
+	transform._42 += 25.0f;
+	wstring posText(L"Camera Position: ");
+	posText += ToString(_camera.Position()[0]) + L", " + ToString(_camera.Position()[1]) + L", "
+		+ ToString(_camera.Position()[2]) + L", ";
+	_spriteRenderer.RenderText(_font, posText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));
+
+	/*Float3 trans = _scenes[0].getStaticOpaqueObjectsPtr()->base->Translation();
+	transform._42 += 25.0f;
+	wstring objText(L"Object Position: ");
+	probeText += ToString(trans[0]) + L", " + ToString(trans[1]) + L", "
+		+ ToString(trans[2]) + L", ";
+	_spriteRenderer.RenderText(_font, probeText.c_str(), transform, XMFLOAT4(1, 1, 0, 1));*/
+
 	BBox sceneBoundingBox = _scenes[AppSettings::CurrentScene].getSceneBoundingBox();
 	/*std::wstring sceneBoundDebugText =
 		L"Scene Bound Max: "
@@ -954,21 +1213,27 @@ void Realtime_GI::UploadLights()
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 
-	// pointlights
-	_deviceManager.ImmediateContext()->Map(_pointLightBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	PointLight *pointLightGPUBufferPtr = static_cast<PointLight *>(mappedResource.pData);
-
 	Scene *curScene = &_scenes[AppSettings::CurrentScene];
-	PointLight *pointLightPtr = curScene->getPointLightPtr();
-	memcpy(pointLightGPUBufferPtr, pointLightPtr, sizeof(PointLight) * curScene->getNumPointLights());
-	_deviceManager.ImmediateContext()->Unmap(_pointLightBuffer.Buffer, 0);
+	// pointlights
+	if (curScene->getNumPointLights() > 0)
+	{
+		_deviceManager.ImmediateContext()->Map(_pointLightBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+		PointLight *pointLightGPUBufferPtr = static_cast<PointLight *>(mappedResource.pData);
+
+		PointLight *pointLightPtr = curScene->getPointLightPtr();
+		memcpy(pointLightGPUBufferPtr, pointLightPtr, sizeof(PointLight) * curScene->getNumPointLights());
+		_deviceManager.ImmediateContext()->Unmap(_pointLightBuffer.Buffer, 0);//!
+	}
 
 	// sh probe lights
-	_deviceManager.ImmediateContext()->Map(_shProbeLightBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	SHProbeLight *shProbeLightGPUBufferPtr = static_cast<SHProbeLight *>(mappedResource.pData);
-	const std::vector<SHProbeLight> &shProbeLights = _irradianceVolume.getSHProbeLights();
-	memcpy(shProbeLightGPUBufferPtr, &shProbeLights[0], sizeof(SHProbeLight) * shProbeLights.size());
-	_deviceManager.ImmediateContext()->Unmap(_shProbeLightBuffer.Buffer, 0);
+	if (_irradianceVolume.getSHProbeLights().size() > 0)
+	{
+		_deviceManager.ImmediateContext()->Map(_shProbeLightBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+		SHProbeLight *shProbeLightGPUBufferPtr = static_cast<SHProbeLight *>(mappedResource.pData);
+		const std::vector<SHProbeLight> &shProbeLights = _irradianceVolume.getSHProbeLights();
+		memcpy(shProbeLightGPUBufferPtr, &shProbeLights[0], sizeof(SHProbeLight) * shProbeLights.size());
+		_deviceManager.ImmediateContext()->Unmap(_shProbeLightBuffer.Buffer, 0);
+	}
 }
 
 void Realtime_GI::AssignLightAndUploadClusters()

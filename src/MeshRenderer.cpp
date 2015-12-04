@@ -22,6 +22,8 @@
 #include "SharedConstants.h"
 #include "ShadowMapSettings.h"
 
+#include "ProbeManager.h"
+#include "DebugRenderer.h"
 
 // Renders a text string indicating the current progress for compiling shaders
 static bool32 RenderShaderProgress(uint32 currShader, uint32 numShaders)
@@ -220,6 +222,20 @@ void MeshRenderer::SetDrawGBuffer(bool32 tf)
 	ReMapMeshShaders();
 }
 
+void MeshRenderer::SetInitializeProbes(bool32 tf)
+{
+	_initializeProbes = tf;
+}
+
+void MeshRenderer::SetParallaxCorrection(Float3 probePosWS[2], Float3 boxSize[2], Float3 objPosWS[2]){
+	for (int i = 0; i < 1; i++)
+	{
+		_probePosWS[i] = probePosWS[i];
+		_boxSize[i] = boxSize[i];
+		_objPosWS[i] = objPosWS[i];
+	}
+}
+
 void MeshRenderer::ReMapMeshShaders()
 {
 	_meshVertexShadersMap.clear();
@@ -278,6 +294,7 @@ void MeshRenderer::GenMeshShaderMap(const Model *model)
 		// TODO: the following case somehow defeats the purpose of the design
 		_drawingCubemap ? arr[5] = true : arr[5] = false;
 		AppSettings::CentroidSampling ? arr[6] = true : arr[6] = false;
+
 		_drawingGBuffer ? arr[7] = true : arr[7] = false;
 
 		uint32 vsbits = boolArrToUint32(arr, 5);
@@ -318,14 +335,19 @@ void MeshRenderer::GenAndCacheMeshInputLayout(const Model* model)
 }
 
 // Loads resources
-void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context)
+void MeshRenderer::Initialize(ID3D11Device* device, ID3D11DeviceContext* context, DebugRenderer *debugRenderer)
 {
     this->_device = device;
+	_debugRenderer = debugRenderer;
+
 	_drawingCubemap = false;
 	_drawingGBuffer = false;
+	_initializeProbes = true;
 
-    _blendStates.Initialize(device);
+	_blendStates.Initialize(device);
+	_rasterizerStates.Wireframe();
     _rasterizerStates.Initialize(device);
+
     _depthStencilStates.Initialize(device);
     _samplerStates.Initialize(device);
 
@@ -551,6 +573,8 @@ void MeshRenderer::ConvertToEVSM(ID3D11DeviceContext* context, uint32 cascadeIdx
     srvs[0] = NULL;
     context->PSSetShaderResources(0, 1, srvs);
 
+	//_debugRenderer->QueueSprite(_varianceShadowMap.SRVArraySlices[cascadeIdx], Float3(128, 256, 0), Float4(1, 1, 1, 1));
+
     const float FilterSizeU = std::max(FilterSize * cascadeScale.x, 1.0f);
     const float FilterSizeV = std::max(FilterSize * cascadeScale.y, 1.0f);
 
@@ -606,7 +630,9 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 {
     PIXEvent event(L"Mesh Rendering");
 
-	DoSceneObjectsFrustumTests(camera, false);
+	//Set Cubemap
+
+	// DoSceneObjectsFrustumTests(camera, false);
 
     // Set states
     float blendFactor[4] = {1, 1, 1, 1};
@@ -635,6 +661,7 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 	// TODO: make deferred a unique structure
 	//if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
 	{
+		// Perframe
 		_meshPSConstants.Data.CameraPosWS = camera.Position();
 		_meshPSConstants.Data.OffsetScale = OffsetScale;
 		_meshPSConstants.Data.PositiveExponent = PositiveExponent;
@@ -646,8 +673,6 @@ void MeshRenderer::Render(ID3D11DeviceContext* context, const Camera& camera, co
 		_meshPSConstants.Data.RTSize.x = float(GlobalApp->DeviceManager().BackBufferWidth());
 		_meshPSConstants.Data.RTSize.y = float(GlobalApp->DeviceManager().BackBufferHeight());
 		_meshPSConstants.Data.JitterOffset = jitterOffset;
-		_meshPSConstants.ApplyChanges(context);
-		_meshPSConstants.SetPS(context, 0);
 	}
 
     // Set shaders
@@ -671,10 +696,10 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 	for (uint64 objIndex = 0; objIndex < numSceneObjs; objIndex++)
 	{
 		// Frustum culling on scene object bound
-		if (!sceneObjectsArr[objIndex].bound->frustumTest)
+		/*if (!sceneObjectsArr[objIndex].bound->frustumTest)
 		{
 			continue;
-		}
+		}*/
 
 		ModelPartsBound *partsBound = sceneObjectsArr[objIndex].bound->modelPartsBound;
 		Float4x4 worldMat = *sceneObjectsArr[objIndex].base * world;
@@ -690,19 +715,65 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 
 		*sceneObjectsArr[objIndex].prevWVP = _meshVSConstants.Data.WorldViewProjection;
 
+		ID3D11ShaderResourceView *chosenEnvMap = nullptr;
+
+		//if (!_initializeProbes)
+		// {	
+			//Get cubemap
+			Float3 objPos = sceneObjectsArr[objIndex].base->Translation();
+			RenderTarget2D cubemapRT;
+			CreateCubemap *cubeMap = nullptr;
+			// RenderTarget2D blendRenderTargetViews[2];
+			// ID3D11ShaderResourceViewPtr blendCubeMaps[2];
+
+			ProbeManager &probeManager = *_scene->getProbeManagerPtr();
+			_meshPSConstants.Data.probeIndex = probeManager.GetNNProbe(&cubeMap, objPos);
+
+			if (cubeMap == nullptr)
+			{
+				chosenEnvMap = envMap;
+			}
+			else
+			{
+				cubeMap->GetPreFilterRT(cubemapRT);
+				chosenEnvMap = cubemapRT.SRView;
+			}
+
+			/*	std::vector<CreateCubemap> blendCubeMapsVec;
+				probeManager.GetBlendProbes(blendCubeMapsVec, objPos);
+				CreateCubemap &blendCubemap1 = blendCubeMapsVec.at(0);
+				CreateCubemap &blendCubemap2 = blendCubeMapsVec.at(1);
+
+				blendCubemap1.GetPreFilterTargetViews(blendRenderTargetViews[0]);
+				blendCubemap2.GetPreFilterTargetViews(blendRenderTargetViews[1]);
+
+				blendCubeMaps[0] = blendRenderTargetViews[0].SRView;
+				blendCubeMaps[1] = blendRenderTargetViews[1].SRView;
+
+				_meshPSConstants.Data.ProbePosWS[0] = blendCubemap1.GetPosition();
+				_meshPSConstants.Data.ProbePosWS[1] = blendCubemap2.GetPosition();
+				_meshPSConstants.Data.BoxSize[0] = blendCubemap1.GetBoxSize();
+				_meshPSConstants.Data.BoxSize[1] = blendCubemap2.GetBoxSize();
+				_meshPSConstants.Data.ObjPos = objPos;*/
+		// }
+
+		// Per object constants
+		_meshPSConstants.ApplyChanges(context);
+		_meshPSConstants.SetPS(context, 0);
+
 		// Draw all meshes
 		uint32 partCount = 0;
 		for (uint64 meshIdx = 0; meshIdx < model->Meshes().size(); ++meshIdx)
 		{
 			const Mesh& mesh = model->Meshes()[meshIdx];
 
-			if (partsBound->BoundingSpheres.size() == 1) // which means the mesh has only one part - which is the assimp-type mesh
-			{
-				if (!partsBound->FrustumTests[0])
-				{
-					continue;
-				}
-			}
+			//if (partsBound->BoundingSpheres.size() == 1) // which means the mesh has only one part - which is the assimp-type mesh
+			//{
+			//	if (!partsBound->FrustumTests[0])
+			//	{
+			//		continue;
+			//	}
+			//}
 
 			// Set per mesh shaders
 			// TODO: sort by view depth
@@ -725,8 +796,11 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 			// Draw all parts
 			for (uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
 			{
+				const MeshPart& part = mesh.MeshParts()[partIdx];
+				const MeshMaterial& material = model->Materials()[part.MaterialIdx];
+
 				// Frustum culling on parts
-				if (partsBound->FrustumTests[partCount++])
+				//if (partsBound->FrustumTests[partCount++])
 				{
 					const MeshPart& part = mesh.MeshParts()[partIdx];
 					const MeshMaterial& material = model->Materials()[part.MaterialIdx];
@@ -738,11 +812,14 @@ void MeshRenderer::RenderSceneObjects(ID3D11DeviceContext* context, const Float4
 						material.DiffuseMap,
 						material.NormalMap,
 						_varianceShadowMap.SRView,
-						envMap,
+						envMap, 
 						_specularLookupTexture,
 						material.RoughnessMap, 
 						material.MetallicMap, 
-						material.EmissiveMap
+						material.EmissiveMap,
+						//_scene->getProbeManagerPtr()->GetProbeArray().SRView,
+						/*blendCubeMaps[0],
+						blendCubeMaps[1]*/
 					};
 
 					context->PSSetShaderResources(0, _countof(psTextures), psTextures);
@@ -759,7 +836,7 @@ void MeshRenderer::RenderDepth(ID3D11DeviceContext* context, const Camera& camer
 {
     PIXEvent event(L"Mesh Depth Rendering");
 
-	DoSceneObjectsFrustumTests(camera, shadowRendering);
+	// DoSceneObjectsFrustumTests(camera, shadowRendering);
 
     // Set states
     float blendFactor[4] = {1, 1, 1, 1};
@@ -789,10 +866,10 @@ void MeshRenderer::RenderDepthSceneObjects(ID3D11DeviceContext* context, const F
 	for (uint64 objIndex = 0; objIndex < numSceneObjs; objIndex++)
 	{
 		// Frustum culling on scene object bound
-		if (!sceneObjectsArr[objIndex].bound->frustumTest)
+		/*if (!sceneObjectsArr[objIndex].bound->frustumTest)
 		{
 			continue;
-		}
+		}*/
 
 		ModelPartsBound *partsBound = sceneObjectsArr[objIndex].bound->modelPartsBound;
 		Float4x4 worldMat = *sceneObjectsArr[objIndex].base * world;
@@ -825,7 +902,7 @@ void MeshRenderer::RenderDepthSceneObjects(ID3D11DeviceContext* context, const F
 			for (uint64 partIdx = 0; partIdx < mesh.MeshParts().size(); ++partIdx)
 			{
 				// Frustum culling on parts
-				if (partsBound->FrustumTests[partCount++])
+				//if (partsBound->FrustumTests[partCount++])
 				{
 					const MeshPart& part = mesh.MeshParts()[partIdx];
 					context->DrawIndexed(part.IndexCount, part.IndexStart, 0);

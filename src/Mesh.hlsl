@@ -54,6 +54,10 @@ cbuffer PSConstants : register(b0)
 	SH9Color EnvironmentSH;
 	float2 RTSize;
 	float2 JitterOffset;
+	float3 ProbePositionWS[2];
+	float3 BoxSize[2];
+	float3 ObjPositionWS;
+	uint probeIndex;
 }
 
 //=================================================================================================
@@ -68,6 +72,9 @@ Texture2D<float2> SpecularCubemapLookup : register(t4);
 Texture2D RoughnessMap : register(t5);
 Texture2D MetallicMap : register(t6);
 Texture2D EmissiveMap : register(t7);
+//TextureCubeArray<float3> SpecularCubemapArray : register(t8);
+//TextureCube<float3> SpecularCubemapArray1 : register(t8);
+//TextureCube<float3> SpecularCubemapArray2 : register(t9);
 
 SamplerState AnisoSampler : register(s0);
 SamplerState EVSMSampler : register(s1);
@@ -330,6 +337,40 @@ float3 CalcLighting(in float3 normal, in float3 lightDir, in float3 lightColor,
     return lighting * nDotL * lightColor;
 }
 
+
+float3 parallaxCorrection(float3 PositionWS, float3 newProbePositionWS, float3 NormalWS, float3 boxMax, float3 boxMin)
+{
+	float3 DirectionWS = normalize(PositionWS - CameraPosWS);
+	float3 ReflDirectionWS = reflect(DirectionWS, NormalWS);
+
+	float3 FirstPlaneIntersect = (boxMax - PositionWS) / ReflDirectionWS;
+	float3 SecondPlaneIntersect = (boxMin - PositionWS) / ReflDirectionWS;
+
+	float3 FurthestPlane = max(FirstPlaneIntersect, SecondPlaneIntersect);
+
+	float Distance = min(min(FurthestPlane.x, FurthestPlane.y), FurthestPlane.z);
+
+	float3 IntersectPositionWS = PositionWS + ReflDirectionWS * Distance;
+
+		ReflDirectionWS = IntersectPositionWS - newProbePositionWS;
+
+	return ReflDirectionWS;
+}
+
+
+float probeWeightCalculate(float3 ProbePosition, float3 PositionWS, float3 BoxSize)
+{
+	float3 distance = ProbePosition - PositionWS;
+	float3 absDistance = float3(abs(distance.x), abs(distance.y), abs(distance.z));
+
+	float3 weight = (BoxSize - absDistance) / BoxSize;
+	if (weight.x < 0 || weight.y < 0 || weight.z < 0) return 0;
+	else
+	{
+		return max(weight.x, max(weight.y, weight.z));
+	}
+}
+
 //=================================================================================================
 // Pixel Shader
 //=================================================================================================
@@ -403,7 +444,8 @@ PSOutput PS(in PSInput input)
 			output.RT1.r   = roughness;
 			output.RT1.g   = metallic;
 			output.RT1.b   = EmissiveIntensity; // TODO: hook up emissive map later
-			output.RT1.a   = 0.0f;
+			output.RT1.a   = probeIndex / 255; // Set probe index
+			//output.RT1.a   = 0.0f;
 			// ouput.RT1.a = SSR?;
 
 			float3 normalVS = normalize(mul(normalWS, (float3x3)View_));
@@ -437,14 +479,15 @@ PSOutput PS(in PSInput input)
 
 			lighting += indirectDiffuse * diffuseAlbedo;
 
-			float3 reflectWS = reflect(-viewWS, normalWS);
+			//float3 parallaxCorrection(float3 PositionWS, float3 newProbePositionWS, float3 NormalWS, float3 boxMax, float3 boxMin)
+			float3 reflectWS = parallaxCorrection(positionWS, ProbePositionWS[0], normalize(normalWS), ProbePositionWS[0] + BoxSize[0], ProbePositionWS[0] - BoxSize[0]);
+			//float3 reflectWS = reflect(-viewWS, normalWS);
 			float3 vtxReflectWS = reflect(-viewWS, vtxNormal);
 
 			uint width, height, numMips;
 			SpecularCubemap.GetDimensions(0, width, height, numMips);
 
 			const float SqrtRoughness = sqrt(roughness);
-
 			// Compute the mip level, assuming the top level is a roughness of 0.01
 			float mipLevel = saturate(SqrtRoughness - 0.01f) * (numMips - 1.0f);
 
@@ -459,8 +502,22 @@ PSOutput PS(in PSInput input)
 			fresnel *= saturate(metallic * 100.0f);
 
 			lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;
-		}
+			//float weight1 = probeWeightCalculate(ProbePositionWS[0], positionWS, BoxSize[0]);//Bug
+			//float weight2 = probeWeightCalculate(ProbePositionWS[1], positionWS, BoxSize[1]);//Bug
 
+			//if (weight1 == 0 && weight2 == 0)
+			//	lighting += SpecularCubemap.SampleLevel(LinearSampler, reflectWS, mipLevel) * fresnel;
+			//else
+			//{
+			//	if (weight1 == 0) lighting += SpecularCubemapArray2.SampleLevel(LinearSampler, reflectWS, mipLevel) * weight2;
+			//	else if (weight2 == 0) lighting += SpecularCubemapArray1.SampleLevel(LinearSampler, reflectWS, mipLevel) * weight1;
+			//	else
+			//		lighting += SpecularCubemapArray1.SampleLevel(LinearSampler, reflectWS, mipLevel) +
+			//			SpecularCubemapArray2.SampleLevel(LinearSampler, reflectWS, mipLevel);
+			//}
+
+			//lighting = weight1;
+		}
 	
 		// Emissive term
 		lighting += emissiveColor;

@@ -22,11 +22,15 @@ cbuffer AppSettings : register(b7)
     int CurrentShadingTech;
     float3 LightDirection;
     float3 LightColor;
+    float3 SkyColor;
+    bool EnableSSR;
+    bool PauseSceneScript;
     bool EnableDirectLighting;
     bool EnableIndirectDiffuseLighting;
     bool EnableIndirectSpecularLighting;
     bool RenderBackground;
     bool RenderSceneObjectBBox;
+    bool RenderProbeBBox;
     bool RenderIrradianceVolumeProbes;
     bool EnableShadows;
     bool EnableNormalMaps;
@@ -38,6 +42,13 @@ cbuffer AppSettings : register(b7)
     float Roughness;
     float SpecularIntensity;
     float EmissiveIntensity;
+    float ProbeIndex;
+    float ProbeX;
+    float ProbeY;
+    float ProbeZ;
+    float BoxSizeX;
+    float BoxSizeY;
+    float BoxSizeZ;
     float4 SceneOrientation;
     float ModelRotationSpeed;
     bool DoubleSyncInterval;
@@ -69,8 +80,8 @@ static const int JitterModes_Uniform2x = 1;
 static const int JitterModes_Hammersly16 = 2;
 
 static const int Scenes_CornellBox = 0;
-static const int Scenes_Boxes = 1;
-static const int Scenes_Plane = 2;
+static const int Scenes_DropBoxes = 1;
+static const int Scenes_Sponza = 2;
 
 static const int ShadingTech_Forward = 0;
 static const int ShadingTech_Clustered_Deferred = 1;

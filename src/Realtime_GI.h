@@ -29,7 +29,10 @@
 
 #include "CreateCubemap.h"
 #include "IrradianceVolume.h"
+#include "ProbeManager.h"
 #include "DebugRenderer.h"
+//SSR
+#include "SSR.h"
 
 using namespace SampleFramework11;
 class Realtime_GI : public App
@@ -55,6 +58,9 @@ protected:
     RenderTarget2D _prevFrameTarget;
     RenderTarget2D _velocityTarget;
     RenderTarget2D _velocityResolveTarget;
+	
+	// SSR
+	RenderTarget2D _ssrTarget;
 
 	// Deferred - GBuffer
 	RenderTarget2D _rt0Target;  // albedo 
@@ -138,8 +144,16 @@ protected:
 		float ProjTermA;
 		Float3 ClusterBias;
 		float ProjTermB;
+
+		Float4x4 WorldToView;
+		Float4 invNDCToWorldZ;
 	};
 
+	struct Probe
+	{
+		Float3 pos;
+		Float3 BoxSize;
+	};
 
     ConstantBuffer<ResolveConstants> _resolveConstants;
     ConstantBuffer<BackgroundVelocityConstants> _backgroundVelocityConstants;
@@ -148,6 +162,8 @@ protected:
 	StructuredBuffer _pointLightBuffer;
 	StructuredBuffer _shProbeLightBuffer;
 
+	StructuredBuffer _probeStructBuffer;
+
 	SamplerStates _samplerStates;
 
 	// Defined outside of the class;
@@ -155,6 +171,9 @@ protected:
 
     virtual void Initialize() override;
 	void LoadShaders(ID3D11DevicePtr device);
+	void RenderSpecularProbeCubemaps();
+	void UpdateSpecularProbeProperties();
+	void UpdateSpecularProbeUIInfo();
 
     virtual void Render(const Timer& timer) override;
     virtual void Update(const Timer& timer) override;
@@ -165,6 +184,9 @@ protected:
 	void CreateLightBuffers();
 	void CreateQuadBuffers();
 
+
+    void RenderScene();
+	void RenderSceneCubemaps(ID3D11DeviceContext *context);
     void RenderSceneForward();
 	void RenderSceneCubemaps();
     void RenderBackgroundVelocity();
@@ -181,12 +203,27 @@ protected:
 	void QueueDebugCommands();
 
 
-	CreateCubemap _cubemapGenerator;
 	DebugRenderer _debugRenderer;
 	LightClusters _lightClusters;
 	IrradianceVolume _irradianceVolume;
+
+
+	//SSR
+	SSR _ssr;
+
+	//Create probe manager
+	/*ProbeManager _probeManager[1024];
+	ProbeManager probeManager; 
+	int _probeCount = 0;
+	ProbeManager::CameraClips _cameraClip;
+	std::vector<ProbeManager::CameraClips, std::allocator<ProbeManager::CameraClips>> _cameraClipVector;*/
+	std::vector<float> _nearClips;
+	std::vector<float> _farClips;
+
 
 public:
 
     Realtime_GI();
 };
+
+

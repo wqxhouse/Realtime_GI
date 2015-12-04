@@ -50,8 +50,8 @@ typedef EnumSettingT<JitterModes> JitterModesSetting;
 enum class Scenes
 {
     CornellBox = 0,
-    Boxes = 1,
-    Plane = 2,
+    DropBoxes = 1,
+    Sponza = 2,
 
     NumValues
 };
@@ -98,11 +98,15 @@ namespace AppSettings
     extern ShadingTechSetting CurrentShadingTech;
     extern DirectionSetting LightDirection;
     extern ColorSetting LightColor;
+    extern ColorSetting SkyColor;
+    extern BoolSetting EnableSSR;
+    extern BoolSetting PauseSceneScript;
     extern BoolSetting EnableDirectLighting;
     extern BoolSetting EnableIndirectDiffuseLighting;
     extern BoolSetting EnableIndirectSpecularLighting;
     extern BoolSetting RenderBackground;
     extern BoolSetting RenderSceneObjectBBox;
+    extern BoolSetting RenderProbeBBox;
     extern BoolSetting RenderIrradianceVolumeProbes;
     extern BoolSetting EnableShadows;
     extern BoolSetting EnableNormalMaps;
@@ -114,6 +118,13 @@ namespace AppSettings
     extern FloatSetting Roughness;
     extern FloatSetting SpecularIntensity;
     extern FloatSetting EmissiveIntensity;
+    extern FloatSetting ProbeIndex;
+    extern FloatSetting ProbeX;
+    extern FloatSetting ProbeY;
+    extern FloatSetting ProbeZ;
+    extern FloatSetting BoxSizeX;
+    extern FloatSetting BoxSizeY;
+    extern FloatSetting BoxSizeZ;
     extern OrientationSetting SceneOrientation;
     extern FloatSetting ModelRotationSpeed;
     extern BoolSetting DoubleSyncInterval;
@@ -147,11 +158,15 @@ namespace AppSettings
         int32 CurrentShadingTech;
         Float3 LightDirection;
         Float4Align Float3 LightColor;
+        Float4Align Float3 SkyColor;
+        bool32 EnableSSR;
+        bool32 PauseSceneScript;
         bool32 EnableDirectLighting;
         bool32 EnableIndirectDiffuseLighting;
         bool32 EnableIndirectSpecularLighting;
         bool32 RenderBackground;
         bool32 RenderSceneObjectBBox;
+        bool32 RenderProbeBBox;
         bool32 RenderIrradianceVolumeProbes;
         bool32 EnableShadows;
         bool32 EnableNormalMaps;
@@ -163,6 +178,13 @@ namespace AppSettings
         float Roughness;
         float SpecularIntensity;
         float EmissiveIntensity;
+        float ProbeIndex;
+        float ProbeX;
+        float ProbeY;
+        float ProbeZ;
+        float BoxSizeX;
+        float BoxSizeY;
+        float BoxSizeZ;
         Float4Align Quaternion SceneOrientation;
         float ModelRotationSpeed;
         bool32 DoubleSyncInterval;

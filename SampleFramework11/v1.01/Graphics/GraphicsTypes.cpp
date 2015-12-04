@@ -63,7 +63,7 @@ void RenderTarget2D::Initialize(ID3D11Device* device,
 
     if(cubeMap)
     {
-        Assert_(arraySize == 6);
+        Assert_(arraySize % 6 == 0);
         desc.MiscFlags |= D3D11_RESOURCE_MISC_TEXTURECUBE;
     }
 
