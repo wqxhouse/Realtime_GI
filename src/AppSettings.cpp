@@ -33,9 +33,10 @@ static const char* JitterModesLabels[3] =
     "Hammersly16",
 };
 
-static const char* ScenesLabels[2] =
+static const char* ScenesLabels[3] =
 {
     "CornellBox",
+    "DropBoxes",
     "Sponza",
 };
 
@@ -71,6 +72,8 @@ namespace AppSettings
     ShadingTechSetting CurrentShadingTech;
     DirectionSetting LightDirection;
     ColorSetting LightColor;
+    ColorSetting SkyColor;
+    BoolSetting EnableSSR;
     BoolSetting PauseSceneScript;
     BoolSetting EnableDirectLighting;
     BoolSetting EnableIndirectDiffuseLighting;
@@ -171,7 +174,7 @@ namespace AppSettings
         SharpeningAmount.Initialize(tweakBar, "SharpeningAmount", "Anti Aliasing", "Sharpening Amount", "", 0.0000f, 0.0000f, 1.0000f, 0.0100f, ConversionMode::None, 1.0000f);
         Settings.AddSetting(&SharpeningAmount);
 
-        CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene Controls", "Current Scene", "", Scenes::CornellBox, 2, ScenesLabels);
+        CurrentScene.Initialize(tweakBar, "CurrentScene", "Scene Controls", "Current Scene", "", Scenes::CornellBox, 3, ScenesLabels);
         Settings.AddSetting(&CurrentScene);
 
         CurrentShadingTech.Initialize(tweakBar, "CurrentShadingTech", "Scene Controls", "Current Shading Tech", "", ShadingTech::Clustered_Deferred, 2, ShadingTechLabels);
@@ -180,8 +183,14 @@ namespace AppSettings
         LightDirection.Initialize(tweakBar, "LightDirection", "Scene Controls", "Light Direction", "The direction of the light", Float3(-0.7500f, 0.9770f, -0.4000f));
         Settings.AddSetting(&LightDirection);
 
-        LightColor.Initialize(tweakBar, "LightColor", "Scene Controls", "Light Color", "The color of the light", Float3(20.0000f, 16.0000f, 10.0000f), true, 0.0000f, 20.0000f, 0.1000f, ColorUnit::None);
+        LightColor.Initialize(tweakBar, "LightColor", "Scene Controls", "Light Color", "The color of the light", Float3(20.0000f, 16.0000f, 10.0000f), true, 0.0000f, 50.0000f, 0.1000f, ColorUnit::None);
         Settings.AddSetting(&LightColor);
+
+        SkyColor.Initialize(tweakBar, "SkyColor", "Scene Controls", "Sky Color", "The color of the sky", Float3(0.1000f, 0.3000f, 0.7000f), true, 0.0000f, 20.0000f, 0.1000f, ColorUnit::None);
+        Settings.AddSetting(&SkyColor);
+
+        EnableSSR.Initialize(tweakBar, "EnableSSR", "Scene Controls", "Enable SSR", "", false);
+        Settings.AddSetting(&EnableSSR);
 
         PauseSceneScript.Initialize(tweakBar, "PauseSceneScript", "Scene Controls", "Pause Scene Script", "", false);
         Settings.AddSetting(&PauseSceneScript);
@@ -207,7 +216,7 @@ namespace AppSettings
         RenderIrradianceVolumeProbes.Initialize(tweakBar, "RenderIrradianceVolumeProbes", "Scene Controls", "Render Irradiance Volume Probes", "", false);
         Settings.AddSetting(&RenderIrradianceVolumeProbes);
 
-        EnableShadows.Initialize(tweakBar, "EnableShadows", "Scene Controls", "Enable Shadows", "", false);
+        EnableShadows.Initialize(tweakBar, "EnableShadows", "Scene Controls", "Enable Shadows", "", true);
         Settings.AddSetting(&EnableShadows);
 
         EnableNormalMaps.Initialize(tweakBar, "EnableNormalMaps", "Scene Controls", "Enable Normal Maps", "", true);
@@ -319,6 +328,8 @@ namespace AppSettings
         CBuffer.Data.CurrentShadingTech = CurrentShadingTech;
         CBuffer.Data.LightDirection = LightDirection;
         CBuffer.Data.LightColor = LightColor;
+        CBuffer.Data.SkyColor = SkyColor;
+        CBuffer.Data.EnableSSR = EnableSSR;
         CBuffer.Data.PauseSceneScript = PauseSceneScript;
         CBuffer.Data.EnableDirectLighting = EnableDirectLighting;
         CBuffer.Data.EnableIndirectDiffuseLighting = EnableIndirectDiffuseLighting;

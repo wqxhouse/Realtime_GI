@@ -1,5 +1,6 @@
 #include "SceneScriptBase.h"
 
+
 class CornellBoxScript : public SceneScript
 {
 public:
@@ -7,6 +8,7 @@ public:
 	{
 		std::wstring modelPath = L"..\\Content\\Models\\sphere\\sphere_new.FBX";
 		std::wstring proxyModelPath = L"..\\Content\\Models\\CornellBox\\UVUnwrapped\\cbox_unwrapped.FBX";
+		
 
 		std::wstring mobelPath2 = L"..\\Content\\Models\\RoboHand\\RoboHand.meshdata";
 
@@ -21,8 +23,15 @@ public:
 		scene->getGlobalCameraPtr()->SetLookAt(Float3(0.0f, 2.5f, -10.0f), Float3(0.0f, 0.0f, 0.0f), Float3(0.0f, 1.0f, 0.0f));
 
 		// set specular probes
-		scene->getProbeManagerPtr()->AddProbe(Float3(0, -3, 0), Float3(2, 2, 2));
+
+		//scene->getProbeManagerPtr()->AddProbe(Float3(0, -3, 0), Float3(2, 2, 2));
 		//scene->getProbeManagerPtr()->AddProbe(Float3(-1, 0, 0), Float3(2, 2, 2));
+
+		scene->getProbeManagerPtr()->AddProbe(Float3(0, 0, 0), Float3(2, 2, 2));
+		scene->getProbeManagerPtr()->AddProbe(Float3(-1, 0, 0), Float3(2, 2, 2));
+
+		scene->setProbeLength(1.0f);
+
 	}
 
 	virtual void Update(Scene *scene, const SampleFramework11::Timer *timer)
@@ -32,4 +41,6 @@ public:
 		camMatrix = camMatrix * rotation;
 		scene->getGlobalCameraPtr()->SetWorldMatrix(camMatrix);
 	}
+
+	
 };

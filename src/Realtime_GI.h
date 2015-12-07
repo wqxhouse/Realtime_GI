@@ -31,6 +31,8 @@
 #include "IrradianceVolume.h"
 #include "ProbeManager.h"
 #include "DebugRenderer.h"
+//SSR
+#include "SSR.h"
 
 using namespace SampleFramework11;
 class Realtime_GI : public App
@@ -56,6 +58,9 @@ protected:
     RenderTarget2D _prevFrameTarget;
     RenderTarget2D _velocityTarget;
     RenderTarget2D _velocityResolveTarget;
+	
+	// SSR
+	RenderTarget2D _ssrTarget;
 
 	// Deferred - GBuffer
 	RenderTarget2D _rt0Target;  // albedo 
@@ -202,6 +207,10 @@ protected:
 	LightClusters _lightClusters;
 	IrradianceVolume _irradianceVolume;
 
+
+	//SSR
+	SSR _ssr;
+
 	//Create probe manager
 	/*ProbeManager _probeManager[1024];
 	ProbeManager probeManager; 
@@ -211,7 +220,10 @@ protected:
 	std::vector<float> _nearClips;
 	std::vector<float> _farClips;
 
+
 public:
 
     Realtime_GI();
 };
+
+

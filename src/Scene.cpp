@@ -24,6 +24,7 @@ Scene::Scene()
 
 	_sceneScript = NULL;
 	_hasProxySceneObject = false;
+	_unitProbeLength = 1.0f;
 }
 
 Scene::~Scene()
@@ -242,6 +243,42 @@ SceneObject *Scene::addDynamicOpaqueBoxObject(float scale, const Float3 &pos, co
 	return &obj;
 }
 
+SceneObject *Scene::addStaticOpaquePlaneObject(float scale, const Float3 &pos, const Quaternion &rot)
+{
+	Assert_(_numObjectBases < MAX_STATIC_OBJECTS);
+	Assert_(_numTotalModelsShared < MAX_MODELS);
+	Assert_(_numObjectBases < MAX_OBJECT_MATRICES);
+	Assert_(_numPrevWVPs < MAX_OBJECT_MATRICES);
+
+	if (!_planeModel)
+	{
+		addPlaneModel();
+		_modelIndices.push_back(_numTotalModelsShared - 1);
+	}
+
+	uint64 modelIndex = getModelIndex(_planeModel);
+	Assert_(modelIndex != -1);
+
+	_objectBases[_numObjectBases] = createBase(scale, pos, rot);
+	_prevWVPs[_numPrevWVPs] = _objectBases[_numObjectBases];
+	_sceneStaticOpaqueObjectBounds[_numStaticOpaqueObjects] = SceneObjectBound();
+
+	SceneObject &obj = _staticOpaqueObjects[_numStaticOpaqueObjects];
+	obj.base = &_objectBases[_numObjectBases];
+	obj.model = _planeModel;
+	obj.bound = &_sceneStaticOpaqueObjectBounds[_numStaticOpaqueObjects];
+	obj.prevWVP = &_prevWVPs[_numPrevWVPs];
+	obj.id = _highestSceneObjId++;
+
+
+	genSceneObjectBounds(STATIC_OBJ | OPAQUE_OBJ, _numStaticOpaqueObjects, modelIndex);
+
+	_numObjectBases++;
+	_numPrevWVPs++;
+	_numStaticOpaqueObjects++;
+
+	return &obj;
+}
 SceneObject *Scene::addDynamicOpaquePlaneObject(float scale, const Float3 &pos, const Quaternion &rot)
 {
 	Assert_(_numObjectBases < MAX_DYNAMIC_OBJECTS);

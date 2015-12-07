@@ -30,7 +30,8 @@ void DebugRenderer::Initialize(DeviceManager *deviceManager, ID3D11Device *devic
 		_spriteTexture = LoadTexture(_device, L"..\\Content\\Textures\\Default.dds");
 
 		_sphereModel = Model();
-		_sphereModel.CreateWithAssimp(_device, L"..\\Content\\Models\\sphere\\sphere_new.FBX");
+		//_sphereModel.CreateWithAssimp(_device, L"..\\Content\\Models\\sphere\\sphere_new.FBX");
+		_sphereModel.CreateWithAssimp(_device, L"..\\Content\\Models\\sphere\\sphere_re.FBX");
 
 		_hasInit = true;
 	}

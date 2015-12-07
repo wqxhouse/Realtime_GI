@@ -208,6 +208,10 @@ void Realtime_GI::Initialize()
 
 	_irradianceVolume.SetScene(&_scenes[AppSettings::CurrentScene]);
 
+	_ssr.Initialize(_deviceManager.Device(), _deviceManager.ImmediateContext(), &_camera, &_colorTarget, &_rt1Target, &_rt2Target
+		,&_depthBuffer, &_ssrTarget, _quadVB, _quadIB);
+
+
 	UpdateSpecularProbeUIInfo();
 }
 
@@ -316,6 +320,7 @@ void Realtime_GI::RenderSpecularProbeCubemaps()
 	}
 
 	_meshRenderer.SetInitializeProbes(false);
+
 }
 
 // Creates all required render targets
@@ -348,6 +353,8 @@ void Realtime_GI::CreateRenderTargets()
 		_rt2Target.Initialize(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT);
 		_depthBuffer.Initialize(device, width, height, DXGI_FORMAT_D32_FLOAT, true);
 		_colorTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT);
+		// SSR
+		_ssrTarget.Initialize(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	}
 
 	//if (_firstFrame)
@@ -464,7 +471,6 @@ void Realtime_GI::QueueDebugCommands()
 		_debugRenderer.QueueLightSphere(pos, Float4(1.0f, 1.0f, 1.0f, 0.2f), 0.2f);
 	}
 
-
 	if (AppSettings::RenderProbeBBox)
 	{
 		for (uint32 i = 0; i < _scenes[AppSettings::CurrentScene].getProbeManagerPtr()->GetProbeNums(); ++i)
@@ -496,7 +502,7 @@ void Realtime_GI::Update(const Timer& timer)
 
 	if (!AppSettings::PauseSceneScript)
 	{
-		//_scenes[AppSettings::CurrentScene].Update(timer);
+		_scenes[AppSettings::CurrentScene].Update(timer);
 	}
 
     MouseState mouseState = MouseState::GetMouseState(_window);
@@ -680,12 +686,17 @@ void Realtime_GI::RenderAA()
 
     context->OMSetRenderTargets(1, rtvs, nullptr);
 
+	
+
+	RenderTarget2D  raaResource ;//= _ssrTarget
+	raaResource = AppSettings::EnableSSR ? _ssrTarget : _colorTarget;
+
     if(AppSettings::UseStandardResolve)
     {
         if(AppSettings::MSAAMode == 0)
-            context->CopyResource(_resolveTarget.Texture, _colorTarget.Texture);
+			context->CopyResource(_resolveTarget.Texture, raaResource.Texture); //_colorTarget
         else
-            context->ResolveSubresource(_resolveTarget.Texture, 0, _colorTarget.Texture, 0, _colorTarget.Format);
+			context->ResolveSubresource(_resolveTarget.Texture, 0, raaResource.Texture, 0, raaResource.Format);//
         return;
     }
 
@@ -694,13 +705,13 @@ void Realtime_GI::RenderAA()
     context->PSSetShader(pixelShader, nullptr, 0);
     context->VSSetShader(_resolveVS, nullptr, 0);
 
-    _resolveConstants.Data.TextureSize = Float2(static_cast<float>(_colorTarget.Width), 
-		static_cast<float>(_colorTarget.Height));
+	_resolveConstants.Data.TextureSize = Float2(static_cast<float>(raaResource.Width),//
+		static_cast<float>(raaResource.Height));//
     _resolveConstants.Data.SampleRadius = SampleRadius;;
     _resolveConstants.ApplyChanges(context);
     _resolveConstants.SetPS(context, 0);
 
-    ID3D11ShaderResourceView* srvs[3] = { _colorTarget.SRView, _prevFrameTarget.SRView, velocitySRV };
+	ID3D11ShaderResourceView* srvs[3] = { raaResource.SRView, _prevFrameTarget.SRView, velocitySRV };//
     context->PSSetShaderResources(0, 3, srvs);
 
     ID3D11SamplerState* samplers[1] = { _samplerStates.LinearClamp() };
@@ -725,7 +736,6 @@ void Realtime_GI::RenderAA()
 
 void Realtime_GI::RenderSceneCubemaps(ID3D11DeviceContext *context)
 {
-	ProbeManager probeManager;
 	_meshRenderer.SetCubemapCapture(true);
 	if (AppSettings::CurrentShadingTech == ShadingTech::Clustered_Deferred)
 	{
@@ -748,13 +758,15 @@ void Realtime_GI::RenderSceneCubemaps(ID3D11DeviceContext *context)
 			_meshRenderer.SetCubemapCapture(false);
 		}
 	}
+	Scene *curScene = &_scenes[AppSettings::CurrentScene];
+	if (curScene->getProbeManagerPtr()->GetProbeNums() == 0) return;
 
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 
 	_deviceManager.ImmediateContext()->Map(_probeStructBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
 	Probe *probePtr = static_cast<Probe*>(mappedResource.pData);
 
-	Scene *curScene = &_scenes[AppSettings::CurrentScene];
+	
 	memcpy(probePtr, &(curScene->getProbeManagerPtr()->_probes[0]), 
 		sizeof(Probe) * curScene->getProbeManagerPtr()->GetProbeNums());
 	_deviceManager.ImmediateContext()->Unmap(_probeStructBuffer.Buffer, 0);
@@ -791,6 +803,9 @@ void Realtime_GI::Render(const Timer& timer)
 
 		_irradianceVolume.MainRender();
 		RenderLightsDeferred();
+		
+		//SSR
+		_ssr.MainRender();
 	}
 	else if (AppSettings::CurrentShadingTech == ShadingTech::Forward)
 	{
@@ -1198,21 +1213,27 @@ void Realtime_GI::UploadLights()
 {
 	D3D11_MAPPED_SUBRESOURCE mappedResource;
 
-	// pointlights
-	_deviceManager.ImmediateContext()->Map(_pointLightBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	PointLight *pointLightGPUBufferPtr = static_cast<PointLight *>(mappedResource.pData);
-
 	Scene *curScene = &_scenes[AppSettings::CurrentScene];
-	PointLight *pointLightPtr = curScene->getPointLightPtr();
-	memcpy(pointLightGPUBufferPtr, pointLightPtr, sizeof(PointLight) * curScene->getNumPointLights());
-	_deviceManager.ImmediateContext()->Unmap(_pointLightBuffer.Buffer, 0);//!
+	// pointlights
+	if (curScene->getNumPointLights() > 0)
+	{
+		_deviceManager.ImmediateContext()->Map(_pointLightBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+		PointLight *pointLightGPUBufferPtr = static_cast<PointLight *>(mappedResource.pData);
+
+		PointLight *pointLightPtr = curScene->getPointLightPtr();
+		memcpy(pointLightGPUBufferPtr, pointLightPtr, sizeof(PointLight) * curScene->getNumPointLights());
+		_deviceManager.ImmediateContext()->Unmap(_pointLightBuffer.Buffer, 0);//!
+	}
 
 	// sh probe lights
-	_deviceManager.ImmediateContext()->Map(_shProbeLightBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
-	SHProbeLight *shProbeLightGPUBufferPtr = static_cast<SHProbeLight *>(mappedResource.pData);
-	const std::vector<SHProbeLight> &shProbeLights = _irradianceVolume.getSHProbeLights();
-	memcpy(shProbeLightGPUBufferPtr, &shProbeLights[0], sizeof(SHProbeLight) * shProbeLights.size());
-	_deviceManager.ImmediateContext()->Unmap(_shProbeLightBuffer.Buffer, 0);
+	if (_irradianceVolume.getSHProbeLights().size() > 0)
+	{
+		_deviceManager.ImmediateContext()->Map(_shProbeLightBuffer.Buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedResource);
+		SHProbeLight *shProbeLightGPUBufferPtr = static_cast<SHProbeLight *>(mappedResource.pData);
+		const std::vector<SHProbeLight> &shProbeLights = _irradianceVolume.getSHProbeLights();
+		memcpy(shProbeLightGPUBufferPtr, &shProbeLights[0], sizeof(SHProbeLight) * shProbeLights.size());
+		_deviceManager.ImmediateContext()->Unmap(_shProbeLightBuffer.Buffer, 0);
+	}
 }
 
 void Realtime_GI::AssignLightAndUploadClusters()

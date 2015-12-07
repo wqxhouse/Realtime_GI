@@ -37,7 +37,8 @@ void CreateCubemap::Initialize(ID3D11Device *device, ID3D11DeviceContext *contex
 	if (!_convolveSphereSet)
 	{
 		//_convolveSphere.CreateWithAssimp(_device, L"..\\Content\\Models\\sphere\\sphere.obj", false);
-		_convolveSphere.CreateWithAssimp(_device, L"..\\Content\\Models\\sphere\\sphere_new.FBX", false);
+		//_convolveSphere.CreateWithAssimp(_device, L"..\\Content\\Models\\sphere\\sphere_new.FBX", false);
+		_convolveSphere.CreateWithAssimp(_device, L"..\\Content\\Models\\sphere\\sphere_re.FBX", false);
 		GenFilterShader();
 		GenAndCacheConvoluteSphereInputLayout();
 		_convolveSphereSet = true;

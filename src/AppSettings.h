@@ -50,7 +50,8 @@ typedef EnumSettingT<JitterModes> JitterModesSetting;
 enum class Scenes
 {
     CornellBox = 0,
-    Sponza = 1,
+    DropBoxes = 1,
+    Sponza = 2,
 
     NumValues
 };
@@ -97,6 +98,8 @@ namespace AppSettings
     extern ShadingTechSetting CurrentShadingTech;
     extern DirectionSetting LightDirection;
     extern ColorSetting LightColor;
+    extern ColorSetting SkyColor;
+    extern BoolSetting EnableSSR;
     extern BoolSetting PauseSceneScript;
     extern BoolSetting EnableDirectLighting;
     extern BoolSetting EnableIndirectDiffuseLighting;
@@ -155,6 +158,8 @@ namespace AppSettings
         int32 CurrentShadingTech;
         Float3 LightDirection;
         Float4Align Float3 LightColor;
+        Float4Align Float3 SkyColor;
+        bool32 EnableSSR;
         bool32 PauseSceneScript;
         bool32 EnableDirectLighting;
         bool32 EnableIndirectDiffuseLighting;
