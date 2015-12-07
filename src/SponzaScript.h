@@ -9,9 +9,11 @@ public:
 		//// std::wstring proxyModelPath = L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\Converted\\sponza_unwrapped.fbx";
 		//std::wstring proxyModelPath = L"C:\\Users\\wqxho_000\\Downloads\\SponzaPBR_Textures\\SponzaPBR_Textures\\Converted\\sponza_high_res_unwrapped.fbx";
 
-		std::wstring modelPath = L"C:\\MyUnity513WS\\Converted\\sponza_new.obj";
-		std::wstring proxyModelPath = L"C:\\MyUnity513WS\\Converted\\sponza_high_res_unwrapped.fbx";
+		/*std::wstring modelPath = L"C:\\MyUnity513WS\\Converted\\sponza_new.obj";
+		std::wstring proxyModelPath = L"C:\\MyUnity513WS\\Converted\\sponza_high_res_unwrapped.fbx";*/
 		
+		std::wstring modelPath = L"..\\Content\\Models\\sphere\\sphere_new.FBX";
+		std::wstring proxyModelPath = L"..\\Content\\Models\\CornellBox\\UVUnwrapped\\cbox_unwrapped.FBX";
 		Model *model = scene->addModel(modelPath);
 		scene->addStaticOpaqueObject(model, 0.03f, Float3(0, 0, 0), Quaternion());
 		scene->setProxySceneObject(proxyModelPath, 0.03f, Float3(0, 0, 0), Quaternion());
